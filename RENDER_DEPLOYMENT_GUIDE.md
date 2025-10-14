@@ -93,7 +93,7 @@ chouieur-express/
    Region: Same as backend
    Branch: main
    Root Directory: client
-   Build Command: npm install && npm run build
+   Build Command: npm ci && npm run build
    Start Command: npm start
    ```
 
@@ -195,22 +195,29 @@ Render automatically deploys when you push to your main branch:
 
 ### Common Issues:
 
-1. **Backend not connecting to MongoDB:**
+1. **"Could not find a production build in the '.next' directory" error:**
+   - This happens when Next.js tries to start without a build
+   - **Solution:** Ensure build command is `npm ci && npm run build`
+   - Check that the build completes successfully in Render logs
+   - Verify `.next` directory is created during build
+
+2. **Backend not connecting to MongoDB:**
    - Verify `MONGO_URI` is correct
    - Check MongoDB Atlas network access settings
    - Ensure your IP is whitelisted (or use 0.0.0.0/0 for all IPs)
 
-2. **Frontend not connecting to backend:**
+3. **Frontend not connecting to backend:**
    - Verify `NEXT_PUBLIC_API_URL` is correct
    - Check CORS configuration in backend
    - Ensure backend is running and accessible
 
-3. **Build failures:**
+4. **Build failures:**
    - Check Render build logs
    - Verify all dependencies are in package.json
    - Ensure build commands are correct
+   - Try using `npm ci` instead of `npm install` for more reliable builds
 
-4. **Environment variables not working:**
+5. **Environment variables not working:**
    - Variables must be set in Render dashboard
    - Frontend variables must start with `NEXT_PUBLIC_`
    - Restart services after changing environment variables

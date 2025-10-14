@@ -30,6 +30,20 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // Production optimizations for Render deployment
+  output: 'standalone',
+  experimental: {
+    outputFileTracingRoot: undefined,
+  },
+  // Ensure proper build output
+  distDir: '.next',
+  // Optimize for production
+  swcMinify: true,
+  compress: true,
+  // Handle environment variables properly
+  env: {
+    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
+  },
 };
 
 export default nextConfig;
