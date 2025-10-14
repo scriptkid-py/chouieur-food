@@ -13,7 +13,12 @@
     "start:client": "cd client && npm start",
     "start:server": "cd server && npm start",
     "install:all": "npm install && cd client && npm install && cd ../server && npm install",
-    "test:atlas": "cd server && node -e \"require('dotenv').config(); require('./db').testMongoDBConnection()\""
+    "test:atlas": "cd server && node -e \"require('dotenv').config(); require('./db').testMongoDBConnection()\"",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f",
+    "docker:build": "docker-compose build",
+    "render:deploy": "echo 'Push to GitHub to trigger Render deployment'"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"

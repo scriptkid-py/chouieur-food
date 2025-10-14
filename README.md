@@ -15,8 +15,9 @@ A modern food ordering platform with separate frontend and backend for optimal d
 
 ### Prerequisites
 - Node.js 18+ and npm
-- Docker and Docker Compose
+- Docker and Docker Compose (optional, for local testing)
 - Git
+- MongoDB Atlas account (for production)
 
 ### 1. Clone and Install
 ```bash
@@ -34,18 +35,38 @@ cp env.example .env
 
 # Frontend environment (optional)
 cd ../client
-# Frontend will use environment variables from build process
+cp env.example .env.local
+# Edit .env.local with your API URL
 ```
 
 ### 3. Run the Application
+
+#### Option A: Development Mode (Recommended)
 ```bash
-# Development mode (both frontend and backend)
+# Run both frontend and backend
 npm run dev
 
 # Or run separately:
 npm run dev:client  # Frontend on http://localhost:3000
 npm run dev:server  # Backend on http://localhost:5000
 ```
+
+#### Option B: Docker (Full Stack)
+```bash
+# Start all services with Docker
+npm run docker:up
+
+# View logs
+npm run docker:logs
+
+# Stop services
+npm run docker:down
+```
+
+### 4. Test Your Setup
+- **Frontend:** http://localhost:3000
+- **Backend API:** http://localhost:5000/api/health
+- **MongoDB:** Connected via Atlas or local Docker
 
 ## 🗄️ Database Setup
 
