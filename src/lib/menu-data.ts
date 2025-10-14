@@ -1,0 +1,83 @@
+import type { MenuItem, Supplement } from './types';
+
+export const SUPPLEMENTS: Supplement[] = [
+  { id: 'fromage', name: 'Fromage', price: 150 },
+  { id: 'viande', name: 'Viande', price: 200 },
+  { id: 'thon', name: 'Thon', price: 200 },
+  { id: 'gruyere', name: 'Gruyère', price: 250 },
+  { id: 'gratine', name: 'Gratiné', price: 200 },
+  { id: 'cheddar', name: 'Cheddar', price: 200 },
+  { id: 'gouda', name: 'Gouda', price: 200 },
+  { id: 'fromage-rouge', name: 'Fromage Rouge', price: 250 },
+  { id: 'camembert', name: 'Camembert', price: 250 },
+  { id: 'poulet-fume', name: 'Poulet Fumé', price: 300 },
+  { id: 'champignon', name: 'Champignon', price: 250 },
+];
+
+export const MENU_ITEMS: MenuItem[] = [
+  {
+    id: 'sandwich-pilon',
+    name: 'Sandwich Pilon',
+    category: 'Sandwiches',
+    price: 350,
+    description: 'A signature sandwich with savory fillings.',
+    imageId: 'sandwich-pilon',
+  },
+  {
+    id: 'pizza-fromage',
+    name: 'Pizza Fromage',
+    category: 'Pizza',
+    price: 900,
+    megaPrice: 1000,
+    description: 'A classic cheese pizza with a rich tomato base.',
+    imageId: 'pizza-fromage',
+  },
+  {
+    id: 'tacos-viande',
+    name: 'Tacos Viande',
+    category: 'Tacos',
+    price: 350,
+    description: 'Flavorful meat tacos with fresh toppings.',
+    imageId: 'tacos-viande',
+  },
+  {
+    id: 'poulet-marine',
+    name: 'Poulet Mariné',
+    category: 'Poulet',
+    price: 350,
+    description: 'Marinated and grilled chicken, tender and juicy.',
+    imageId: 'poulet-marine',
+  },
+  {
+    id: 'hamburger-double-cheese',
+    name: 'Hamburger Double Cheese',
+    category: 'Hamburgers',
+    price: 500,
+    description: 'A hearty double cheeseburger with all the fixings.',
+    imageId: 'hamburger-double-cheese',
+  },
+  {
+    id: 'panini-classic',
+    name: 'Panini Classic',
+    category: 'Panini / Fajitas',
+    price: 400,
+    description: 'A classic pressed panini with melted cheese.',
+    imageId: 'panini',
+  },
+  {
+    id: 'fajitas-poulet',
+    name: 'Fajitas Poulet',
+    category: 'Panini / Fajitas',
+    price: 600,
+    description: 'Sizzling chicken fajitas with peppers and onions.',
+    imageId: 'fajitas',
+  },
+  {
+    id: 'plat-du-jour',
+    name: 'Plat du Jour',
+    category: 'Plats',
+    price: 800,
+    description: 'The special plate of the day.',
+    imageId: 'plat',
+  },
+];

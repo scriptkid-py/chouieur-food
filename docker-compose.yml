@@ -1,0 +1,63 @@
+# =============================================================================
+# MONGODB DOCKER COMPOSE CONFIGURATION
+# =============================================================================
+# 
+# This file sets up a MongoDB container for local development.
+# The database will persist data in ./data/db directory.
+# 
+# USAGE:
+# ======
+# Start MongoDB: docker-compose up -d
+# Stop MongoDB:  docker-compose down
+# View logs:     docker-compose logs -f
+# 
+# FOR RENDER DEPLOYMENT:
+# =====================
+# In production, Render will connect to a remote MongoDB instance (MongoDB Atlas).
+# Update the MONGO_URI environment variable in Render dashboard to point to your
+# production MongoDB instance instead of localhost.
+
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: myapp-mongo
+    restart: always
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password123
+      MONGO_INITDB_DATABASE: myapp_db
+    volumes:
+      - ./data/db:/data/db
+      - ./data/configdb:/data/configdb
+    networks:
+      - myapp-network
+
+networks:
+  myapp-network:
+    driver: bridge
+
+# =============================================================================
+# BACKUP AND RESTORE COMMANDS
+# =============================================================================
+# 
+# Backup MongoDB:
+# docker exec myapp-mongo mongodump --db myapp_db --out /data/backup
+# docker cp myapp-mongo:/data/backup ./backup
+# 
+# Restore MongoDB:
+# docker cp ./backup myapp-mongo:/data/backup
+# docker exec myapp-mongo mongorestore --db myapp_db /data/backup/myapp_db
+# 
+# =============================================================================
+# CHANGING MONGODB LOCATION
+# =============================================================================
+# 
+# To use a different MongoDB instance:
+# 1. Update MONGO_URI in .env file
+# 2. For MongoDB Atlas: Use connection string from Atlas dashboard
+# 3. For another PC: Use the IP address instead of localhost
+# 4. Restart your application
