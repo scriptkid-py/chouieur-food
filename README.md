@@ -1,6 +1,15 @@
 # Chouieur Express
 
-A modern food ordering platform built with Next.js, Firebase, and MongoDB.
+A modern food ordering platform with separate frontend and backend for optimal deployment on Render.
+
+## 🏗️ Architecture
+
+- **Frontend**: Next.js 15 with React 18, TypeScript, Tailwind CSS
+- **Backend**: Express.js with MongoDB Atlas integration
+- **Database**: MongoDB Atlas (production) / Docker MongoDB (development)
+- **Deployment**: Render (separate services for frontend and backend)
+- **Authentication**: Firebase Auth
+- **AI Features**: Google Genkit for automation
 
 ## 🚀 Quick Start
 
@@ -11,32 +20,31 @@ A modern food ordering platform built with Next.js, Firebase, and MongoDB.
 
 ### 1. Clone and Install
 ```bash
-git clone <your-repo-url>
-cd your-project
-npm install
+git clone https://github.com/scriptkid-py/chouieur-food.git
+cd chouieur-food
+npm run install:all
 ```
 
 ### 2. Set Up Environment Variables
 ```bash
+# Backend environment
+cd server
 cp env.example .env
-# Edit .env with your configuration
+# Edit .env with your MongoDB Atlas connection string
+
+# Frontend environment (optional)
+cd ../client
+# Frontend will use environment variables from build process
 ```
 
-### 3. Start MongoDB Database
+### 3. Run the Application
 ```bash
-# Start MongoDB container
-docker-compose up -d
-
-# Check if MongoDB is running
-docker-compose ps
-```
-
-### 4. Run the Application
-```bash
-# Development mode
+# Development mode (both frontend and backend)
 npm run dev
 
-# The app will be available at http://localhost:3000
+# Or run separately:
+npm run dev:client  # Frontend on http://localhost:3000
+npm run dev:server  # Backend on http://localhost:5000
 ```
 
 ## 🗄️ Database Setup
