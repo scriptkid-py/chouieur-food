@@ -39,6 +39,10 @@ This guide covers deploying the cleaned and organized Next.js project to Render.
 - **Build Command**: `npm ci && npm run build`
 - **Start Command**: `npm start`
 
+**🔧 Alternative Build Commands** (if you encounter issues):
+- **Build Command**: `npm run render-build` (includes build verification)
+- **Start Command**: `npm run render-start` (includes build verification)
+
 **⚠️ Important**: 
 - Make sure to remove the `postinstall` script from package.json as it can cause build loops on Render
 - Ensure all build dependencies (TypeScript, PostCSS, Tailwind) are in the main `dependencies` section
@@ -138,8 +142,8 @@ FRONTEND_URL=https://your-frontend-service.onrender.com
 
 3. **"Could not find a production build in the '.next' directory"**
    - ✅ **Fixed**: All build dependencies moved to main dependencies
-   - Build command now includes success confirmation
-   - Make sure build completes successfully before start command runs
+   - Build verification script added to ensure build integrity
+   - Use `npm run render-build` and `npm run render-start` for enhanced verification
 
 4. **Environment Variables Not Loading**
    - Make sure all `NEXT_PUBLIC_` variables are set
