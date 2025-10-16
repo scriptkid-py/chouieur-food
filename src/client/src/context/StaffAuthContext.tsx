@@ -1,82 +1,64 @@
 'use client';
 
-import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-
-type StaffRole = 'admin' | 'kitchen';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 
 interface StaffAuthContextType {
   isAuthenticated: boolean;
-  role: StaffRole | null;
-  login: (username: string, password: string) => { success: boolean; role: StaffRole | null };
-  logout: () => void;
+  role: 'admin' | 'kitchen' | null;
   isLoading: boolean;
+  login: (role: 'admin' | 'kitchen') => void;
+  logout: () => void;
 }
 
 const StaffAuthContext = createContext<StaffAuthContextType | undefined>(undefined);
 
-export const StaffAuthProvider = ({ children }: { children: ReactNode }) => {
+export function StaffAuthProvider({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [role, setRole] = useState<StaffRole | null>(null);
+  const [role, setRole] = useState<'admin' | 'kitchen' | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    try {
-        const storedRole = localStorage.getItem('staffRole');
-        if (storedRole && (storedRole === 'admin' || storedRole === 'kitchen')) {
-            setIsAuthenticated(true);
-            setRole(storedRole);
-        }
-    } catch (error) {
-        console.error("Could not access localStorage", error);
-    } finally {
-        setIsLoading(false);
+    // Check for stored authentication on mount
+    const storedAuth = localStorage.getItem('staffAuth');
+    if (storedAuth) {
+      const { isAuthenticated: stored, role: storedRole } = JSON.parse(storedAuth);
+      setIsAuthenticated(stored);
+      setRole(storedRole);
     }
+    setIsLoading(false);
   }, []);
 
-  const login = (username: string, password: string): { success: boolean; role: StaffRole | null } => {
-    let loggedInRole: StaffRole | null = null;
-
-    if (username === 'admin' && password === 'admin') {
-      loggedInRole = 'admin';
-    } else if (username === 'kitchen' && password === 'kitchen') {
-      loggedInRole = 'kitchen';
-    }
-
-    if (loggedInRole) {
-      try {
-        localStorage.setItem('staffRole', loggedInRole);
-      } catch (error) {
-        console.error("Could not access localStorage", error);
-      }
-      setIsAuthenticated(true);
-      setRole(loggedInRole);
-      return { success: true, role: loggedInRole };
-    }
-
-    return { success: false, role: null };
+  const login = (newRole: 'admin' | 'kitchen') => {
+    setIsAuthenticated(true);
+    setRole(newRole);
+    localStorage.setItem('staffAuth', JSON.stringify({ isAuthenticated: true, role: newRole }));
   };
 
   const logout = () => {
-    try {
-        localStorage.removeItem('staffRole');
-    } catch (error) {
-        console.error("Could not access localStorage", error);
-    }
     setIsAuthenticated(false);
     setRole(null);
+    localStorage.removeItem('staffAuth');
   };
 
   return (
-    <StaffAuthContext.Provider value={{ isAuthenticated, role, login, logout, isLoading }}>
+    <StaffAuthContext.Provider
+      value={{
+        isAuthenticated,
+        role,
+        isLoading,
+        login,
+        logout,
+      }}
+    >
       {children}
     </StaffAuthContext.Provider>
   );
-};
+}
 
-export const useStaffAuth = () => {
+export function useStaffAuth() {
   const context = useContext(StaffAuthContext);
   if (context === undefined) {
     throw new Error('useStaffAuth must be used within a StaffAuthProvider');
   }
   return context;
-};
+}

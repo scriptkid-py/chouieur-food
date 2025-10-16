@@ -8,93 +8,150 @@ import { useToast } from '@/hooks/use-toast';
 import { automateDeliveryNotifications } from '@/ai/flows/automate-delivery-notifications';
 import { useState } from 'react';
 import { Loader2, Send } from 'lucide-react';
-import type { AutomateDeliveryNotificationsInput } from '@/ai/flows/automate-delivery-notifications';
 
-type FormValues = Omit<AutomateDeliveryNotificationsInput, 'orderId' | 'totalAmount' | 'orderItems'> & {
-    orderItems: string;
-    totalAmount: string;
-};
-
+interface DeliveryOrderFormData {
+  customerName: string;
+  customerPhone: string;
+  deliveryAddress: string;
+  orderItems: string;
+  totalAmount: string;
+  estimatedDeliveryTime: string;
+}
 
 export function DeliveryOrderForm() {
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<FormValues>({
-    defaultValues: {
-        customerName: 'John Doe',
-        customerPhoneNumber: '+15551234567',
-        deliveryAddress: '123 Main St, Anytown, USA',
-        orderItems: '1x Pizza, 2x Burger',
-        totalAmount: '2500'
-    }
-  });
-  const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
+  
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    reset,
+  } = useForm<DeliveryOrderFormData>();
 
-  const onSubmit: SubmitHandler<FormValues> = async (data) => {
+  const onSubmit: SubmitHandler<DeliveryOrderFormData> = async (data) => {
     setIsSubmitting(true);
+    
     try {
-        const payload: AutomateDeliveryNotificationsInput = {
-            orderId: `del_${Date.now()}`,
-            customerName: data.customerName,
-            customerPhoneNumber: data.customerPhoneNumber,
-            deliveryAddress: data.deliveryAddress,
-            orderItems: data.orderItems.split(',').map(item => item.trim()),
-            totalAmount: parseFloat(data.totalAmount),
-        };
+      // Simulate the delivery notification flow
+      await automateDeliveryNotifications({
+        customerName: data.customerName,
+        customerPhone: data.customerPhone,
+        deliveryAddress: data.deliveryAddress,
+        orderItems: data.orderItems,
+        totalAmount: parseFloat(data.totalAmount),
+        estimatedDeliveryTime: data.estimatedDeliveryTime,
+      });
 
-      const result = await automateDeliveryNotifications(payload);
-
-      if (result.messageSent) {
-        toast({
-          title: 'Notification Sent',
-          description: 'The delivery notification was sent successfully.',
-        });
-        reset();
-      } else {
-        throw new Error('An unknown error occurred while sending the notification.');
-      }
-    } catch (error: any) {
       toast({
-        title: 'Action Failed',
-        description: error.message || 'There was a problem triggering the notification.',
-        variant: 'destructive',
+        title: "Delivery Order Created",
+        description: "WhatsApp notification sent successfully!",
+      });
+
+      reset();
+    } catch (error) {
+      console.error('Error creating delivery order:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create delivery order. Please try again.",
+        variant: "destructive",
       });
     } finally {
-        setIsSubmitting(false);
+      setIsSubmitting(false);
     }
   };
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="customerName">Customer Name</Label>
-        <Input id="customerName" {...register('customerName', { required: 'Name is required' })} />
-        {errors.customerName && <p className="text-sm text-destructive">{errors.customerName.message}</p>}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="customerName">Customer Name</Label>
+          <Input
+            id="customerName"
+            {...register('customerName', { required: 'Customer name is required' })}
+            placeholder="Enter customer name"
+          />
+          {errors.customerName && (
+            <p className="text-sm text-red-500">{errors.customerName.message}</p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="customerPhone">Phone Number</Label>
+          <Input
+            id="customerPhone"
+            {...register('customerPhone', { required: 'Phone number is required' })}
+            placeholder="Enter phone number"
+          />
+          {errors.customerPhone && (
+            <p className="text-sm text-red-500">{errors.customerPhone.message}</p>
+          )}
+        </div>
       </div>
-      <div className="space-y-2">
-        <Label htmlFor="customerPhoneNumber">Customer Phone</Label>
-        <Input id="customerPhoneNumber" type="tel" {...register('customerPhoneNumber', { required: 'Phone is required' })} />
-        {errors.customerPhoneNumber && <p className="text-sm text-destructive">{errors.customerPhoneNumber.message}</p>}
-      </div>
+
       <div className="space-y-2">
         <Label htmlFor="deliveryAddress">Delivery Address</Label>
-        <Input id="deliveryAddress" {...register('deliveryAddress', { required: 'Address is required' })} />
-        {errors.deliveryAddress && <p className="text-sm text-destructive">{errors.deliveryAddress.message}</p>}
+        <Input
+          id="deliveryAddress"
+          {...register('deliveryAddress', { required: 'Delivery address is required' })}
+          placeholder="Enter delivery address"
+        />
+        {errors.deliveryAddress && (
+          <p className="text-sm text-red-500">{errors.deliveryAddress.message}</p>
+        )}
       </div>
-       <div className="space-y-2">
-        <Label htmlFor="orderItems">Order Items (comma-separated)</Label>
-        <Input id="orderItems" {...register('orderItems', { required: 'Items are required' })} />
-        {errors.orderItems && <p className="text-sm text-destructive">{errors.orderItems.message}</p>}
+
+      <div className="space-y-2">
+        <Label htmlFor="orderItems">Order Items</Label>
+        <Input
+          id="orderItems"
+          {...register('orderItems', { required: 'Order items are required' })}
+          placeholder="e.g., 2x Pizza Margherita, 1x Caesar Salad"
+        />
+        {errors.orderItems && (
+          <p className="text-sm text-red-500">{errors.orderItems.message}</p>
+        )}
       </div>
-       <div className="space-y-2">
-        <Label htmlFor="totalAmount">Total Amount (DA)</Label>
-        <Input id="totalAmount" type="number" {...register('totalAmount', { required: 'Total is required', valueAsNumber: true })} />
-        {errors.totalAmount && <p className="text-sm text-destructive">{errors.totalAmount.message}</p>}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="totalAmount">Total Amount ($)</Label>
+          <Input
+            id="totalAmount"
+            type="number"
+            step="0.01"
+            {...register('totalAmount', { required: 'Total amount is required' })}
+            placeholder="0.00"
+          />
+          {errors.totalAmount && (
+            <p className="text-sm text-red-500">{errors.totalAmount.message}</p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="estimatedDeliveryTime">Estimated Delivery Time</Label>
+          <Input
+            id="estimatedDeliveryTime"
+            {...register('estimatedDeliveryTime', { required: 'Delivery time is required' })}
+            placeholder="e.g., 30-45 minutes"
+          />
+          {errors.estimatedDeliveryTime && (
+            <p className="text-sm text-red-500">{errors.estimatedDeliveryTime.message}</p>
+          )}
+        </div>
       </div>
-      <Button type="submit" className="w-full" disabled={isSubmitting}>
+
+      <Button type="submit" disabled={isSubmitting} className="w-full">
         {isSubmitting ? (
-          <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Sending...</>
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Creating Order...
+          </>
         ) : (
-          <><Send className="mr-2 h-4 w-4" /> Send Notification</>
+          <>
+            <Send className="mr-2 h-4 w-4" />
+            Create Delivery Order
+          </>
         )}
       </Button>
     </form>
