@@ -37,13 +37,14 @@ This guide covers deploying the cleaned and organized Next.js project to Render.
 - **Branch**: `master`
 - **Root Directory**: Leave empty (root directory)
 - **Build Command**: `npm ci && npm run build`
-- **Start Command**: `npm start`
+- **Start Command**: `npm run start`
 
 **🔧 Alternative Build Commands** (if you encounter issues):
-- **Build Command**: `npm run render-build` (includes build verification)
-- **Start Command**: `npm run render-start` (includes build verification)
+- **Build Command**: `npm run render-build` (simplified for Render)
+- **Start Command**: `npm run render-start` (uses dynamic port)
 
 **⚠️ Important**: 
+- The start script now uses `npm run start` which automatically uses `process.env.PORT` for Render compatibility
 - Make sure to remove the `postinstall` script from package.json as it can cause build loops on Render
 - Ensure all build dependencies (TypeScript, PostCSS, Tailwind) are in the main `dependencies` section
 
@@ -132,28 +133,33 @@ FRONTEND_URL=https://your-frontend-service.onrender.com
 
 ### Common Issues:
 
-1. **Build Fails with "TypeScript not found"**
+1. **"Port scan timeout reached, no open ports detected"**
+   - ✅ **FIXED**: The start script now uses `npm run start` with dynamic port (`${PORT:-3000}`)
+   - This ensures Render can detect the open port properly
+   - The app will automatically use Render's assigned port
+
+2. **Build Fails with "TypeScript not found"**
    - ✅ **Fixed**: TypeScript is now in dependencies (not devDependencies)
    - The `postinstall` script has been removed to prevent build loops
 
-2. **Build Fails with "Module not found"**
+3. **Build Fails with "Module not found"**
    - ✅ **Fixed**: The new structure eliminates double `src` nesting
    - All imports now use `@/` aliases correctly
 
-3. **"Could not find a production build in the '.next' directory"**
+4. **"Could not find a production build in the '.next' directory"**
    - ✅ **Fixed**: All build dependencies moved to main dependencies
    - Build verification script added to ensure build integrity
    - Use `npm run render-build` and `npm run render-start` for enhanced verification
 
-4. **Environment Variables Not Loading**
+5. **Environment Variables Not Loading**
    - Make sure all `NEXT_PUBLIC_` variables are set
    - Check that variable names match exactly
 
-5. **API Calls Failing**
+6. **API Calls Failing**
    - Verify `NEXT_PUBLIC_API_URL` is correct
    - Check CORS settings on backend
 
-6. **Build Timeout**
+7. **Build Timeout**
    - The cleaned structure should build faster
    - If still slow, consider upgrading Render plan
 

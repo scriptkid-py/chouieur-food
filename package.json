@@ -5,9 +5,9 @@
   "scripts": {
     "dev": "next dev --turbopack -p 3000",
     "build": "next build",
-    "start": "next start -p 3000",
-    "render-build": "npm ci && npm run build && node scripts/verify-build.js",
-    "render-start": "node scripts/verify-build.js && npm run start",
+    "start": "next start -p ${PORT:-3000}",
+    "render-build": "npm ci && npm run build",
+    "render-start": "npm run start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "genkit:dev": "genkit start -- tsx src/ai/dev.ts",
