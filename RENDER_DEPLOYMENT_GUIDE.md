@@ -55,13 +55,13 @@ Add these environment variables in Render dashboard:
 NODE_ENV=production
 NEXT_PUBLIC_API_URL=https://your-backend-service.onrender.com
 
-# Firebase Configuration (if using Firebase)
-NEXT_PUBLIC_FIREBASE_API_KEY=your_firebase_api_key
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
-NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
+# Firebase Configuration
+NEXT_PUBLIC_FIREBASE_API_KEY=AIzaSyAqfhoMTXk1wx57snyYUCOypdAhBS9X5pg
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=studio-4940927620-c4e90.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=studio-4940927620-c4e90
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=studio-4940927620-c4e90.appspot.com
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=424747215465
+NEXT_PUBLIC_FIREBASE_APP_ID=1:424747215465:web:4ca1009750bc6fc50650f8
 
 # Any other environment variables your app needs
 ```
