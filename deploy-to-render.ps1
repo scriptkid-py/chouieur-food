@@ -16,7 +16,9 @@
 $API_KEY = "rnd_9TXSUJbKIfSqyIUkLcsqbSY28MYt"
 $OWNER_ID = "tea-d3erf1mmcj7s73doitng"
 $REPO_URL = "https://github.com/scriptkid-py/chouieur-food"
-$MONGO_URI = "mongodb+srv://zaidden123_db_user:u0bssk9YrDKF9YEe@myweb.8slnc33.mongodb.net/myapp_db?retryWrites=true&w=majority&appName=myweb"
+$GOOGLE_SHEETS_ID = "13D8FOHg_zycwBi67_Rq3UYiR_V1aDxomSCe8dNZwsvk"
+$GOOGLE_SERVICE_ACCOUNT_EMAIL = "chouieur-express-service@chouieur-express-sheets.iam.gserviceaccount.com"
+$GOOGLE_PRIVATE_KEY = "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCHoQYJ0nK7mFFZ\nomz6vLAKAHRqCcF4fOo/G8WOecrgd5uxl7g1k9y1c19lGKPBgOz2pIHSLpqCiTVO\nZkQBAEUmJWwF8HfWvU2Il3fA23VcP9XTWdRSaW4BQk9IaVTKrMbebyVV33wxZFtF\n9dLf0jZtXom25gNuVeWmctOa6k5W5eSCa1PIaOZNYmkNzXVH5dSIJLacwhUlJNyv\n9QUzHiX6uGEozmJYpGRduwhQNxXBr3YW5ZKXn9fb5D8CTHo2dZORdeASYDJ818nA\nepAbJmG+bDlo7RpDCqg4W5srZSpjSHE/rT4Bsr0wet8X1hPehDom2dTt7UFB72e/\nCSdtLnbZAgMBAAECggEACOnRLsYQ2jlJZ12gUd4ip5WeEPXxLAzxjBI0KofgiF3z\n8njpF0RPZfFeHJPA90+UwyTOj1SWvOttgGiCIZq18KrW7ZD/HzKzrL1flmIV1Wkw\nkUI/DOd23khQU47wjp1KOIYPaxRT4h8ZTIC6ShFTmF51KHr3UMH+ZLD5LR4m5dj/\nbI8027B8eGl6C/S62rKJL9k1fCfLIeqL1qRcpqhr2+VhLikqcHNH2bazpUVer6mn\nQzi2ME8HUoAM8+Q6sy9/y77nVqAyXDJVuvHdqQXMB9hzzsqan8RA2Rjgz7NK5N8P\nq6DfX3pJm5VoULKLvgv+BNwIAlRhtTKcmHeg5BUs3QKBgQC65IWydG2vUFqDkFpS\n+mL963I4JbjAdoZR2Sptc5lazg5U4QPY6px2qLGTBU3Bw4hm04LHaxzC2BXaw5K2\n8rLg6L3t5cETc/U1qwD2zCkZukqq3sGL7PX6utdTZXgYFPFs+CaMl1lpi93ZvrDI\ns22MaxuogMLVBE/Dj8WBEdCDzwKBgQC5x9KlBPeyzdcSCvw1p3oq0CWqTwSeOW0p\n8ZYINDEDvZ6hnccNwwtMc65/Gf4xhEjD9mpCKvQnxBD+qzB8JuvUhjPtzck0Skj+\no8s7GxKdzn07IjA6FyShSN7tzxLHherOoA6CUdI4Aw9EWK2tkAfBecN4qgHTCMOd\nG1bTubD81wKBgA0p22DeYntepYFuwW3mxOItmzXpMkIcFwncyeg7pCmJKelAkAzP\nOYYCC7/XN8rWAt17OFLjcHsozSFDdSn9nivJONdwv1CncjX9fWvkpWByhp/SYL+C\nSTEHx/LPys2na/nI4K42Ws3cVBvqGnmIacbiJGiR6ScnzpZvofGdV5pxAoGATbbo\nR/2e/F4dBMAxpuQrN7OgvfCWFvYg0zXrM/1ZL55nuGW++ePIWy/dI/AkpGQY6Fix\nNIKxZd0f2tiTzKufZWTKXkUCUOxuQo8UGeKGVBsnyc/Qasx5lzpbfxFrYqmDgvHz\nf9JoZOPqxAVwibVBeU7NVTGQ183HvnXMSX9ZKTsCgYBDvyqgMAqPRGSAmYQ1T5ZJ\nNeUvu0QhxorZ0xV3X7AvEKAnoa4Z2jFnvq1tZMXr0bpDHEzqNK/f6um78TwP7z7h\nT7aFKSYT/2aYFgvSdXxPVoCHj33NApnYPHVD7NGltvMCQbO34aA3qyWEJoHDQKSs\ndk5yvqVdqBoJ7hZg7HMe3w==\n-----END PRIVATE KEY-----\n"
 
 # API Headers
 $headers = @{
@@ -45,8 +47,16 @@ $backendPayload = @{
     region = "oregon"
     envVars = @(
         @{
-            key = "MONGO_URI"
-            value = $MONGO_URI
+            key = "GOOGLE_SHEETS_ID"
+            value = $GOOGLE_SHEETS_ID
+        },
+        @{
+            key = "GOOGLE_SERVICE_ACCOUNT_EMAIL"
+            value = $GOOGLE_SERVICE_ACCOUNT_EMAIL
+        },
+        @{
+            key = "GOOGLE_PRIVATE_KEY"
+            value = $GOOGLE_PRIVATE_KEY
         },
         @{
             key = "NODE_ENV"
@@ -80,7 +90,7 @@ $frontendPayload = @{
     repo = $REPO_URL
     branch = "master"
     rootDir = "client"
-    buildCommand = "npm ci && npm run build"
+    buildCommand = "npm ci; npm run build"
     startCommand = "npm start"
     plan = "free"
     region = "oregon"
@@ -117,8 +127,16 @@ Write-Host "`n🔧 Updating Backend CORS Configuration..." -ForegroundColor Yell
 $corsPayload = @{
     envVars = @(
         @{
-            key = "MONGO_URI"
-            value = $MONGO_URI
+            key = "GOOGLE_SHEETS_ID"
+            value = $GOOGLE_SHEETS_ID
+        },
+        @{
+            key = "GOOGLE_SERVICE_ACCOUNT_EMAIL"
+            value = $GOOGLE_SERVICE_ACCOUNT_EMAIL
+        },
+        @{
+            key = "GOOGLE_PRIVATE_KEY"
+            value = $GOOGLE_PRIVATE_KEY
         },
         @{
             key = "NODE_ENV"
@@ -155,9 +173,9 @@ Write-Host "`nFrontend Service:" -ForegroundColor White
 Write-Host "  - Name: chouieur-express-frontend" -ForegroundColor Gray
 Write-Host "  - URL: $FRONTEND_URL" -ForegroundColor Gray
 
-Write-Host "`n🔗 MongoDB Atlas:" -ForegroundColor White
+Write-Host "`n🔗 Google Sheets:" -ForegroundColor White
 Write-Host "  - Connection: Configured and ready" -ForegroundColor Gray
-Write-Host "  - Database: myapp_db" -ForegroundColor Gray
+Write-Host "  - Database: Google Sheets" -ForegroundColor Gray
 
 Write-Host "`n⏱️  Deployment Status:" -ForegroundColor Cyan
 Write-Host "  - Backend: Building and deploying..." -ForegroundColor Yellow
