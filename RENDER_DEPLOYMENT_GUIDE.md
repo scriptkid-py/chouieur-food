@@ -64,49 +64,61 @@ NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
 - **Auto-Deploy**: `Yes` (recommended)
 - **Pull Request Previews**: `Yes` (optional)
 
-## 🔧 Backend Service (if needed)
+## 🔧 Backend Service (Optional)
 
-If you need a backend service, create a separate Web Service:
+**⚠️ IMPORTANT**: The current project is a **frontend-only** Next.js application. If you need a backend, you have two options:
 
-### 1. Create Backend Service
+### Option 1: Frontend-Only (Recommended)
+- Delete any existing backend services in Render
+- Deploy only the frontend service
+- Use external APIs or serverless functions for backend needs
+
+### Option 2: Add Backend Service
+If you need a backend, create a separate Web Service:
+
+#### 1. Create Backend Service
 - **Name**: `chouieur-express-backend`
 - **Environment**: `Node`
 - **Region**: Same as frontend
 - **Branch**: `master`
-- **Root Directory**: Leave empty
+- **Root Directory**: `backend`
 - **Build Command**: `npm ci`
 - **Start Command**: `npm start`
 
-### 2. Backend Environment Variables
+#### 2. Backend Environment Variables
 ```bash
 NODE_ENV=production
 PORT=10000
 
-# Google Sheets Configuration
-GOOGLE_SHEETS_ID=your_google_sheets_id
-GOOGLE_SERVICE_ACCOUNT_EMAIL=your_service_account_email
-GOOGLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nYour private key here\n-----END PRIVATE KEY-----\n"
-
 # CORS Configuration
 FRONTEND_URL=https://your-frontend-service.onrender.com
+
+# Add your other environment variables here
+# GOOGLE_SHEETS_ID=your_google_sheets_id
+# GOOGLE_SERVICE_ACCOUNT_EMAIL=your_service_account_email
+# GOOGLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nYour private key here\n-----END PRIVATE KEY-----\n"
 ```
 
 ## 📝 Deployment Steps
 
-### Step 1: Update Render Services
+### Step 1: Clean Up Render Services
 1. Go to your Render dashboard
-2. Find your existing frontend service
-3. Update the configuration:
-   - **Root Directory**: Leave empty (was `src/client` before)
+2. **Delete the old backend service** that's looking for `/opt/render/project/src/src/server`
+3. Keep only your frontend service
+
+### Step 2: Update Frontend Service
+1. Find your existing frontend service
+2. Update the configuration:
+   - **Root Directory**: Leave **EMPTY** (not `src/client` or `src/server`)
    - **Build Command**: `npm ci && npm run build`
    - **Start Command**: `npm start`
 
-### Step 2: Update Environment Variables
-1. Go to your service settings
+### Step 3: Update Environment Variables
+1. Go to your frontend service settings
 2. Update the environment variables
-3. Make sure `NEXT_PUBLIC_API_URL` points to your backend service
+3. If you have a backend, make sure `NEXT_PUBLIC_API_URL` points to your backend service
 
-### Step 3: Deploy
+### Step 4: Deploy
 1. Click "Manual Deploy" → "Deploy latest commit"
 2. Or push a new commit to trigger auto-deploy
 
