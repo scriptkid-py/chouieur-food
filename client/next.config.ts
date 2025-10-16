@@ -38,7 +38,6 @@ const nextConfig: NextConfig = {
   distDir: '.next',
   
   // Optimize for production
-  swcMinify: true,
   compress: true,
   
   // Handle environment variables properly
