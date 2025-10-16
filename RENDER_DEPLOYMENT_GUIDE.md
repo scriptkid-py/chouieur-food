@@ -39,7 +39,9 @@ This guide covers deploying the cleaned and organized Next.js project to Render.
 - **Build Command**: `npm ci && npm run build`
 - **Start Command**: `npm start`
 
-**⚠️ Important**: Make sure to remove the `postinstall` script from package.json as it can cause build loops on Render.
+**⚠️ Important**: 
+- Make sure to remove the `postinstall` script from package.json as it can cause build loops on Render
+- Ensure all build dependencies (TypeScript, PostCSS, Tailwind) are in the main `dependencies` section
 
 ### 2. Environment Variables
 Add these environment variables in Render dashboard:
@@ -134,15 +136,20 @@ FRONTEND_URL=https://your-frontend-service.onrender.com
    - ✅ **Fixed**: The new structure eliminates double `src` nesting
    - All imports now use `@/` aliases correctly
 
-3. **Environment Variables Not Loading**
+3. **"Could not find a production build in the '.next' directory"**
+   - ✅ **Fixed**: All build dependencies moved to main dependencies
+   - Build command now includes success confirmation
+   - Make sure build completes successfully before start command runs
+
+4. **Environment Variables Not Loading**
    - Make sure all `NEXT_PUBLIC_` variables are set
    - Check that variable names match exactly
 
-4. **API Calls Failing**
+5. **API Calls Failing**
    - Verify `NEXT_PUBLIC_API_URL` is correct
    - Check CORS settings on backend
 
-5. **Build Timeout**
+6. **Build Timeout**
    - The cleaned structure should build faster
    - If still slow, consider upgrading Render plan
 
