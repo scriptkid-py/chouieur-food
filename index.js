@@ -60,6 +60,20 @@ async function initializeGoogleSheets() {
   }
 }
 
+// Root endpoint for Render health checks
+app.get('/', (req, res) => {
+  res.json({ 
+    status: 'OK', 
+    message: 'Chouieur Express Backend is running',
+    timestamp: new Date().toISOString(),
+    endpoints: {
+      health: '/api/health',
+      testSheets: '/api/test-sheets',
+      data: '/api/data'
+    }
+  });
+});
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({ 
