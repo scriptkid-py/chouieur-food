@@ -66,12 +66,19 @@ app.get('/', (req, res) => {
     status: 'OK', 
     message: 'Chouieur Express Backend is running',
     timestamp: new Date().toISOString(),
+    port: PORT,
+    environment: process.env.NODE_ENV,
     endpoints: {
       health: '/api/health',
       testSheets: '/api/test-sheets',
       data: '/api/data'
     }
   });
+});
+
+// Simple ping endpoint for Render
+app.get('/ping', (req, res) => {
+  res.json({ status: 'pong', timestamp: new Date().toISOString() });
 });
 
 // Health check endpoint
