@@ -6,7 +6,7 @@ const { google } = require('googleapis');
 require('dotenv').config();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 
 // Google Sheets configuration
 const GOOGLE_SHEETS_ID = process.env.GOOGLE_SHEETS_ID;
@@ -29,16 +29,24 @@ let auth;
 async function initializeGoogleSheets() {
   try {
     if (!GOOGLE_SHEETS_ID || !GOOGLE_SERVICE_ACCOUNT_EMAIL || !GOOGLE_PRIVATE_KEY) {
-      throw new Error('Missing required Google Sheets environment variables');
+      console.log('⚠️  Google Sheets credentials not configured, running without Sheets integration');
+      return false;
     }
 
-    // Create JWT authentication
-    auth = new google.auth.JWT(
-      GOOGLE_SERVICE_ACCOUNT_EMAIL,
-      null,
-      GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
-      ['https://www.googleapis.com/auth/spreadsheets']
-    );
+    // Clean the private key
+    const cleanPrivateKey = GOOGLE_PRIVATE_KEY
+      .replace(/\\n/g, '\n')
+      .replace(/^"|"$/g, '')
+      .trim();
+
+    // Create GoogleAuth with service account credentials
+    const auth = new google.auth.GoogleAuth({
+      credentials: {
+        client_email: GOOGLE_SERVICE_ACCOUNT_EMAIL,
+        private_key: cleanPrivateKey,
+      },
+      scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+    });
 
     // Create sheets API instance
     sheets = google.sheets({ version: 'v4', auth });
@@ -47,6 +55,7 @@ async function initializeGoogleSheets() {
     return true;
   } catch (error) {
     console.error('❌ Google Sheets authentication failed:', error.message);
+    console.log('⚠️  Running without Google Sheets integration');
     return false;
   }
 }
@@ -67,14 +76,22 @@ app.get('/api/test-sheets', async (req, res) => {
     if (!sheets) {
       return res.status(500).json({
         success: false,
-        message: 'Google Sheets not initialized'
+        message: 'Google Sheets not initialized. Check your environment variables and service account permissions.',
+        troubleshooting: {
+          steps: [
+            '1. Verify GOOGLE_SHEETS_ID, GOOGLE_SERVICE_ACCOUNT_EMAIL, and GOOGLE_PRIVATE_KEY are set',
+            '2. Enable Google Sheets API in Google Cloud Console',
+            '3. Share your Google Sheet with the service account email',
+            '4. Check that the private key is properly formatted'
+          ]
+        }
       });
     }
 
     // Test read access
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: GOOGLE_SHEETS_ID,
-      range: 'Sheet1!A1:E5',
+      range: 'A1:E5',
     });
 
     const values = response.data.values || [];
@@ -89,7 +106,15 @@ app.get('/api/test-sheets', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Google Sheets connection failed',
-      error: error.message
+      error: error.message,
+      troubleshooting: {
+        commonIssues: [
+          'Private key format issue - ensure proper line breaks',
+          'Google Sheets API not enabled',
+          'Service account lacks permissions',
+          'Sheet not shared with service account'
+        ]
+      }
     });
   }
 });
@@ -103,7 +128,7 @@ app.get('/api/data', async (req, res) => {
       });
     }
 
-    const { range = 'Sheet1!A1:Z100' } = req.query;
+    const { range = 'A1:Z100' } = req.query;
     
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: GOOGLE_SHEETS_ID,
@@ -148,7 +173,7 @@ app.post('/api/data', async (req, res) => {
       });
     }
 
-    const { data, range = 'Sheet1!A:Z' } = req.body;
+    const { data, range = 'A:Z' } = req.body;
     
     if (!data || !Array.isArray(data)) {
       return res.status(400).json({
@@ -331,12 +356,13 @@ async function startServer() {
     console.log('   - GOOGLE_PRIVATE_KEY');
   }
 
-  app.listen(PORT, () => {
+  app.listen(PORT, '0.0.0.0', () => {
     console.log(`🌐 Server running on port ${PORT}`);
     console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
     console.log(`🧪 Sheets test: http://localhost:${PORT}/api/test-sheets`);
     console.log(`📋 Sheets ID: ${GOOGLE_SHEETS_ID || 'Not configured'}`);
+    console.log(`🚀 Server bound to 0.0.0.0:${PORT} for Render deployment`);
   });
 }
 
