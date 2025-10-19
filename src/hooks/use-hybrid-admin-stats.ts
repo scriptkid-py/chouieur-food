@@ -71,6 +71,17 @@ export function useHybridAdminStats() {
     return [];
   }, [firebaseOrders, apiOrders, useFirebase, apiLoading]);
 
+  // Auto-refresh API orders every 30 seconds when using API mode
+  useEffect(() => {
+    if (!useFirebase && !apiLoading) {
+      const interval = setInterval(() => {
+        fetchOrdersFromAPI();
+      }, 30000); // Refresh every 30 seconds
+
+      return () => clearInterval(interval);
+    }
+  }, [useFirebase, apiLoading]);
+
   const isLoading = useFirebase ? firebaseLoading : apiLoading;
   const error = useFirebase ? firebaseError : apiError;
 

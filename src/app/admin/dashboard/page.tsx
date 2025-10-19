@@ -20,7 +20,8 @@ import {
   TrendingUp,
   Plus,
   Eye,
-  Loader2
+  Loader2,
+  RefreshCw
 } from "lucide-react";
 import Link from "next/link";
 
@@ -53,6 +54,16 @@ export default function AdminDashboardPage() {
           <Badge variant="secondary" className="text-xs">
             {source?.toUpperCase()} • {ordersCount} orders
           </Badge>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={refetch}
+            disabled={statsLoading}
+            className="h-8"
+          >
+            <RefreshCw className={`h-3 w-3 mr-1 ${statsLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
         </div>
       </div>
 
