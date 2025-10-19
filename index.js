@@ -278,7 +278,7 @@ app.get('/api/orders', async (req, res) => {
 
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: GOOGLE_SHEETS_ID,
-      range: 'Orders!A1:F100',
+      range: 'Orders!A1:O1000',
     });
 
     const values = response.data.values || [];
@@ -293,7 +293,7 @@ app.get('/api/orders', async (req, res) => {
       headers.forEach((header, colIndex) => {
         order[header.toLowerCase().replace(/\s+/g, '_')] = row[colIndex] || '';
       });
-      order.id = (index + 1).toString();
+      order.id = order.orderid || (index + 1).toString();
       return order;
     });
 
@@ -316,34 +316,193 @@ app.post('/api/orders', async (req, res) => {
     }
 
     const order = req.body;
+    const orderId = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
+    // Prepare order data for Google Sheets
     const orderData = [
-      new Date().toISOString(),
+      orderId,
+      order.userId || '',
       order.customerName || 'Anonymous',
-      order.items ? JSON.stringify(order.items) : '',
+      order.customerPhone || '',
+      order.customerAddress || '',
+      JSON.stringify(order.items || []),
       order.total || 0,
       order.status || 'pending',
-      order.email || ''
+      new Date().toISOString(),
+      new Date().toISOString(),
+      order.email || '',
+      order.notes || '',
+      order.deliveryTime || '',
+      order.paymentMethod || 'cash',
+      order.orderType || 'delivery'
     ];
 
-    const response = await sheets.spreadsheets.values.append({
+    // Add order to Orders sheet
+    await sheets.spreadsheets.values.append({
       spreadsheetId: GOOGLE_SHEETS_ID,
-      range: 'Orders!A:F',
+      range: 'Orders!A:O',
       valueInputOption: 'RAW',
       resource: {
         values: [orderData]
       }
     });
 
+    // Add individual order items to OrderItems sheet
+    if (order.items && order.items.length > 0) {
+      const orderItemsData = order.items.map(item => [
+        orderId,
+        item.menuItemId || item.menuItem?.id || '',
+        item.menuItem?.name || item.name || '',
+        item.quantity || 1,
+        item.size || 'Normal',
+        item.unitPrice || item.menuItem?.price || 0,
+        item.totalPrice || 0,
+        JSON.stringify(item.supplements || []),
+        new Date().toISOString(),
+        item.notes || ''
+      ]);
+
+      await sheets.spreadsheets.values.append({
+        spreadsheetId: GOOGLE_SHEETS_ID,
+        range: 'OrderItems!A:J',
+        valueInputOption: 'RAW',
+        resource: {
+          values: orderItemsData
+        }
+      });
+    }
+
     res.json({
       success: true,
       message: 'Order created successfully',
-      orderId: Date.now().toString(),
-      order: order
+      orderId: orderId,
+      order: {
+        ...order,
+        id: orderId
+      }
     });
   } catch (error) {
     console.error('Error creating order:', error);
     res.status(500).json({
       error: 'Failed to create order',
+      message: error.message
+    });
+  }
+});
+
+// Get orders by user ID
+app.get('/api/orders/user/:userId', async (req, res) => {
+  try {
+    if (!sheets) {
+      return res.status(500).json({
+        error: 'Google Sheets not initialized'
+      });
+    }
+
+    const { userId } = req.params;
+
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId: GOOGLE_SHEETS_ID,
+      range: 'Orders!A1:O1000',
+    });
+
+    const values = response.data.values || [];
+    
+    if (values.length === 0) {
+      return res.json([]);
+    }
+
+    const headers = values[0];
+    const allOrders = values.slice(1).map((row, index) => {
+      const order = {};
+      headers.forEach((header, colIndex) => {
+        order[header.toLowerCase().replace(/\s+/g, '_')] = row[colIndex] || '';
+      });
+      order.id = order.orderid || (index + 1).toString();
+      return order;
+    });
+
+    // Filter orders by user ID
+    const userOrders = allOrders.filter(order => order.userid === userId);
+
+    res.json(userOrders);
+  } catch (error) {
+    console.error('Error fetching user orders:', error);
+    res.status(500).json({
+      error: 'Failed to fetch user orders',
+      message: error.message
+    });
+  }
+});
+
+// Update order status
+app.put('/api/orders/:orderId', async (req, res) => {
+  try {
+    if (!sheets) {
+      return res.status(500).json({
+        error: 'Google Sheets not initialized'
+      });
+    }
+
+    const { orderId } = req.params;
+    const { status, notes } = req.body;
+
+    // Find the order row
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId: GOOGLE_SHEETS_ID,
+      range: 'Orders!A1:O1000',
+    });
+
+    const values = response.data.values || [];
+    const orderRowIndex = values.findIndex(row => row[0] === orderId);
+
+    if (orderRowIndex === -1) {
+      return res.status(404).json({
+        error: 'Order not found'
+      });
+    }
+
+    // Update the order status
+    const rowNumber = orderRowIndex + 1;
+    const updates = [];
+    
+    if (status) {
+      updates.push({
+        range: `Orders!H${rowNumber}`,
+        values: [[status]]
+      });
+    }
+    
+    if (notes) {
+      updates.push({
+        range: `Orders!L${rowNumber}`,
+        values: [[notes]]
+      });
+    }
+
+    // Update timestamp
+    updates.push({
+      range: `Orders!J${rowNumber}`,
+      values: [[new Date().toISOString()]]
+    });
+
+    await sheets.spreadsheets.values.batchUpdate({
+      spreadsheetId: GOOGLE_SHEETS_ID,
+      resource: {
+        valueInputOption: 'RAW',
+        data: updates
+      }
+    });
+
+    res.json({
+      success: true,
+      message: 'Order updated successfully',
+      orderId: orderId
+    });
+  } catch (error) {
+    console.error('Error updating order:', error);
+    res.status(500).json({
+      error: 'Failed to update order',
       message: error.message
     });
   }

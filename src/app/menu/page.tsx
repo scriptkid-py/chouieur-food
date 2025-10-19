@@ -1,12 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { MENU_ITEMS } from '@/lib/menu-data';
 import { MenuItemCard } from '@/components/menu/MenuItemCard';
+import { useMenuItems } from '@/hooks/use-menu-items';
 import type { MenuItemCategory } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Sandwich, Pizza, Drumstick, Ham, Wheat, Utensils } from 'lucide-react';
+import { Sandwich, Pizza, Drumstick, Ham, Wheat, Utensils, Loader2 } from 'lucide-react';
 
 const categories: { name: MenuItemCategory; icon: React.ElementType }[] = [
   { name: 'Sandwiches', icon: Sandwich },
@@ -20,10 +20,32 @@ const categories: { name: MenuItemCategory; icon: React.ElementType }[] = [
 
 export default function MenuPage() {
   const [activeCategory, setActiveCategory] = useState<MenuItemCategory | 'All'>('All');
+  const { menuItems, isLoading, error } = useMenuItems();
 
   const filteredItems = activeCategory === 'All'
-    ? MENU_ITEMS
-    : MENU_ITEMS.filter(item => item.category === activeCategory);
+    ? menuItems
+    : menuItems.filter(item => item.category === activeCategory);
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-4 py-8 md:px-6">
+        <div className="flex justify-center items-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin" />
+          <span className="ml-2">Loading menu...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto px-4 py-8 md:px-6">
+        <div className="text-center">
+          <p className="text-red-500">Error loading menu: {error}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-8 md:px-6">

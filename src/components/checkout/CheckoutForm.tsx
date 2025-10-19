@@ -12,11 +12,8 @@ import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
-import { useFirestore, useUser } from '@/firebase';
-import { addDoc, collection } from 'firebase/firestore';
-import type { Order } from '@/lib/types';
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
+import { useUser } from '@/firebase';
+import { apiRequest } from '@/lib/api-config';
 import Link from 'next/link';
 import { automateDeliveryNotifications } from '@/ai/flows/automate-delivery-notifications';
 
@@ -32,7 +29,6 @@ export function CheckoutForm() {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { register, handleSubmit, formState: { errors }, setValue } = useForm<FormValues>();
-  const firestore = useFirestore();
   const { user, isUserLoading } = useUser();
 
   useEffect(() => {
@@ -60,65 +56,59 @@ export function CheckoutForm() {
       return;
     }
 
-    if (!firestore) {
-        toast({
-            title: 'Error',
-            description: 'Could not connect to the database. Please try again later.',
-            variant: 'destructive',
-        });
-        return;
-    }
-    
     setIsSubmitting(true);
 
-    const ordersCollection = collection(firestore, 'users', user.uid, 'orders');
-    const newOrder: Omit<Order, 'id'> = {
-      userId: user.uid,
-      customerName: data.name,
-      customerPhone: data.phone,
-      customerAddress: data.address,
-      items: cartItems,
-      total: cartTotal,
-      status: 'pending',
-      createdAt: new Date().toISOString(),
-    };
+    try {
+      // Prepare order data for Google Sheets
+      const newOrder = {
+        userId: user.uid,
+        customerName: data.name,
+        customerPhone: data.phone,
+        customerAddress: data.address,
+        items: cartItems,
+        total: cartTotal,
+        status: 'pending',
+        email: user.email || '',
+        orderType: 'delivery',
+        paymentMethod: 'cash'
+      };
 
-    addDoc(ordersCollection, newOrder)
-      .then(async (docRef) => {
-        if (docRef.id) {
-            
-          // Trigger the automation flow
-          await automateDeliveryNotifications({
-            orderId: docRef.id,
-            customerName: newOrder.customerName,
-            customerPhoneNumber: newOrder.customerPhone,
-            deliveryAddress: newOrder.customerAddress,
-            orderItems: newOrder.items.map(item => `${item.quantity}x ${item.menuItem.name}`),
-            totalAmount: newOrder.total,
-          });
+      // Send order to Google Sheets via API
+      const response = await apiRequest('/api/orders', {
+        method: 'POST',
+        body: JSON.stringify(newOrder)
+      });
 
-          toast({
-            title: 'Order Placed!',
-            description: 'Your order has been successfully placed.',
-          });
-          clearCart();
-          router.push(`/order/confirmation/${docRef.id}`);
-        } else {
-          throw new Error('Failed to create order.');
-        }
-      })
-      .catch((serverError) => {
-        const permissionError = new FirestorePermissionError({
-            path: `users/${user.uid}/orders`,
-            operation: 'create',
-            requestResourceData: newOrder,
+      if (response.success) {
+        // Trigger the automation flow
+        await automateDeliveryNotifications({
+          orderId: response.orderId,
+          customerName: newOrder.customerName,
+          customerPhoneNumber: newOrder.customerPhone,
+          deliveryAddress: newOrder.customerAddress,
+          orderItems: newOrder.items.map(item => `${item.quantity}x ${item.menuItem.name}`),
+          totalAmount: newOrder.total,
         });
 
-        errorEmitter.emit('permission-error', permissionError);
-      })
-      .finally(() => {
-        setIsSubmitting(false);
+        toast({
+          title: 'Order Placed!',
+          description: 'Your order has been successfully placed.',
+        });
+        clearCart();
+        router.push(`/order/confirmation/${response.orderId}`);
+      } else {
+        throw new Error('Failed to create order.');
+      }
+    } catch (error) {
+      console.error('Error placing order:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to place order. Please try again.',
+        variant: 'destructive',
       });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (isUserLoading) {
