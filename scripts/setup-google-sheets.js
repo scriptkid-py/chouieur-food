@@ -54,10 +54,10 @@ async function setupGoogleSheets() {
     // Add headers for MenuItems
     await sheets.spreadsheets.values.update({
       spreadsheetId: GOOGLE_SHEETS_ID,
-      range: 'MenuItems!A1:H1',
+      range: 'MenuItems!A1:I1',
       valueInputOption: 'RAW',
       resource: {
-        values: [['ID', 'Name', 'Category', 'Price', 'MegaPrice', 'Description', 'ImageId', 'IsActive']]
+        values: [['ID', 'Name', 'Category', 'Price', 'MegaPrice', 'Description', 'ImageId', 'ImageUrl', 'IsActive']]
       }
     });
 
@@ -161,12 +161,15 @@ async function setupGoogleSheets() {
       ['plat-du-jour', 'Plat du Jour', 'Plats', 800, '', 'The special plate of the day.', 'plat', 'TRUE']
     ];
 
+    // Add menu items (with empty ImageUrl column)
+    const sampleMenuItemsWithImageUrl = sampleMenuItems.map(item => [...item, '']); // Add empty ImageUrl column
+    
     await sheets.spreadsheets.values.update({
       spreadsheetId: GOOGLE_SHEETS_ID,
-      range: 'MenuItems!A2:H9',
+      range: 'MenuItems!A2:I9',
       valueInputOption: 'RAW',
       resource: {
-        values: sampleMenuItems
+        values: sampleMenuItemsWithImageUrl
       }
     });
 

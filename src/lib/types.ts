@@ -14,6 +14,8 @@ export type MenuItem = {
   megaPrice?: number;
   description: string;
   imageId: string;
+  imageUrl?: string; // New field for actual image URLs
+  isActive?: boolean;
 };
 
 export type CartItem = {

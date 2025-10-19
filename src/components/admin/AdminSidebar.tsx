@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, Package, LogOut } from 'lucide-react';
+import { LayoutDashboard, Package, LogOut, Utensils } from 'lucide-react';
 import {
   Sidebar,
   SidebarHeader,
@@ -29,6 +29,11 @@ export function AdminSidebar() {
       title: 'Dashboard',
       href: '/admin/dashboard',
       icon: LayoutDashboard,
+    },
+    {
+      title: 'Menu Items',
+      href: '/admin/menu',
+      icon: Utensils,
     },
     {
       title: 'Orders',

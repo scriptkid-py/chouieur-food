@@ -24,6 +24,7 @@ export function useMenuItems() {
           megaPrice: item.megaprice ? parseFloat(item.megaprice) : undefined,
           description: item.description || item.description,
           imageId: item.imageid || item.imageId,
+          imageUrl: item.imageurl || item.imageUrl, // New field for actual image URLs
           isActive: item.isactive === 'TRUE' || item.isActive === true
         }));
 

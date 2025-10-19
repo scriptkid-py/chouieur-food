@@ -18,7 +18,13 @@ type MenuItemCardProps = {
 export function MenuItemCard({ item }: MenuItemCardProps) {
   const { addItem } = useCart();
   const [size, setSize] = useState<'Normal' | 'Mega'>('Normal');
-  const image = PlaceHolderImages.find(p => p.id === item.imageId);
+  
+  // Use actual image URL if available, otherwise fall back to placeholder
+  const imageUrl = item.imageUrl || (() => {
+    const placeholder = PlaceHolderImages.find(p => p.id === item.imageId);
+    return placeholder?.imageUrl;
+  })();
+  
   const hasSizeOption = item.megaPrice !== undefined;
 
   const handleAddToCart = () => {
@@ -31,11 +37,10 @@ export function MenuItemCard({ item }: MenuItemCardProps) {
     <Card className="flex flex-col overflow-hidden rounded-lg shadow-lg transition-transform duration-300 hover:scale-105 hover:shadow-xl">
       <CardHeader className="p-0">
         <div className="relative h-48 w-full">
-          {image ? (
+          {imageUrl ? (
              <Image
-                src={image.imageUrl}
+                src={imageUrl}
                 alt={item.name}
-                data-ai-hint={image.imageHint}
                 fill
                 className="object-cover"
                 sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"

@@ -2,6 +2,10 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+const { v4: uuidv4 } = require('uuid');
 const { google } = require('googleapis');
 require('dotenv').config();
 
@@ -13,6 +17,41 @@ const GOOGLE_SHEETS_ID = process.env.GOOGLE_SHEETS_ID;
 const GOOGLE_SERVICE_ACCOUNT_EMAIL = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
 const GOOGLE_PRIVATE_KEY = process.env.GOOGLE_PRIVATE_KEY;
 
+// Image upload configuration
+const UPLOADS_DIR = path.join(__dirname, 'uploads', 'menu-images');
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+
+// Create uploads directory if it doesn't exist
+if (!fs.existsSync(UPLOADS_DIR)) {
+  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+}
+
+// Configure multer for file uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, UPLOADS_DIR);
+  },
+  filename: (req, file, cb) => {
+    const uniqueName = `${uuidv4()}-${Date.now()}${path.extname(file.originalname)}`;
+    cb(null, uniqueName);
+  }
+});
+
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: MAX_FILE_SIZE
+  },
+  fileFilter: (req, file, cb) => {
+    if (ALLOWED_FILE_TYPES.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only JPEG, PNG, and WebP images are allowed.'), false);
+    }
+  }
+});
+
 // Middleware
 app.use(helmet());
 app.use(morgan('combined'));
@@ -21,6 +60,9 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json());
+
+// Serve uploaded images statically
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Google Sheets authentication
 let sheets;
@@ -567,7 +609,7 @@ app.get('/api/menu-items', async (req, res) => {
     // Read from MenuItems sheet
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: GOOGLE_SHEETS_ID,
-      range: 'MenuItems!A1:F100',
+      range: 'MenuItems!A1:H100',
     });
 
     const values = response.data.values || [];
@@ -591,6 +633,247 @@ app.get('/api/menu-items', async (req, res) => {
     console.error('Error fetching menu items:', error);
     res.status(500).json({
       error: 'Failed to fetch menu items',
+      message: error.message
+    });
+  }
+});
+
+// ==================== IMAGE UPLOAD ENDPOINTS ====================
+
+// Upload menu item image
+app.post('/api/menu-items/upload-image', upload.single('image'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        error: 'No image file provided'
+      });
+    }
+
+    const imageUrl = `/uploads/menu-images/${req.file.filename}`;
+    const fullImageUrl = `${req.protocol}://${req.get('host')}${imageUrl}`;
+
+    res.json({
+      success: true,
+      message: 'Image uploaded successfully',
+      imageUrl: fullImageUrl,
+      filename: req.file.filename
+    });
+  } catch (error) {
+    console.error('Error uploading image:', error);
+    res.status(500).json({
+      error: 'Failed to upload image',
+      message: error.message
+    });
+  }
+});
+
+// Create new menu item with image
+app.post('/api/menu-items', upload.single('image'), async (req, res) => {
+  try {
+    if (!sheets) {
+      return res.status(500).json({
+        error: 'Google Sheets not initialized'
+      });
+    }
+
+    const { name, category, price, megaPrice, description, imageId } = req.body;
+    
+    if (!name || !category || !price || !description) {
+      return res.status(400).json({
+        error: 'Missing required fields: name, category, price, description'
+      });
+    }
+
+    let imageUrl = '';
+    if (req.file) {
+      imageUrl = `/uploads/menu-images/${req.file.filename}`;
+    } else if (imageId) {
+      // Use existing imageId if no new image uploaded
+      imageUrl = imageId;
+    }
+
+    // Prepare menu item data for Google Sheets
+    const menuItemData = [
+      uuidv4(), // ID
+      name,
+      category,
+      parseFloat(price),
+      megaPrice ? parseFloat(megaPrice) : '',
+      description,
+      imageUrl || imageId || '',
+      'TRUE' // IsActive
+    ];
+
+    // Add menu item to MenuItems sheet
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: GOOGLE_SHEETS_ID,
+      range: 'MenuItems!A:H',
+      valueInputOption: 'RAW',
+      resource: {
+        values: [menuItemData]
+      }
+    });
+
+    res.json({
+      success: true,
+      message: 'Menu item created successfully',
+      menuItem: {
+        id: menuItemData[0],
+        name,
+        category,
+        price: parseFloat(price),
+        megaPrice: megaPrice ? parseFloat(megaPrice) : undefined,
+        description,
+        imageUrl: imageUrl || imageId || '',
+        isActive: true
+      }
+    });
+  } catch (error) {
+    console.error('Error creating menu item:', error);
+    res.status(500).json({
+      error: 'Failed to create menu item',
+      message: error.message
+    });
+  }
+});
+
+// Update menu item with image
+app.put('/api/menu-items/:id', upload.single('image'), async (req, res) => {
+  try {
+    if (!sheets) {
+      return res.status(500).json({
+        error: 'Google Sheets not initialized'
+      });
+    }
+
+    const { id } = req.params;
+    const { name, category, price, megaPrice, description, imageId } = req.body;
+
+    // Find the menu item row
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId: GOOGLE_SHEETS_ID,
+      range: 'MenuItems!A1:H1000',
+    });
+
+    const values = response.data.values || [];
+    const menuItemRowIndex = values.findIndex(row => row[0] === id);
+
+    if (menuItemRowIndex === -1) {
+      return res.status(404).json({
+        error: 'Menu item not found'
+      });
+    }
+
+    let imageUrl = '';
+    if (req.file) {
+      imageUrl = `/uploads/menu-images/${req.file.filename}`;
+    } else if (imageId) {
+      imageUrl = imageId;
+    } else {
+      // Keep existing image if no new one provided
+      imageUrl = values[menuItemRowIndex][6] || '';
+    }
+
+    // Update the menu item
+    const rowNumber = menuItemRowIndex + 1;
+    const updates = [];
+
+    if (name) {
+      updates.push({
+        range: `MenuItems!B${rowNumber}`,
+        values: [[name]]
+      });
+    }
+    
+    if (category) {
+      updates.push({
+        range: `MenuItems!C${rowNumber}`,
+        values: [[category]]
+      });
+    }
+    
+    if (price) {
+      updates.push({
+        range: `MenuItems!D${rowNumber}`,
+        values: [[parseFloat(price)]]
+      });
+    }
+    
+    if (megaPrice !== undefined) {
+      updates.push({
+        range: `MenuItems!E${rowNumber}`,
+        values: [[megaPrice ? parseFloat(megaPrice) : '']]
+      });
+    }
+    
+    if (description) {
+      updates.push({
+        range: `MenuItems!F${rowNumber}`,
+        values: [[description]]
+      });
+    }
+    
+    if (imageUrl) {
+      updates.push({
+        range: `MenuItems!G${rowNumber}`,
+        values: [[imageUrl]]
+      });
+    }
+
+    if (updates.length > 0) {
+      await sheets.spreadsheets.values.batchUpdate({
+        spreadsheetId: GOOGLE_SHEETS_ID,
+        resource: {
+          valueInputOption: 'RAW',
+          data: updates
+        }
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Menu item updated successfully',
+      menuItem: {
+        id,
+        name: name || values[menuItemRowIndex][1],
+        category: category || values[menuItemRowIndex][2],
+        price: price ? parseFloat(price) : parseFloat(values[menuItemRowIndex][3]),
+        megaPrice: megaPrice ? parseFloat(megaPrice) : (values[menuItemRowIndex][4] ? parseFloat(values[menuItemRowIndex][4]) : undefined),
+        description: description || values[menuItemRowIndex][5],
+        imageUrl: imageUrl || values[menuItemRowIndex][6],
+        isActive: values[menuItemRowIndex][7] === 'TRUE'
+      }
+    });
+  } catch (error) {
+    console.error('Error updating menu item:', error);
+    res.status(500).json({
+      error: 'Failed to update menu item',
+      message: error.message
+    });
+  }
+});
+
+// Delete menu item image
+app.delete('/api/menu-items/:id/image', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const imagePath = path.join(UPLOADS_DIR, id);
+    
+    if (fs.existsSync(imagePath)) {
+      fs.unlinkSync(imagePath);
+      res.json({
+        success: true,
+        message: 'Image deleted successfully'
+      });
+    } else {
+      res.status(404).json({
+        error: 'Image not found'
+      });
+    }
+  } catch (error) {
+    console.error('Error deleting image:', error);
+    res.status(500).json({
+      error: 'Failed to delete image',
       message: error.message
     });
   }

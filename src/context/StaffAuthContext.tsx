@@ -6,7 +6,7 @@ interface StaffAuthContextType {
   isAuthenticated: boolean;
   role: 'admin' | 'kitchen' | null;
   isLoading: boolean;
-  login: (role: 'admin' | 'kitchen') => void;
+  login: (username: string, password: string) => { success: boolean; role?: 'admin' | 'kitchen' };
   logout: () => void;
 }
 
@@ -28,10 +28,32 @@ export function StaffAuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(false);
   }, []);
 
-  const login = (newRole: 'admin' | 'kitchen') => {
-    setIsAuthenticated(true);
-    setRole(newRole);
-    localStorage.setItem('staffAuth', JSON.stringify({ isAuthenticated: true, role: newRole }));
+  const login = (username: string, password: string) => {
+    // Simple hardcoded credentials for demo purposes
+    // In production, this should be replaced with proper authentication
+    const credentials = {
+      admin: { username: 'admin', password: 'admin123' },
+      kitchen: { username: 'kitchen', password: 'kitchen123' }
+    };
+
+    // Check admin credentials
+    if (username === credentials.admin.username && password === credentials.admin.password) {
+      setIsAuthenticated(true);
+      setRole('admin');
+      localStorage.setItem('staffAuth', JSON.stringify({ isAuthenticated: true, role: 'admin' }));
+      return { success: true, role: 'admin' };
+    }
+
+    // Check kitchen credentials
+    if (username === credentials.kitchen.username && password === credentials.kitchen.password) {
+      setIsAuthenticated(true);
+      setRole('kitchen');
+      localStorage.setItem('staffAuth', JSON.stringify({ isAuthenticated: true, role: 'kitchen' }));
+      return { success: true, role: 'kitchen' };
+    }
+
+    // Invalid credentials
+    return { success: false };
   };
 
   const logout = () => {
