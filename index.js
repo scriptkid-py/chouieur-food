@@ -69,13 +69,22 @@ const upload = multer({
 });
 
 // Middleware
-app.use(helmet());
+app.use(helmet({
+  crossOriginEmbedderPolicy: false,
+  contentSecurityPolicy: false
+}));
 app.use(morgan('combined'));
-// More permissive CORS configuration for production
+
+// Enhanced CORS configuration for production
 const corsOptions = {
   origin: function (origin, callback) {
+    console.log('CORS request from origin:', origin);
+    
     // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
+    if (!origin) {
+      console.log('No origin provided, allowing request');
+      return callback(null, true);
+    }
     
     const allowedOrigins = [
       process.env.FRONTEND_URL,
@@ -88,25 +97,39 @@ const corsOptions = {
     
     // Always allow the specific Render frontend URL
     if (origin === 'https://chouieur-express-frontend.onrender.com') {
+      console.log('Allowing Render frontend origin:', origin);
       return callback(null, true);
     }
     
     if (allowedOrigins.indexOf(origin) !== -1) {
+      console.log('Origin in allowed list:', origin);
       callback(null, true);
     } else {
       // For development, allow any localhost origin
       if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+        console.log('Allowing localhost origin:', origin);
         callback(null, true);
       } else {
         console.log('CORS blocked origin:', origin);
         // For now, allow all origins to fix the issue
+        console.log('Allowing blocked origin for now:', origin);
         callback(null, true);
       }
     }
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'Access-Control-Request-Method', 'Access-Control-Request-Headers'],
+  allowedHeaders: [
+    'Content-Type', 
+    'Authorization', 
+    'X-Requested-With', 
+    'Accept', 
+    'Origin', 
+    'Access-Control-Request-Method', 
+    'Access-Control-Request-Headers',
+    'Cache-Control',
+    'Pragma'
+  ],
   exposedHeaders: ['Content-Length', 'X-Foo', 'X-Bar'],
   preflightContinue: false,
   optionsSuccessStatus: 200
@@ -114,12 +137,16 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
-// Handle preflight requests explicitly
+// Handle preflight requests explicitly for all routes
 app.options('*', (req, res) => {
+  console.log('Handling preflight request for:', req.path);
+  console.log('Origin:', req.headers.origin);
+  
   res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin, Access-Control-Request-Method, Access-Control-Request-Headers');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin, Access-Control-Request-Method, Access-Control-Request-Headers, Cache-Control, Pragma');
   res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Max-Age', '86400'); // 24 hours
   res.sendStatus(200);
 });
 
@@ -673,6 +700,12 @@ app.post('/api/data', async (req, res) => {
 
 // Menu items endpoints
 app.get('/api/menu-items', async (req, res) => {
+  // Add CORS headers specifically for this endpoint
+  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  
   try {
     if (!sheets) {
       return res.status(500).json({
