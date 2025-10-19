@@ -4,14 +4,14 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { useOrders } from "@/hooks/use-orders";
+import { useRealtimeOrders } from "@/hooks/use-realtime-orders";
 import { useStaffAuth } from "@/context/StaffAuthContext";
 import { Loader2, RefreshCw, Eye, CheckCircle, XCircle, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function AdminOrdersPage() {
   const { role } = useStaffAuth();
-  const { orders, isLoading, error, refetch, updateOrderStatus } = useOrders();
+  const { orders, isLoading, error, refetch, updateOrderStatus } = useRealtimeOrders();
 
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
@@ -24,15 +24,32 @@ export default function AdminOrdersPage() {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    if (!dateString) return 'Unknown';
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+  const formatDate = (date: any) => {
+    if (!date) return 'Unknown';
+    
+    // Handle Firestore timestamp
+    if (date.toDate && typeof date.toDate === 'function') {
+      return date.toDate().toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+    
+    // Handle string dates
+    if (typeof date === 'string') {
+      return new Date(date).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+    
+    return 'Unknown';
   };
 
   const handleStatusUpdate = async (orderId: string, newStatus: string) => {
@@ -127,7 +144,7 @@ export default function AdminOrdersPage() {
                   </TableRow>
                 ) : orders.length > 0 ? (
                   orders.map((order) => {
-                    const items = order.items ? JSON.parse(order.items) : [];
+                    const items = order.items || [];
                     
                     return (
                       <TableRow key={order.orderid || order.id}>
@@ -135,12 +152,12 @@ export default function AdminOrdersPage() {
                           {order.orderid || order.id}
                         </TableCell>
                         <TableCell>
-                          {formatDate(order.created_at)}
+                          {formatDate(order.createdAt)}
                         </TableCell>
                         <TableCell>
                           <div>
-                            <div className="font-medium">{order.customer_name || 'Anonymous'}</div>
-                            <div className="text-sm text-muted-foreground">{order.customer_phone}</div>
+                            <div className="font-medium">{order.customerName || 'Anonymous'}</div>
+                            <div className="text-sm text-muted-foreground">{order.customerPhone}</div>
                           </div>
                         </TableCell>
                         <TableCell>

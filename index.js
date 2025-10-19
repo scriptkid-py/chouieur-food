@@ -7,6 +7,7 @@ const path = require('path');
 const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
 const { google } = require('googleapis');
+const admin = require('firebase-admin');
 require('dotenv').config();
 
 const app = express();
@@ -16,6 +17,21 @@ const PORT = process.env.PORT || 3001;
 const GOOGLE_SHEETS_ID = process.env.GOOGLE_SHEETS_ID;
 const GOOGLE_SERVICE_ACCOUNT_EMAIL = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
 const GOOGLE_PRIVATE_KEY = process.env.GOOGLE_PRIVATE_KEY;
+
+// Firebase Admin configuration
+let db;
+try {
+  if (!admin.apps.length) {
+    admin.initializeApp({
+      credential: admin.credential.applicationDefault(),
+      projectId: 'studio-4940927620-c4e90'
+    });
+  }
+  db = admin.firestore();
+  console.log('Firebase Admin initialized successfully');
+} catch (error) {
+  console.error('Firebase Admin initialization failed:', error);
+}
 
 // Image upload configuration
 const UPLOADS_DIR = path.join(__dirname, 'uploads', 'menu-images');
@@ -982,6 +998,35 @@ app.post('/api/orders', async (req, res) => {
           values: orderItemsData
         }
       });
+    }
+
+    // Also save to Firebase Firestore for real-time updates
+    if (db) {
+      try {
+        const firestoreOrder = {
+          orderid: orderId,
+          userid: order.userId || '',
+          customerName: order.customerName || 'Anonymous',
+          customerPhone: order.customerPhone || '',
+          customerAddress: order.customerAddress || '',
+          items: order.items || [],
+          total: order.total || 0,
+          status: order.status || 'pending',
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          email: order.email || '',
+          notes: order.notes || '',
+          deliveryTime: order.deliveryTime || '',
+          paymentMethod: order.paymentMethod || 'cash',
+          orderType: order.orderType || 'delivery'
+        };
+
+        await db.collection('orders').add(firestoreOrder);
+        console.log('Order saved to Firestore:', orderId);
+      } catch (firestoreError) {
+        console.error('Failed to save order to Firestore:', firestoreError);
+        // Don't fail the request if Firestore fails, Google Sheets is the primary storage
+      }
     }
 
     res.json({

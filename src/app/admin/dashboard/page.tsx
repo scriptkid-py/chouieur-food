@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useMenuItems } from "@/hooks/use-menu-items";
 import { useStaffAuth } from "@/context/StaffAuthContext";
-import { useAdminStats } from "@/hooks/use-admin-stats";
+import { useRealtimeAdminStats } from "@/hooks/use-realtime-orders";
 import { 
   Package, 
   Users, 
@@ -26,7 +26,7 @@ import Link from "next/link";
 export default function AdminDashboardPage() {
   const { role } = useStaffAuth();
   const { menuItems, isLoading: menuLoading } = useMenuItems();
-  const { stats, isLoading: statsLoading, error: statsError, refetch } = useAdminStats();
+  const { stats, isLoading: statsLoading, error: statsError, refetch } = useRealtimeAdminStats();
 
   const getStatusColor = (status: string) => {
     switch (status) {

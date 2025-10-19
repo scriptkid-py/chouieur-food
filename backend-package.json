@@ -13,7 +13,8 @@
     "helmet": "^7.1.0",
     "morgan": "^1.10.0",
     "googleapis": "^163.0.0",
-    "dotenv": "^16.6.1"
+    "dotenv": "^16.6.1",
+    "firebase-admin": "^12.0.0"
   },
   "engines": {
     "node": ">=18.0.0"

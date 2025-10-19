@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useStaffAuth } from "@/context/StaffAuthContext";
-import { useOrders } from "@/hooks/use-orders";
+import { useRealtimeOrders } from "@/hooks/use-realtime-orders";
 import { 
   UtensilsCrossed, 
   Clock, 
@@ -18,7 +18,7 @@ import { useState } from "react";
 
 export default function KitchenViewPage() {
   const { role } = useStaffAuth();
-  const { orders: allOrders, isLoading, updateOrderStatus, refetch, error } = useOrders();
+  const { orders: allOrders, isLoading, updateOrderStatus, refetch, error } = useRealtimeOrders();
 
   // Filter orders for kitchen (confirmed, preparing, ready)
   const kitchenOrders = allOrders.filter(order => 
@@ -162,13 +162,15 @@ export default function KitchenViewPage() {
                 </TableRow>
               ) : kitchenOrders.length > 0 ? (
                 kitchenOrders.map((order) => {
-                  const items = order.items ? JSON.parse(order.items) : [];
-                  const timeAgo = order.created_at ? new Date(order.created_at).toLocaleString() : 'Unknown';
+                  const items = order.items || [];
+                  const timeAgo = order.createdAt ? 
+                    (order.createdAt.toDate ? order.createdAt.toDate().toLocaleString() : new Date(order.createdAt).toLocaleString()) 
+                    : 'Unknown';
                   
                   return (
                     <TableRow key={order.orderid || order.id}>
                       <TableCell className="font-medium">{order.orderid || order.id}</TableCell>
-                      <TableCell>{order.customer_name || 'Anonymous'}</TableCell>
+                      <TableCell>{order.customerName || 'Anonymous'}</TableCell>
                       <TableCell>
                         <div className="space-y-1">
                           {items.map((item: any, index: number) => (
