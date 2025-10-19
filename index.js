@@ -1120,6 +1120,158 @@ app.put('/api/orders/:orderId', async (req, res) => {
   }
 });
 
+// Admin statistics endpoint
+app.get('/api/admin/stats', async (req, res) => {
+  try {
+    if (!sheets) {
+      return res.status(500).json({
+        error: 'Google Sheets not initialized'
+      });
+    }
+
+    // Fetch orders data
+    const ordersResponse = await sheets.spreadsheets.values.get({
+      spreadsheetId: GOOGLE_SHEETS_ID,
+      range: 'Orders!A1:O1000',
+    });
+
+    // Fetch menu items data
+    const menuResponse = await sheets.spreadsheets.values.get({
+      spreadsheetId: GOOGLE_SHEETS_ID,
+      range: 'MenuItems!A1:I1000',
+    });
+
+    const ordersValues = ordersResponse.data.values || [];
+    const menuValues = menuResponse.data.values || [];
+
+    // Process orders
+    let totalOrders = 0;
+    let pendingOrders = 0;
+    let confirmedOrders = 0;
+    let readyOrders = 0;
+    let deliveredOrders = 0;
+    let totalRevenue = 0;
+    const recentOrders = [];
+
+    if (ordersValues.length > 1) {
+      const orderHeaders = ordersValues[0];
+      const orders = ordersValues.slice(1);
+
+      totalOrders = orders.length;
+
+      orders.forEach((row, index) => {
+        const order = {};
+        orderHeaders.forEach((header, colIndex) => {
+          order[header.toLowerCase().replace(/\s+/g, '_')] = row[colIndex] || '';
+        });
+
+        // Count by status
+        const status = order.status?.toLowerCase();
+        switch (status) {
+          case 'pending':
+            pendingOrders++;
+            break;
+          case 'confirmed':
+            confirmedOrders++;
+            break;
+          case 'ready':
+            readyOrders++;
+            break;
+          case 'delivered':
+            deliveredOrders++;
+            break;
+        }
+
+        // Calculate revenue
+        const total = parseFloat(order.total) || 0;
+        totalRevenue += total;
+
+        // Get recent orders (last 10)
+        if (index < 10) {
+          recentOrders.push({
+            id: order.orderid || `ORD-${index + 1}`,
+            customer: order.customer_name || 'Anonymous',
+            total: total,
+            status: status || 'pending',
+            time: order.created_at || new Date().toISOString(),
+            items: order.items ? JSON.parse(order.items) : []
+          });
+        }
+      });
+    }
+
+    // Process menu items
+    let totalMenuItems = 0;
+    let activeMenuItems = 0;
+    let menuItemsWithImages = 0;
+    const categories = new Set();
+
+    if (menuValues.length > 1) {
+      const menuHeaders = menuValues[0];
+      const menuItems = menuValues.slice(1);
+
+      totalMenuItems = menuItems.length;
+
+      menuItems.forEach(row => {
+        const item = {};
+        menuHeaders.forEach((header, colIndex) => {
+          item[header.toLowerCase().replace(/\s+/g, '_')] = row[colIndex] || '';
+        });
+
+        // Count active items
+        if (item.isactive !== 'FALSE' && item.isactive !== false) {
+          activeMenuItems++;
+        }
+
+        // Count items with images
+        if (item.imageurl && item.imageurl.trim() !== '') {
+          menuItemsWithImages++;
+        }
+
+        // Count categories
+        if (item.category) {
+          categories.add(item.category);
+        }
+      });
+    }
+
+    // Calculate growth (mock data for now - you can implement real growth calculation)
+    const stats = {
+      orders: {
+        total: totalOrders,
+        pending: pendingOrders,
+        confirmed: confirmedOrders,
+        ready: readyOrders,
+        delivered: deliveredOrders,
+        growth: totalOrders > 0 ? Math.round((totalOrders / 30) * 100) / 100 : 0 // Mock growth
+      },
+      revenue: {
+        total: totalRevenue,
+        growth: totalRevenue > 0 ? Math.round((totalRevenue / 30) * 100) / 100 : 0 // Mock growth
+      },
+      menu: {
+        total: totalMenuItems,
+        active: activeMenuItems,
+        withImages: menuItemsWithImages,
+        categories: categories.size
+      },
+      recentOrders: recentOrders
+    };
+
+    res.json({
+      success: true,
+      data: stats
+    });
+
+  } catch (error) {
+    console.error('Error fetching admin stats:', error);
+    res.status(500).json({
+      error: 'Failed to fetch admin statistics',
+      message: error.message
+    });
+  }
+});
+
 // Error handling
 app.use((err, req, res, next) => {
   console.error(err.stack);

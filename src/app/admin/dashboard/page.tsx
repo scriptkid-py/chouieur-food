@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useMenuItems } from "@/hooks/use-menu-items";
 import { useStaffAuth } from "@/context/StaffAuthContext";
+import { useAdminStats } from "@/hooks/use-admin-stats";
 import { 
   Package, 
   Users, 
@@ -24,39 +25,8 @@ import Link from "next/link";
 
 export default function AdminDashboardPage() {
   const { role } = useStaffAuth();
-  const { menuItems, isLoading } = useMenuItems();
-
-  // Mock data for demonstration
-  const stats = {
-    totalOrders: 156,
-    pendingOrders: 12,
-    totalRevenue: 2450000, // FCFA
-    menuItems: menuItems.length
-  };
-
-  const recentOrders = [
-    {
-      id: "ORD-001",
-      customer: "John Doe",
-      total: 3500,
-      status: "pending",
-      time: "2 min ago"
-    },
-    {
-      id: "ORD-002", 
-      customer: "Jane Smith",
-      total: 2800,
-      status: "confirmed",
-      time: "5 min ago"
-    },
-    {
-      id: "ORD-003",
-      customer: "Mike Johnson", 
-      total: 4200,
-      status: "ready",
-      time: "8 min ago"
-    }
-  ];
+  const { menuItems, isLoading: menuLoading } = useMenuItems();
+  const { stats, isLoading: statsLoading, error: statsError, refetch } = useAdminStats();
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -88,9 +58,11 @@ export default function AdminDashboardPage() {
             <ShoppingCart className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalOrders}</div>
+            <div className="text-2xl font-bold">
+              {statsLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : stats?.orders.total || 0}
+            </div>
             <p className="text-xs text-muted-foreground">
-              +12% from last month
+              {stats?.orders.growth ? `+${stats.orders.growth}% growth` : 'No data available'}
             </p>
           </CardContent>
         </Card>
@@ -101,7 +73,9 @@ export default function AdminDashboardPage() {
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.pendingOrders}</div>
+            <div className="text-2xl font-bold">
+              {statsLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : stats?.orders.pending || 0}
+            </div>
             <p className="text-xs text-muted-foreground">
               Awaiting confirmation
             </p>
@@ -114,9 +88,11 @@ export default function AdminDashboardPage() {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalRevenue.toLocaleString()} FCFA</div>
+            <div className="text-2xl font-bold">
+              {statsLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : `${(stats?.revenue.total || 0).toLocaleString()} FCFA`}
+            </div>
             <p className="text-xs text-muted-foreground">
-              +8% from last month
+              {stats?.revenue.growth ? `+${stats.revenue.growth}% growth` : 'No data available'}
             </p>
           </CardContent>
         </Card>
@@ -128,10 +104,10 @@ export default function AdminDashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {isLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : stats.menuItems}
+              {menuLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : stats?.menu.active || 0}
             </div>
             <p className="text-xs text-muted-foreground">
-              Active menu items
+              {stats?.menu.withImages || 0} with images
             </p>
           </CardContent>
         </Card>
@@ -163,18 +139,32 @@ export default function AdminDashboardPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {recentOrders.map((order) => (
-                      <TableRow key={order.id}>
-                        <TableCell className="font-medium">{order.id}</TableCell>
-                        <TableCell>{order.customer}</TableCell>
-                        <TableCell>
-                          <Badge className={getStatusColor(order.status)}>
-                            {order.status}
-                          </Badge>
+                    {statsLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center">
+                          <Loader2 className="h-6 w-6 animate-spin mx-auto" />
                         </TableCell>
-                        <TableCell className="text-right">{order.total.toLocaleString()} FCFA</TableCell>
                       </TableRow>
-                    ))}
+                    ) : stats?.recentOrders && stats.recentOrders.length > 0 ? (
+                      stats.recentOrders.map((order) => (
+                        <TableRow key={order.id}>
+                          <TableCell className="font-medium">{order.id}</TableCell>
+                          <TableCell>{order.customer}</TableCell>
+                          <TableCell>
+                            <Badge className={getStatusColor(order.status)}>
+                              {order.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">{order.total.toLocaleString()} FCFA</TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center text-muted-foreground">
+                          No recent orders found
+                        </TableCell>
+                      </TableRow>
+                    )}
                   </TableBody>
                 </Table>
                 <div className="mt-4">

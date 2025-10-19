@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useStaffAuth } from "@/context/StaffAuthContext";
+import { useOrders } from "@/hooks/use-orders";
 import { 
   UtensilsCrossed, 
   Clock, 
@@ -17,35 +18,12 @@ import { useState } from "react";
 
 export default function KitchenViewPage() {
   const { role } = useStaffAuth();
-  const [orders, setOrders] = useState([
-    {
-      id: "ORD-001",
-      customer: "John Doe",
-      items: ["2x Pizza Margherita", "1x Caesar Salad"],
-      total: 3500,
-      status: "confirmed",
-      time: "5 min ago",
-      estimatedTime: "15 min"
-    },
-    {
-      id: "ORD-002",
-      customer: "Jane Smith", 
-      items: ["1x Burger Deluxe", "1x Fries"],
-      total: 2800,
-      status: "preparing",
-      time: "12 min ago",
-      estimatedTime: "8 min"
-    },
-    {
-      id: "ORD-003",
-      customer: "Mike Johnson",
-      items: ["3x Tacos", "2x Drinks"],
-      total: 4200,
-      status: "ready",
-      time: "18 min ago",
-      estimatedTime: "Ready"
-    }
-  ]);
+  const { orders: allOrders, isLoading, updateOrderStatus, refetch } = useOrders();
+
+  // Filter orders for kitchen (confirmed, preparing, ready)
+  const kitchenOrders = allOrders.filter(order => 
+    ['confirmed', 'preparing', 'ready'].includes(order.status?.toLowerCase())
+  );
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -65,10 +43,13 @@ export default function KitchenViewPage() {
     }
   };
 
-  const updateOrderStatus = (orderId: string, newStatus: string) => {
-    setOrders(orders.map(order => 
-      order.id === orderId ? { ...order, status: newStatus } : order
-    ));
+  const handleUpdateOrderStatus = async (orderId: string, newStatus: string) => {
+    try {
+      await updateOrderStatus(orderId, newStatus);
+      // Orders will be automatically refreshed by the hook
+    } catch (error) {
+      console.error('Failed to update order status:', error);
+    }
   };
 
   return (
@@ -95,7 +76,7 @@ export default function KitchenViewPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {orders.filter(o => o.status === 'confirmed').length}
+              {isLoading ? '...' : kitchenOrders.filter(o => o.status?.toLowerCase() === 'confirmed').length}
             </div>
             <p className="text-xs text-muted-foreground">
               Waiting to start
@@ -110,7 +91,7 @@ export default function KitchenViewPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {orders.filter(o => o.status === 'preparing').length}
+              {isLoading ? '...' : kitchenOrders.filter(o => o.status?.toLowerCase() === 'preparing').length}
             </div>
             <p className="text-xs text-muted-foreground">
               Currently preparing
@@ -125,7 +106,7 @@ export default function KitchenViewPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {orders.filter(o => o.status === 'ready').length}
+              {isLoading ? '...' : kitchenOrders.filter(o => o.status?.toLowerCase() === 'ready').length}
             </div>
             <p className="text-xs text-muted-foreground">
               Awaiting pickup
@@ -153,63 +134,84 @@ export default function KitchenViewPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {orders.map((order) => (
-                <TableRow key={order.id}>
-                  <TableCell className="font-medium">{order.id}</TableCell>
-                  <TableCell>{order.customer}</TableCell>
-                  <TableCell>
-                    <div className="space-y-1">
-                      {order.items.map((item, index) => (
-                        <div key={index} className="text-sm">{item}</div>
-                      ))}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge className={getStatusColor(order.status)}>
-                      <div className="flex items-center gap-1">
-                        {getStatusIcon(order.status)}
-                        {order.status}
-                      </div>
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="text-sm">
-                      <div>{order.time}</div>
-                      <div className="text-muted-foreground">{order.estimatedTime}</div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      {order.status === 'confirmed' && (
-                        <Button
-                          size="sm"
-                          onClick={() => updateOrderStatus(order.id, 'preparing')}
-                        >
-                          Start Preparing
-                        </Button>
-                      )}
-                      {order.status === 'preparing' && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => updateOrderStatus(order.id, 'ready')}
-                        >
-                          Mark Ready
-                        </Button>
-                      )}
-                      {order.status === 'ready' && (
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          disabled
-                        >
-                          Ready
-                        </Button>
-                      )}
-                    </div>
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center">
+                    Loading orders...
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : kitchenOrders.length > 0 ? (
+                kitchenOrders.map((order) => {
+                  const items = order.items ? JSON.parse(order.items) : [];
+                  const timeAgo = order.created_at ? new Date(order.created_at).toLocaleString() : 'Unknown';
+                  
+                  return (
+                    <TableRow key={order.orderid || order.id}>
+                      <TableCell className="font-medium">{order.orderid || order.id}</TableCell>
+                      <TableCell>{order.customer_name || 'Anonymous'}</TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          {items.map((item: any, index: number) => (
+                            <div key={index} className="text-sm">
+                              {item.quantity}x {item.name || item.menuItem?.name}
+                            </div>
+                          ))}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={getStatusColor(order.status)}>
+                          <div className="flex items-center gap-1">
+                            {getStatusIcon(order.status)}
+                            {order.status}
+                          </div>
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm">
+                          <div>{timeAgo}</div>
+                          <div className="text-muted-foreground">{order.total} FCFA</div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          {order.status?.toLowerCase() === 'confirmed' && (
+                            <Button
+                              size="sm"
+                              onClick={() => handleUpdateOrderStatus(order.orderid || order.id, 'preparing')}
+                            >
+                              Start Preparing
+                            </Button>
+                          )}
+                          {order.status?.toLowerCase() === 'preparing' && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleUpdateOrderStatus(order.orderid || order.id, 'ready')}
+                            >
+                              Mark Ready
+                            </Button>
+                          )}
+                          {order.status?.toLowerCase() === 'ready' && (
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              disabled
+                            >
+                              Ready
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center text-muted-foreground">
+                    No orders found
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </CardContent>
