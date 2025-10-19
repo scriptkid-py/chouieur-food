@@ -25,7 +25,6 @@ export interface HybridOrder {
 }
 
 export function useHybridOrders() {
-  const [orders, setOrders] = useState<HybridOrder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [useFirebase, setUseFirebase] = useState(true);
@@ -46,17 +45,17 @@ export function useHybridOrders() {
   // Fetch orders from API as fallback
   const fetchOrdersFromAPI = async () => {
     try {
-      setIsLoading(true);
-      setError(null);
+      setApiLoading(true);
+      setApiError(null);
       
       const response = await apiRequest<any[]>('/api/orders');
-      setOrders(response);
+      setApiOrders(response);
       setUseFirebase(false); // Switch to API mode
     } catch (err) {
       console.error('Error fetching orders from API:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch orders');
+      setApiError(err instanceof Error ? err.message : 'Failed to fetch orders');
     } finally {
-      setIsLoading(false);
+      setApiLoading(false);
     }
   };
 
@@ -113,10 +112,13 @@ export function useHybridOrders() {
     }
   };
 
+  const currentLoading = useFirebase ? firebaseLoading : apiLoading;
+  const currentError = useFirebase ? firebaseError : apiError;
+
   return {
     orders: orders || [],
-    isLoading,
-    error,
+    isLoading: currentLoading,
+    error: currentError,
     refetch,
     updateOrderStatus,
     source: useFirebase ? 'firebase' : 'api'
