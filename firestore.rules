@@ -1,0 +1,29 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Allow read/write access to orders collection for authenticated users
+    match /orders/{document} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Allow read/write access to users collection for authenticated users
+    match /users/{document} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Allow read/write access to menu collection for authenticated users
+    match /menu/{document} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Allow read access to menu for unauthenticated users (for public menu viewing)
+    match /menu/{document} {
+      allow read: if true;
+    }
+    
+    // Default rule: deny all other access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -34,6 +34,14 @@ export function useRealtimeOrders() {
 
   const { data: orders, isLoading, error } = useCollection<RealtimeOrder>(ordersQuery);
 
+  // Handle Firestore permission errors gracefully
+  useEffect(() => {
+    if (error) {
+      console.warn('Firestore permission error - please update Firestore security rules:', error);
+      console.log('Go to Firebase Console > Firestore Database > Rules and update the rules');
+    }
+  }, [error]);
+
   const updateOrderStatus = async (orderId: string, status: string, notes?: string) => {
     try {
       if (!db) throw new Error('Firebase not initialized');
