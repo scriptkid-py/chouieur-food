@@ -1184,6 +1184,38 @@ app.put('/api/orders/:orderId', async (req, res) => {
       }
     });
 
+    // Also update Firebase Firestore for real-time updates
+    if (db) {
+      try {
+        // Find the order in Firestore by orderid
+        const ordersRef = db.collection('orders');
+        const snapshot = await ordersRef.where('orderid', '==', orderId).get();
+        
+        if (!snapshot.empty) {
+          const orderDoc = snapshot.docs[0];
+          const updateData = {
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+          };
+          
+          if (status) {
+            updateData.status = status;
+          }
+          
+          if (notes) {
+            updateData.notes = notes;
+          }
+          
+          await orderDoc.ref.update(updateData);
+          console.log('Order updated in Firestore:', orderId);
+        } else {
+          console.warn('Order not found in Firestore:', orderId);
+        }
+      } catch (firestoreError) {
+        console.error('Failed to update order in Firestore:', firestoreError);
+        // Don't fail the request if Firestore fails, Google Sheets is the primary storage
+      }
+    }
+
     res.json({
       success: true,
       message: 'Order updated successfully',
