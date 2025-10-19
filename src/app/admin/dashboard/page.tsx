@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useMenuItems } from "@/hooks/use-menu-items";
 import { useStaffAuth } from "@/context/StaffAuthContext";
-import { useRealtimeAdminStats } from "@/hooks/use-realtime-orders";
+import { useHybridAdminStats } from "@/hooks/use-hybrid-admin-stats";
 import { 
   Package, 
   Users, 
@@ -27,7 +27,7 @@ import Link from "next/link";
 export default function AdminDashboardPage() {
   const { role } = useStaffAuth();
   const { menuItems, isLoading: menuLoading } = useMenuItems();
-  const { stats, isLoading: statsLoading, error: statsError, refetch } = useRealtimeAdminStats();
+  const { stats, isLoading: statsLoading, error: statsError, refetch, source, ordersCount } = useHybridAdminStats();
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -46,9 +46,14 @@ export default function AdminDashboardPage() {
           <h1 className="text-3xl font-headline font-bold">Admin Dashboard</h1>
           <p className="text-muted-foreground">Welcome back! Here's what's happening at your restaurant.</p>
         </div>
-        <Badge variant="outline" className="text-sm">
-          {role?.toUpperCase()} ACCESS
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="text-sm">
+            {role?.toUpperCase()} ACCESS
+          </Badge>
+          <Badge variant="secondary" className="text-xs">
+            {source?.toUpperCase()} • {ordersCount} orders
+          </Badge>
+        </div>
       </div>
 
       {/* Stats Cards */}
