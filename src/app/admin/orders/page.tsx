@@ -159,7 +159,20 @@ export default function AdminOrdersPage() {
                   </TableRow>
                 ) : orders.length > 0 ? (
                   orders.map((order) => {
-                    const items = order.items || [];
+                    // Handle items field - it might be a JSON string or array
+                    let items = [];
+                    if (order.items) {
+                      if (typeof order.items === 'string') {
+                        try {
+                          items = JSON.parse(order.items);
+                        } catch (e) {
+                          console.warn('Failed to parse items JSON:', order.items);
+                          items = [];
+                        }
+                      } else if (Array.isArray(order.items)) {
+                        items = order.items;
+                      }
+                    }
                     
                     return (
                       <TableRow key={order.orderid || order.id}>

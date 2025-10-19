@@ -100,16 +100,33 @@ export function useHybridAdminStats() {
 
     const recentOrders = orders
       .slice(0, 5)
-      .map(order => ({
-        id: order.orderid || order.id,
-        customer: order.customerName || order.customer_name || 'Anonymous',
-        total: parseFloat(order.total) || 0,
-        status: order.status,
-        time: order.createdAt?.toDate?.()?.toLocaleString() || 
-              order.created_at || 
-              'Unknown',
-        items: order.items || []
-      }));
+      .map(order => {
+        // Handle items field - it might be a JSON string or array
+        let items = [];
+        if (order.items) {
+          if (typeof order.items === 'string') {
+            try {
+              items = JSON.parse(order.items);
+            } catch (e) {
+              console.warn('Failed to parse items JSON:', order.items);
+              items = [];
+            }
+          } else if (Array.isArray(order.items)) {
+            items = order.items;
+          }
+        }
+        
+        return {
+          id: order.orderid || order.id,
+          customer: order.customerName || order.customer_name || 'Anonymous',
+          total: parseFloat(order.total) || 0,
+          status: order.status,
+          time: order.createdAt?.toDate?.()?.toLocaleString() || 
+                order.created_at || 
+                'Unknown',
+          items: items
+        };
+      });
 
     return {
       orders: {
