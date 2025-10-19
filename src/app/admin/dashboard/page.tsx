@@ -2,6 +2,7 @@
 
 import { DeliveryOrderForm } from "@/components/admin/DeliveryOrderForm";
 import { AdminCredentials } from "@/components/admin/AdminCredentials";
+import { LiveOrdersTest } from "@/components/admin/LiveOrdersTest";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableRow, TableHeader, TableHead } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -229,7 +230,10 @@ export default function AdminDashboardPage() {
         </TabsContent>
 
         <TabsContent value="credentials">
-          <AdminCredentials />
+          <div className="space-y-6">
+            <AdminCredentials />
+            <LiveOrdersTest />
+          </div>
         </TabsContent>
       </Tabs>
     </div>
