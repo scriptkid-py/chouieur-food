@@ -81,6 +81,335 @@ app.get('/ping', (req, res) => {
   res.json({ status: 'pong', timestamp: new Date().toISOString() });
 });
 
+// ==================== USER MANAGEMENT ENDPOINTS ====================
+
+// Create or update user
+app.post('/api/users', async (req, res) => {
+  try {
+    if (!sheets) {
+      return res.status(500).json({
+        error: 'Google Sheets not initialized'
+      });
+    }
+
+    const user = req.body;
+    
+    // Check if user already exists
+    const existingResponse = await sheets.spreadsheets.values.get({
+      spreadsheetId: GOOGLE_SHEETS_ID,
+      range: 'Users!A1:H1000',
+    });
+
+    const existingValues = existingResponse.data.values || [];
+    const headers = existingValues[0] || [];
+    const existingUsers = existingValues.slice(1);
+
+    // Find existing user by Firebase UID
+    let existingUserIndex = -1;
+    if (headers.includes('FirebaseUID')) {
+      const uidIndex = headers.indexOf('FirebaseUID');
+      existingUserIndex = existingUsers.findIndex(row => row[uidIndex] === user.uid);
+    }
+
+    // Prepare user data for Google Sheets
+    const userData = [
+      user.uid || '',                    // FirebaseUID
+      user.email || '',                  // Email
+      user.displayName || '',            // DisplayName
+      user.phoneNumber || '',            // PhoneNumber
+      user.photoURL || '',               // PhotoURL
+      new Date().toISOString(),          // CreatedAt
+      new Date().toISOString(),          // UpdatedAt
+      user.role || 'customer'            // Role (customer, admin, staff)
+    ];
+
+    if (existingUserIndex >= 0) {
+      // Update existing user
+      const rowNumber = existingUserIndex + 2; // +2 because of header row and 0-based index
+      await sheets.spreadsheets.values.update({
+        spreadsheetId: GOOGLE_SHEETS_ID,
+        range: `Users!A${rowNumber}:H${rowNumber}`,
+        valueInputOption: 'RAW',
+        resource: {
+          values: [userData]
+        }
+      });
+
+      res.json({
+        success: true,
+        message: 'User updated successfully',
+        user: {
+          ...user,
+          id: user.uid
+        }
+      });
+    } else {
+      // Create new user
+      await sheets.spreadsheets.values.append({
+        spreadsheetId: GOOGLE_SHEETS_ID,
+        range: 'Users!A:H',
+        valueInputOption: 'RAW',
+        resource: {
+          values: [userData]
+        }
+      });
+
+      res.json({
+        success: true,
+        message: 'User created successfully',
+        user: {
+          ...user,
+          id: user.uid
+        }
+      });
+    }
+  } catch (error) {
+    console.error('Error creating/updating user:', error);
+    res.status(500).json({
+      error: 'Failed to create/update user',
+      message: error.message
+    });
+  }
+});
+
+// Get user by Firebase UID
+app.get('/api/users/:uid', async (req, res) => {
+  try {
+    if (!sheets) {
+      return res.status(500).json({
+        error: 'Google Sheets not initialized'
+      });
+    }
+
+    const { uid } = req.params;
+
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId: GOOGLE_SHEETS_ID,
+      range: 'Users!A1:H1000',
+    });
+
+    const values = response.data.values || [];
+    
+    if (values.length === 0) {
+      return res.status(404).json({
+        error: 'User not found'
+      });
+    }
+
+    const headers = values[0];
+    const users = values.slice(1);
+
+    // Find user by Firebase UID
+    const uidIndex = headers.indexOf('FirebaseUID');
+    if (uidIndex === -1) {
+      return res.status(500).json({
+        error: 'FirebaseUID column not found'
+      });
+    }
+
+    const userRow = users.find(row => row[uidIndex] === uid);
+    if (!userRow) {
+      return res.status(404).json({
+        error: 'User not found'
+      });
+    }
+
+    // Convert row to user object
+    const user = {};
+    headers.forEach((header, index) => {
+      user[header.toLowerCase().replace(/\s+/g, '_')] = userRow[index] || '';
+    });
+
+    res.json({
+      success: true,
+      user: {
+        ...user,
+        id: user.firebaseuid
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching user:', error);
+    res.status(500).json({
+      error: 'Failed to fetch user',
+      message: error.message
+    });
+  }
+});
+
+// Get all users (admin only)
+app.get('/api/users', async (req, res) => {
+  try {
+    if (!sheets) {
+      return res.status(500).json({
+        error: 'Google Sheets not initialized'
+      });
+    }
+
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId: GOOGLE_SHEETS_ID,
+      range: 'Users!A1:H1000',
+    });
+
+    const values = response.data.values || [];
+    
+    if (values.length === 0) {
+      return res.json([]);
+    }
+
+    const headers = values[0];
+    const users = values.slice(1).map((row, index) => {
+      const user = {};
+      headers.forEach((header, colIndex) => {
+        user[header.toLowerCase().replace(/\s+/g, '_')] = row[colIndex] || '';
+      });
+      user.id = user.firebaseuid || (index + 1).toString();
+      return user;
+    });
+
+    res.json(users);
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    res.status(500).json({
+      error: 'Failed to fetch users',
+      message: error.message
+    });
+  }
+});
+
+// Update user role (admin only)
+app.put('/api/users/:uid/role', async (req, res) => {
+  try {
+    if (!sheets) {
+      return res.status(500).json({
+        error: 'Google Sheets not initialized'
+      });
+    }
+
+    const { uid } = req.params;
+    const { role } = req.body;
+
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId: GOOGLE_SHEETS_ID,
+      range: 'Users!A1:H1000',
+    });
+
+    const values = response.data.values || [];
+    
+    if (values.length === 0) {
+      return res.status(404).json({
+        error: 'User not found'
+      });
+    }
+
+    const headers = values[0];
+    const users = values.slice(1);
+
+    // Find user by Firebase UID
+    const uidIndex = headers.indexOf('FirebaseUID');
+    const roleIndex = headers.indexOf('Role');
+    const updatedAtIndex = headers.indexOf('UpdatedAt');
+
+    if (uidIndex === -1 || roleIndex === -1) {
+      return res.status(500).json({
+        error: 'Required columns not found'
+      });
+    }
+
+    const userRowIndex = users.findIndex(row => row[uidIndex] === uid);
+    if (userRowIndex === -1) {
+      return res.status(404).json({
+        error: 'User not found'
+      });
+    }
+
+    // Update user role
+    const rowNumber = userRowIndex + 2; // +2 because of header row and 0-based index
+    
+    // Update role column
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: GOOGLE_SHEETS_ID,
+      range: `Users!${String.fromCharCode(65 + roleIndex)}${rowNumber}`,
+      valueInputOption: 'RAW',
+      resource: {
+        values: [[role]]
+      }
+    });
+
+    // Update UpdatedAt column if it exists
+    if (updatedAtIndex !== -1) {
+      await sheets.spreadsheets.values.update({
+        spreadsheetId: GOOGLE_SHEETS_ID,
+        range: `Users!${String.fromCharCode(65 + updatedAtIndex)}${rowNumber}`,
+        valueInputOption: 'RAW',
+        resource: {
+          values: [[new Date().toISOString()]]
+        }
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'User role updated successfully'
+    });
+  } catch (error) {
+    console.error('Error updating user role:', error);
+    res.status(500).json({
+      error: 'Failed to update user role',
+      message: error.message
+    });
+  }
+});
+
+// Fix Users sheet headers endpoint
+app.post('/api/fix-users-headers', async (req, res) => {
+  try {
+    if (!sheets) {
+      return res.status(500).json({
+        error: 'Google Sheets not initialized'
+      });
+    }
+
+    // Set up proper headers for Users sheet
+    const headers = [
+      'FirebaseUID',    // A - Firebase User ID
+      'Email',          // B - User email
+      'DisplayName',    // C - User display name
+      'PhoneNumber',    // D - User phone number
+      'PhotoURL',       // E - User profile photo URL
+      'CreatedAt',      // F - Account creation timestamp
+      'UpdatedAt',      // G - Last update timestamp
+      'Role'            // H - User role (customer, admin, staff)
+    ];
+
+    // Clear existing data and add headers
+    await sheets.spreadsheets.values.clear({
+      spreadsheetId: GOOGLE_SHEETS_ID,
+      range: 'Users!A1:H1',
+    });
+
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: GOOGLE_SHEETS_ID,
+      range: 'Users!A1:H1',
+      valueInputOption: 'RAW',
+      resource: {
+        values: [headers]
+      }
+    });
+
+    res.json({
+      success: true,
+      message: 'Users sheet headers fixed successfully',
+      headers: headers
+    });
+  } catch (error) {
+    console.error('Error fixing Users sheet headers:', error);
+    res.status(500).json({
+      error: 'Failed to fix Users sheet headers',
+      message: error.message
+    });
+  }
+});
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({ 

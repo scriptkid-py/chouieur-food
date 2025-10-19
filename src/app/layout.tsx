@@ -6,6 +6,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { CartProvider } from '@/context/CartContext';
 import { FirebaseClientProvider } from '@/firebase';
 import { StaffAuthProvider } from '@/context/StaffAuthContext';
+import { UserSync } from '@/components/UserSync';
 
 export const metadata: Metadata = {
   title: 'Chouieur Express',
@@ -28,6 +29,7 @@ export default function RootLayout({
         <FirebaseClientProvider>
           <StaffAuthProvider>
             <CartProvider>
+              <UserSync />
               <div className="flex min-h-screen flex-col">
                 <Header />
                 <main className="flex-grow">{children}</main>
