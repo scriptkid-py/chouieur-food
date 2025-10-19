@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { collection, query, orderBy, onSnapshot, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/firebase/config';
 import { useCollection } from '@/firebase/firestore/use-collection';
+import { useMemoFirebase } from '@/firebase/provider';
 
 export interface RealtimeOrder {
   id: string;
@@ -24,7 +25,7 @@ export interface RealtimeOrder {
 
 export function useRealtimeOrders() {
   // Create a memoized query for real-time updates
-  const ordersQuery = useMemo(() => {
+  const ordersQuery = useMemoFirebase(() => {
     if (!db) return null;
     
     const ordersRef = collection(db, 'orders');
