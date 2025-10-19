@@ -18,7 +18,7 @@ import { useState } from "react";
 
 export default function KitchenViewPage() {
   const { role } = useStaffAuth();
-  const { orders: allOrders, isLoading, updateOrderStatus, refetch } = useOrders();
+  const { orders: allOrders, isLoading, updateOrderStatus, refetch, error } = useOrders();
 
   // Filter orders for kitchen (confirmed, preparing, ready)
   const kitchenOrders = allOrders.filter(order => 
@@ -114,6 +114,26 @@ export default function KitchenViewPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Backend Connection Status */}
+      {error && (
+        <Card className="border-red-200 bg-red-50 dark:bg-red-950">
+          <CardHeader>
+            <CardTitle className="text-red-800 dark:text-red-200 flex items-center gap-2">
+              <AlertCircle className="h-5 w-5" />
+              Backend Connection Issue
+            </CardTitle>
+            <CardDescription className="text-red-700 dark:text-red-300">
+              Unable to connect to the backend server. Please ensure the backend service is running.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button onClick={refetch} variant="outline" className="border-red-300 text-red-700 hover:bg-red-100">
+              Retry Connection
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Orders Table */}
       <Card>
