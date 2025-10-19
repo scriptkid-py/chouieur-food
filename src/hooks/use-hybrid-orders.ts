@@ -14,7 +14,7 @@ export interface HybridOrder {
   customerAddress: string;
   items: any[];
   total: number;
-  status: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'delivered';
+  status: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'delivered' | 'cancelled';
   createdAt: any;
   updatedAt: any;
   email?: string;
@@ -29,6 +29,9 @@ export function useHybridOrders() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [useFirebase, setUseFirebase] = useState(true);
+  const [apiOrders, setApiOrders] = useState<any[]>([]);
+  const [apiLoading, setApiLoading] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
 
   // Create a memoized query for real-time updates
   const ordersQuery = useMemoFirebase(() => {
@@ -40,13 +43,13 @@ export function useHybridOrders() {
 
   const { data: firebaseOrders, isLoading: firebaseLoading, error: firebaseError } = useCollection<HybridOrder>(ordersQuery);
 
-  // Fallback to API if Firebase fails
+  // Fetch orders from API as fallback
   const fetchOrdersFromAPI = async () => {
     try {
       setIsLoading(true);
       setError(null);
       
-      const response = await apiRequest<HybridOrder[]>('/api/orders');
+      const response = await apiRequest<any[]>('/api/orders');
       setOrders(response);
       setUseFirebase(false); // Switch to API mode
     } catch (err) {
@@ -57,25 +60,32 @@ export function useHybridOrders() {
     }
   };
 
-  // Update orders based on source
-  useEffect(() => {
-    if (useFirebase && firebaseOrders) {
-      setOrders(firebaseOrders);
-      setIsLoading(firebaseLoading);
-      setError(firebaseError ? firebaseError.message : null);
-    } else if (!useFirebase) {
-      // Use API orders
-      setIsLoading(false);
+  // Use Firebase orders if available, otherwise fall back to API
+  const orders = useMemo(() => {
+    if (useFirebase && firebaseOrders && firebaseOrders.length > 0) {
+      return firebaseOrders;
+    } else if (!useFirebase && apiOrders.length > 0) {
+      return apiOrders;
+    } else if (useFirebase && firebaseOrders && firebaseOrders.length === 0) {
+      // Firebase is connected but has no orders, try API
+      if (!apiLoading && apiOrders.length === 0) {
+        fetchOrdersFromAPI();
+      }
+      return [];
     }
-  }, [firebaseOrders, firebaseLoading, firebaseError, useFirebase]);
+    return [];
+  }, [firebaseOrders, apiOrders, useFirebase, apiLoading]);
 
-  // Handle Firebase errors by falling back to API
+  // Auto-refresh API orders every 30 seconds when using API mode
   useEffect(() => {
-    if (firebaseError && useFirebase) {
-      console.warn('Firebase error, falling back to API:', firebaseError);
-      fetchOrdersFromAPI();
+    if (!useFirebase && !apiLoading) {
+      const interval = setInterval(() => {
+        fetchOrdersFromAPI();
+      }, 30000); // Refresh every 30 seconds
+
+      return () => clearInterval(interval);
     }
-  }, [firebaseError, useFirebase]);
+  }, [useFirebase, apiLoading]);
 
   const updateOrderStatus = async (orderId: string, status: string, notes?: string) => {
     try {

@@ -4,14 +4,14 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { useRealtimeOrders } from "@/hooks/use-realtime-orders";
+import { useHybridOrders } from "@/hooks/use-hybrid-orders";
 import { useStaffAuth } from "@/context/StaffAuthContext";
 import { Loader2, RefreshCw, Eye, CheckCircle, XCircle, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function AdminOrdersPage() {
   const { role } = useStaffAuth();
-  const { orders, isLoading, error, refetch, updateOrderStatus } = useRealtimeOrders();
+  const { orders, isLoading, error, refetch, updateOrderStatus, source } = useHybridOrders();
 
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
@@ -68,9 +68,24 @@ export default function AdminOrdersPage() {
           <h1 className="text-3xl font-headline font-bold">Order Management</h1>
           <p className="text-muted-foreground">Complete history of all orders placed through the website.</p>
         </div>
-        <Badge variant="outline" className="text-sm">
-          {role?.toUpperCase()} ACCESS
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="text-sm">
+            {role?.toUpperCase()} ACCESS
+          </Badge>
+          <Badge variant="secondary" className="text-xs">
+            {source?.toUpperCase()} • {orders.length} orders
+          </Badge>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={refetch}
+            disabled={isLoading}
+            className="h-8"
+          >
+            <RefreshCw className={`h-3 w-3 mr-1 ${isLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       {/* Pending Orders Alert */}
