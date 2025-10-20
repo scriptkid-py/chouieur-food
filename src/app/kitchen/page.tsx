@@ -5,25 +5,31 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useStaffAuth } from "@/context/StaffAuthContext";
-import { useRealtimeOrders } from "@/hooks/use-realtime-orders";
+import { useHybridOrders } from "@/hooks/use-hybrid-orders";
 import { 
   UtensilsCrossed, 
   Clock, 
   CheckCircle, 
   AlertCircle,
   Timer,
-  ChefHat
+  ChefHat,
+  RefreshCw
 } from "lucide-react";
 import { useState } from "react";
 
 export default function KitchenViewPage() {
   const { role } = useStaffAuth();
-  const { orders: allOrders, isLoading, updateOrderStatus, refetch, error } = useRealtimeOrders();
+  const { orders: allOrders, isLoading, updateOrderStatus, refetch, error } = useHybridOrders();
 
   // Filter orders for kitchen (confirmed, preparing, ready)
   const kitchenOrders = allOrders.filter(order => 
     ['confirmed', 'preparing', 'ready'].includes(order.status?.toLowerCase())
   );
+
+  // Debug logging
+  console.log('Kitchen Dashboard - All orders:', allOrders.length);
+  console.log('Kitchen Dashboard - Kitchen orders:', kitchenOrders.length);
+  console.log('Kitchen Dashboard - Orders:', allOrders.map(o => ({ id: o.orderid || o.id, status: o.status })));
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -62,9 +68,21 @@ export default function KitchenViewPage() {
           </h1>
           <p className="text-muted-foreground">Live list of confirmed orders to be prepared.</p>
         </div>
-        <Badge variant="outline" className="text-sm">
-          {role?.toUpperCase()} ACCESS
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={refetch}
+            disabled={isLoading}
+            className="h-8"
+          >
+            <RefreshCw className={`h-3 w-3 mr-1 ${isLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+          <Badge variant="outline" className="text-sm">
+            {role?.toUpperCase()} ACCESS
+          </Badge>
+        </div>
       </header>
 
       {/* Kitchen Stats */}
@@ -142,25 +160,36 @@ export default function KitchenViewPage() {
           <CardDescription>Manage order preparation status</CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Order ID</TableHead>
-                <TableHead>Customer</TableHead>
-                <TableHead>Items</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Time</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
+          {error ? (
+            <div className="text-center py-8">
+              <p className="text-red-500 mb-4">Error loading orders: {typeof error === 'string' ? error : error.message || 'Unknown error'}</p>
+              <Button onClick={refetch} variant="outline">
+                Try Again
+              </Button>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center">
-                    Loading orders...
-                  </TableCell>
+                  <TableHead>Order ID</TableHead>
+                  <TableHead>Customer</TableHead>
+                  <TableHead>Items</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Time</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
-              ) : kitchenOrders.length > 0 ? (
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-8">
+                      <div className="flex items-center justify-center">
+                        <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                        Loading orders...
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : kitchenOrders.length > 0 ? (
                 kitchenOrders.map((order) => {
                   const items = order.items || [];
                   const timeAgo = order.createdAt ? 
@@ -236,6 +265,7 @@ export default function KitchenViewPage() {
               )}
             </TableBody>
           </Table>
+          )}
         </CardContent>
       </Card>
 
