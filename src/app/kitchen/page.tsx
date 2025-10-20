@@ -30,6 +30,11 @@ export default function KitchenViewPage() {
   console.log('Kitchen Dashboard - All orders:', allOrders.length);
   console.log('Kitchen Dashboard - Kitchen orders:', kitchenOrders.length);
   console.log('Kitchen Dashboard - Orders:', allOrders.map(o => ({ id: o.orderid || o.id, status: o.status })));
+  if (kitchenOrders.length > 0) {
+    console.log('Kitchen Dashboard - First kitchen order:', kitchenOrders[0]);
+    console.log('Kitchen Dashboard - First order items type:', typeof kitchenOrders[0].items);
+    console.log('Kitchen Dashboard - First order items:', kitchenOrders[0].items);
+  }
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -191,7 +196,21 @@ export default function KitchenViewPage() {
                   </TableRow>
                 ) : kitchenOrders.length > 0 ? (
                 kitchenOrders.map((order) => {
-                  const items = order.items || [];
+                  // Handle items field - it might be a JSON string or array
+                  let items = [];
+                  if (order.items) {
+                    if (typeof order.items === 'string') {
+                      try {
+                        items = JSON.parse(order.items);
+                      } catch (e) {
+                        console.warn('Failed to parse items JSON:', order.items);
+                        items = [];
+                      }
+                    } else if (Array.isArray(order.items)) {
+                      items = order.items;
+                    }
+                  }
+                  
                   const timeAgo = order.createdAt ? 
                     (order.createdAt.toDate ? order.createdAt.toDate().toLocaleString() : new Date(order.createdAt).toLocaleString()) 
                     : 'Unknown';
@@ -202,11 +221,13 @@ export default function KitchenViewPage() {
                       <TableCell>{order.customerName || 'Anonymous'}</TableCell>
                       <TableCell>
                         <div className="space-y-1">
-                          {items.map((item: any, index: number) => (
+                          {Array.isArray(items) ? items.map((item: any, index: number) => (
                             <div key={index} className="text-sm">
                               {item.quantity}x {item.name || item.menuItem?.name}
                             </div>
-                          ))}
+                          )) : (
+                            <div className="text-sm text-muted-foreground">No items</div>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell>
