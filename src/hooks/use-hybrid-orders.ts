@@ -48,7 +48,9 @@ export function useHybridOrders() {
       setApiLoading(true);
       setApiError(null);
       
+      console.log('Fetching orders from API...');
       const response = await apiRequest<any[]>('/api/orders');
+      console.log('API orders response:', response);
       setApiOrders(response);
       setUseFirebase(false); // Switch to API mode
     } catch (err) {
@@ -88,14 +90,34 @@ export function useHybridOrders() {
 
   const updateOrderStatus = async (orderId: string, status: string, notes?: string) => {
     try {
-      if (!db) throw new Error('Firebase not initialized');
-      
-      const orderRef = doc(db, 'orders', orderId);
-      await updateDoc(orderRef, {
-        status,
-        notes: notes || '',
-        updatedAt: serverTimestamp()
-      });
+      if (useFirebase && db) {
+        // Update via Firebase
+        const orderRef = doc(db, 'orders', orderId);
+        await updateDoc(orderRef, {
+          status,
+          notes: notes || '',
+          updatedAt: serverTimestamp()
+        });
+      } else {
+        // Update via API
+        console.log('Updating order via API:', orderId, 'to status:', status);
+        const response = await apiRequest(`/api/orders/${orderId}`, {
+          method: 'PUT',
+          body: JSON.stringify({
+            status,
+            notes: notes || ''
+          })
+        });
+        
+        console.log('API response:', response);
+        
+        if (!response.success) {
+          throw new Error(response.message || 'Failed to update order');
+        }
+        
+        // Refresh API orders after successful update
+        await fetchOrdersFromAPI();
+      }
     } catch (err) {
       console.error('Error updating order:', err);
       throw err;

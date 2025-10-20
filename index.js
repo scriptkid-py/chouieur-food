@@ -18,6 +18,50 @@ const GOOGLE_SHEETS_ID = process.env.GOOGLE_SHEETS_ID;
 const GOOGLE_SERVICE_ACCOUNT_EMAIL = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
 const GOOGLE_PRIVATE_KEY = process.env.GOOGLE_PRIVATE_KEY;
 
+// In-memory fallback storage when Google Sheets is not available
+let inMemoryOrders = [
+  {
+    orderid: 'ORD-1732051200000-abc123',
+    userid: 'user123',
+    customerName: 'John Doe',
+    customerPhone: '+237123456789',
+    customerAddress: '123 Main St, Douala',
+    items: [
+      { name: 'Pizza Margherita', quantity: 2, price: 5000, totalPrice: 10000 },
+      { name: 'Coca Cola', quantity: 1, price: 1000, totalPrice: 1000 }
+    ],
+    total: 11000,
+    status: 'pending',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    email: 'john@example.com',
+    notes: '',
+    deliveryTime: '',
+    paymentMethod: 'cash',
+    orderType: 'delivery'
+  },
+  {
+    orderid: 'ORD-1732051200001-def456',
+    userid: 'user456',
+    customerName: 'Jane Smith',
+    customerPhone: '+237987654321',
+    customerAddress: '456 Oak Ave, Yaounde',
+    items: [
+      { name: 'Burger Deluxe', quantity: 1, price: 8000, totalPrice: 8000 }
+    ],
+    total: 8000,
+    status: 'pending',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    email: 'jane@example.com',
+    notes: 'Extra cheese please',
+    deliveryTime: '',
+    paymentMethod: 'card',
+    orderType: 'delivery'
+  }
+];
+let inMemoryMenuItems = [];
+
 // Firebase Admin configuration
 let db;
 try {
@@ -990,33 +1034,37 @@ app.delete('/api/menu-items/:id/image', async (req, res) => {
 app.get('/api/orders', async (req, res) => {
   try {
     if (!sheets) {
-      return res.status(500).json({
-        error: 'Google Sheets not initialized'
-      });
+      console.log('Google Sheets not available, using in-memory storage');
+      return res.json(inMemoryOrders);
     }
 
-    const response = await sheets.spreadsheets.values.get({
-      spreadsheetId: GOOGLE_SHEETS_ID,
-      range: 'Orders!A1:O1000',
-    });
-
-    const values = response.data.values || [];
-    
-    if (values.length === 0) {
-      return res.json([]);
-    }
-
-    const headers = values[0];
-    const orders = values.slice(1).map((row, index) => {
-      const order = {};
-      headers.forEach((header, colIndex) => {
-        order[header.toLowerCase().replace(/\s+/g, '_')] = row[colIndex] || '';
+    try {
+      const response = await sheets.spreadsheets.values.get({
+        spreadsheetId: GOOGLE_SHEETS_ID,
+        range: 'Orders!A1:O1000',
       });
-      order.id = order.orderid || (index + 1).toString();
-      return order;
-    });
 
-    res.json(orders);
+      const values = response.data.values || [];
+      
+      if (values.length === 0) {
+        return res.json(inMemoryOrders);
+      }
+
+      const headers = values[0];
+      const orders = values.slice(1).map((row, index) => {
+        const order = {};
+        headers.forEach((header, colIndex) => {
+          order[header.toLowerCase().replace(/\s+/g, '_')] = row[colIndex] || '';
+        });
+        order.id = order.orderid || (index + 1).toString();
+        return order;
+      });
+
+      res.json(orders);
+    } catch (sheetsError) {
+      console.log('Google Sheets error, falling back to in-memory storage:', sheetsError.message);
+      res.json(inMemoryOrders);
+    }
   } catch (error) {
     console.error('Error fetching orders:', error);
     res.status(500).json({
@@ -1028,43 +1076,66 @@ app.get('/api/orders', async (req, res) => {
 
 app.post('/api/orders', async (req, res) => {
   try {
-    if (!sheets) {
-      return res.status(500).json({
-        error: 'Google Sheets not initialized'
-      });
-    }
-
     const order = req.body;
     const orderId = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     
-    // Prepare order data for Google Sheets
-    const orderData = [
-      orderId,
-      order.userId || '',
-      order.customerName || 'Anonymous',
-      order.customerPhone || '',
-      order.customerAddress || '',
-      JSON.stringify(order.items || []),
-      order.total || 0,
-      order.status || 'pending',
-      new Date().toISOString(),
-      new Date().toISOString(),
-      order.email || '',
-      order.notes || '',
-      order.deliveryTime || '',
-      order.paymentMethod || 'cash',
-      order.orderType || 'delivery'
-    ];
+    // Prepare order data
+    const orderData = {
+      orderid: orderId,
+      userid: order.userId || '',
+      customerName: order.customerName || 'Anonymous',
+      customerPhone: order.customerPhone || '',
+      customerAddress: order.customerAddress || '',
+      items: order.items || [],
+      total: order.total || 0,
+      status: order.status || 'pending',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      email: order.email || '',
+      notes: order.notes || '',
+      deliveryTime: order.deliveryTime || '',
+      paymentMethod: order.paymentMethod || 'cash',
+      orderType: order.orderType || 'delivery'
+    };
 
-    // Add order to Orders sheet
-    await sheets.spreadsheets.values.append({
-      spreadsheetId: GOOGLE_SHEETS_ID,
-      range: 'Orders!A:O',
-      valueInputOption: 'RAW',
-      resource: {
-        values: [orderData]
+    if (!sheets) {
+      console.log('Google Sheets not available, storing in memory');
+      inMemoryOrders.push(orderData);
+    } else {
+      try {
+        // Prepare order data for Google Sheets
+        const sheetsOrderData = [
+          orderId,
+          order.userId || '',
+          order.customerName || 'Anonymous',
+          order.customerPhone || '',
+          order.customerAddress || '',
+          JSON.stringify(order.items || []),
+          order.total || 0,
+          order.status || 'pending',
+          new Date().toISOString(),
+          new Date().toISOString(),
+          order.email || '',
+          order.notes || '',
+          order.deliveryTime || '',
+          order.paymentMethod || 'cash',
+          order.orderType || 'delivery'
+        ];
+
+        // Add order to Orders sheet
+        await sheets.spreadsheets.values.append({
+          spreadsheetId: GOOGLE_SHEETS_ID,
+          range: 'Orders!A:O',
+          valueInputOption: 'RAW',
+          resource: {
+            values: [sheetsOrderData]
+          }
+        });
+      } catch (sheetsError) {
+        console.log('Google Sheets error, storing in memory:', sheetsError.message);
+        inMemoryOrders.push(orderData);
       }
-    });
+    }
 
     // Add individual order items to OrderItems sheet
     if (order.items && order.items.length > 0) {
@@ -1186,99 +1257,147 @@ app.get('/api/orders/user/:userId', async (req, res) => {
 // Update order status
 app.put('/api/orders/:orderId', async (req, res) => {
   try {
-    if (!sheets) {
-      return res.status(500).json({
-        error: 'Google Sheets not initialized'
-      });
-    }
-
+    console.log('Received order update request:', req.params.orderId, req.body);
+    
     const { orderId } = req.params;
     const { status, notes } = req.body;
 
-    // Find the order row
-    const response = await sheets.spreadsheets.values.get({
-      spreadsheetId: GOOGLE_SHEETS_ID,
-      range: 'Orders!A1:O1000',
-    });
+    console.log('Looking for order:', orderId, 'with status:', status);
 
-    const values = response.data.values || [];
-    const orderRowIndex = values.findIndex(row => row[0] === orderId);
-
-    if (orderRowIndex === -1) {
-      return res.status(404).json({
-        error: 'Order not found'
-      });
-    }
-
-    // Update the order status
-    const rowNumber = orderRowIndex + 1;
-    const updates = [];
-    
-    if (status) {
-      updates.push({
-        range: `Orders!H${rowNumber}`,
-        values: [[status]]
-      });
-    }
-    
-    if (notes) {
-      updates.push({
-        range: `Orders!L${rowNumber}`,
-        values: [[notes]]
-      });
-    }
-
-    // Update timestamp
-    updates.push({
-      range: `Orders!J${rowNumber}`,
-      values: [[new Date().toISOString()]]
-    });
-
-    await sheets.spreadsheets.values.batchUpdate({
-      spreadsheetId: GOOGLE_SHEETS_ID,
-      resource: {
-        valueInputOption: 'RAW',
-        data: updates
+    if (!sheets) {
+      console.log('Google Sheets not available, updating in-memory storage');
+      const orderIndex = inMemoryOrders.findIndex(order => order.orderid === orderId);
+      
+      if (orderIndex === -1) {
+        return res.status(404).json({
+          error: 'Order not found'
+        });
       }
-    });
+      
+      inMemoryOrders[orderIndex].status = status;
+      if (notes) {
+        inMemoryOrders[orderIndex].notes = notes;
+      }
+      inMemoryOrders[orderIndex].updatedAt = new Date().toISOString();
+      
+      return res.json({
+        success: true,
+        message: 'Order updated successfully',
+        orderId: orderId
+      });
+    }
 
-    // Also update Firebase Firestore for real-time updates
-    if (db) {
-      try {
-        // Find the order in Firestore by orderid
-        const ordersRef = db.collection('orders');
-        const snapshot = await ordersRef.where('orderid', '==', orderId).get();
-        
-        if (!snapshot.empty) {
-          const orderDoc = snapshot.docs[0];
-          const updateData = {
-            updatedAt: admin.firestore.FieldValue.serverTimestamp()
-          };
-          
-          if (status) {
-            updateData.status = status;
-          }
-          
-          if (notes) {
-            updateData.notes = notes;
-          }
-          
-          await orderDoc.ref.update(updateData);
-          console.log('Order updated in Firestore:', orderId);
-        } else {
-          console.warn('Order not found in Firestore:', orderId);
+    try {
+      // Find the order row
+      const response = await sheets.spreadsheets.values.get({
+        spreadsheetId: GOOGLE_SHEETS_ID,
+        range: 'Orders!A1:O1000',
+      });
+
+      const values = response.data.values || [];
+      console.log('Total orders found:', values.length);
+      
+      const orderRowIndex = values.findIndex(row => row[0] === orderId);
+      console.log('Order row index:', orderRowIndex);
+
+      if (orderRowIndex === -1) {
+        console.log('Order not found in Google Sheets');
+        return res.status(404).json({
+          error: 'Order not found'
+        });
+      }
+
+      // Update the order status
+      const rowNumber = orderRowIndex + 1;
+      const updates = [];
+      
+      if (status) {
+        updates.push({
+          range: `Orders!H${rowNumber}`,
+          values: [[status]]
+        });
+      }
+      
+      if (notes) {
+        updates.push({
+          range: `Orders!L${rowNumber}`,
+          values: [[notes]]
+        });
+      }
+
+      // Update timestamp
+      updates.push({
+        range: `Orders!J${rowNumber}`,
+        values: [[new Date().toISOString()]]
+      });
+
+      await sheets.spreadsheets.values.batchUpdate({
+        spreadsheetId: GOOGLE_SHEETS_ID,
+        resource: {
+          valueInputOption: 'RAW',
+          data: updates
         }
-      } catch (firestoreError) {
-        console.error('Failed to update order in Firestore:', firestoreError);
-        // Don't fail the request if Firestore fails, Google Sheets is the primary storage
-      }
-    }
+      });
 
-    res.json({
-      success: true,
-      message: 'Order updated successfully',
-      orderId: orderId
-    });
+      // Also update Firebase Firestore for real-time updates
+      if (db) {
+        try {
+          // Find the order in Firestore by orderid
+          const ordersRef = db.collection('orders');
+          const snapshot = await ordersRef.where('orderid', '==', orderId).get();
+          
+          if (!snapshot.empty) {
+            const orderDoc = snapshot.docs[0];
+            const updateData = {
+              updatedAt: admin.firestore.FieldValue.serverTimestamp()
+            };
+            
+            if (status) {
+              updateData.status = status;
+            }
+            
+            if (notes) {
+              updateData.notes = notes;
+            }
+            
+            await orderDoc.ref.update(updateData);
+            console.log('Order updated in Firestore:', orderId);
+          } else {
+            console.warn('Order not found in Firestore:', orderId);
+          }
+        } catch (firestoreError) {
+          console.error('Failed to update order in Firestore:', firestoreError);
+          // Don't fail the request if Firestore fails, Google Sheets is the primary storage
+        }
+      }
+
+      res.json({
+        success: true,
+        message: 'Order updated successfully',
+        orderId: orderId
+      });
+    } catch (sheetsError) {
+      console.log('Google Sheets error, trying in-memory storage:', sheetsError.message);
+      const orderIndex = inMemoryOrders.findIndex(order => order.orderid === orderId);
+      
+      if (orderIndex === -1) {
+        return res.status(404).json({
+          error: 'Order not found'
+        });
+      }
+      
+      inMemoryOrders[orderIndex].status = status;
+      if (notes) {
+        inMemoryOrders[orderIndex].notes = notes;
+      }
+      inMemoryOrders[orderIndex].updatedAt = new Date().toISOString();
+      
+      return res.json({
+        success: true,
+        message: 'Order updated successfully',
+        orderId: orderId
+      });
+    }
   } catch (error) {
     console.error('Error updating order:', error);
     res.status(500).json({

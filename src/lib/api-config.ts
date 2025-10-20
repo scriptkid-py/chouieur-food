@@ -25,7 +25,7 @@
  * 1. NEXT_PUBLIC_API_URL environment variable (for production)
  * 2. Default to localhost:5000 (for development)
  */
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 /**
  * API endpoints configuration

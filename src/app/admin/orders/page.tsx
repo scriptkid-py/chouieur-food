@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -12,6 +13,7 @@ import { cn } from "@/lib/utils";
 export default function AdminOrdersPage() {
   const { role } = useStaffAuth();
   const { orders, isLoading, error, refetch, updateOrderStatus, source } = useHybridOrders();
+  const [updatingOrders, setUpdatingOrders] = useState<Set<string>>(new Set());
 
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
@@ -54,10 +56,21 @@ export default function AdminOrdersPage() {
 
   const handleStatusUpdate = async (orderId: string, newStatus: string) => {
     try {
+      console.log('Attempting to update order:', orderId, 'to status:', newStatus);
+      setUpdatingOrders(prev => new Set(prev).add(orderId));
       await updateOrderStatus(orderId, newStatus);
+      console.log('Order updated successfully');
       // Orders will be automatically refreshed by the hook
     } catch (error) {
       console.error('Failed to update order status:', error);
+      alert(`Failed to update order: ${error.message || error}`);
+      // You could add a toast notification here for better UX
+    } finally {
+      setUpdatingOrders(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(orderId);
+        return newSet;
+      });
     }
   };
 
@@ -131,7 +144,7 @@ export default function AdminOrdersPage() {
         <CardContent>
           {error ? (
             <div className="text-center py-8">
-              <p className="text-red-500 mb-4">Error loading orders: {error}</p>
+              <p className="text-red-500 mb-4">Error loading orders: {typeof error === 'string' ? error : error.message || 'Unknown error'}</p>
               <Button onClick={refetch} variant="outline">
                 Try Again
               </Button>
@@ -224,16 +237,26 @@ export default function AdminOrdersPage() {
                                   size="sm" 
                                   onClick={() => handleStatusUpdate(order.orderid || order.id, 'confirmed')}
                                   className="bg-green-600 hover:bg-green-700"
+                                  disabled={updatingOrders.has(order.orderid || order.id)}
                                 >
-                                  <CheckCircle className="h-4 w-4 mr-1" />
+                                  {updatingOrders.has(order.orderid || order.id) ? (
+                                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                                  ) : (
+                                    <CheckCircle className="h-4 w-4 mr-1" />
+                                  )}
                                   Confirm
                                 </Button>
                                 <Button 
                                   size="sm" 
                                   variant="destructive"
                                   onClick={() => handleStatusUpdate(order.orderid || order.id, 'cancelled')}
+                                  disabled={updatingOrders.has(order.orderid || order.id)}
                                 >
-                                  <XCircle className="h-4 w-4 mr-1" />
+                                  {updatingOrders.has(order.orderid || order.id) ? (
+                                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                                  ) : (
+                                    <XCircle className="h-4 w-4 mr-1" />
+                                  )}
                                   Cancel
                                 </Button>
                               </>
@@ -244,8 +267,13 @@ export default function AdminOrdersPage() {
                                 size="sm" 
                                 variant="outline"
                                 onClick={() => handleStatusUpdate(order.orderid || order.id, 'preparing')}
+                                disabled={updatingOrders.has(order.orderid || order.id)}
                               >
-                                <Clock className="h-4 w-4 mr-1" />
+                                {updatingOrders.has(order.orderid || order.id) ? (
+                                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                                ) : (
+                                  <Clock className="h-4 w-4 mr-1" />
+                                )}
                                 Start Prep
                               </Button>
                             )}
@@ -255,8 +283,13 @@ export default function AdminOrdersPage() {
                                 size="sm" 
                                 variant="outline"
                                 onClick={() => handleStatusUpdate(order.orderid || order.id, 'ready')}
+                                disabled={updatingOrders.has(order.orderid || order.id)}
                               >
-                                <CheckCircle className="h-4 w-4 mr-1" />
+                                {updatingOrders.has(order.orderid || order.id) ? (
+                                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                                ) : (
+                                  <CheckCircle className="h-4 w-4 mr-1" />
+                                )}
                                 Mark Ready
                               </Button>
                             )}
@@ -266,8 +299,13 @@ export default function AdminOrdersPage() {
                                 size="sm" 
                                 variant="outline"
                                 onClick={() => handleStatusUpdate(order.orderid || order.id, 'delivered')}
+                                disabled={updatingOrders.has(order.orderid || order.id)}
                               >
-                                <CheckCircle className="h-4 w-4 mr-1" />
+                                {updatingOrders.has(order.orderid || order.id) ? (
+                                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                                ) : (
+                                  <CheckCircle className="h-4 w-4 mr-1" />
+                                )}
                                 Mark Delivered
                               </Button>
                             )}
