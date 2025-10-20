@@ -1339,8 +1339,10 @@ app.put('/api/orders/:orderId', async (req, res) => {
         }
       });
 
-      // Also update Firebase Firestore for real-time updates
-      if (db) {
+    // Also update Firebase Firestore for real-time updates (async, don't wait)
+    if (db) {
+      // Run Firestore update asynchronously to avoid blocking the main response
+      setImmediate(async () => {
         try {
           // Find the order in Firestore by orderid
           const ordersRef = db.collection('orders');
@@ -1369,7 +1371,8 @@ app.put('/api/orders/:orderId', async (req, res) => {
           console.error('Failed to update order in Firestore:', firestoreError);
           // Don't fail the request if Firestore fails, Google Sheets is the primary storage
         }
-      }
+      });
+    }
 
       res.json({
         success: true,

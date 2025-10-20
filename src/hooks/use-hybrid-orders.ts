@@ -31,6 +31,7 @@ export function useHybridOrders() {
   const [apiOrders, setApiOrders] = useState<any[]>([]);
   const [apiLoading, setApiLoading] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
+  const [lastFetchTime, setLastFetchTime] = useState<number>(0);
 
   // Create a memoized query for real-time updates
   const ordersQuery = useMemoFirebase(() => {
@@ -43,7 +44,16 @@ export function useHybridOrders() {
   const { data: firebaseOrders, isLoading: firebaseLoading, error: firebaseError } = useCollection<HybridOrder>(ordersQuery);
 
   // Fetch orders from API as fallback
-  const fetchOrdersFromAPI = async () => {
+  const fetchOrdersFromAPI = async (forceRefresh = false) => {
+    const now = Date.now();
+    const timeSinceLastFetch = now - lastFetchTime;
+    
+    // Cache for 30 seconds to prevent excessive API calls
+    if (!forceRefresh && timeSinceLastFetch < 30000 && apiOrders.length > 0) {
+      console.log('Using cached orders, skipping API call');
+      return;
+    }
+    
     try {
       setApiLoading(true);
       setApiError(null);
@@ -52,6 +62,7 @@ export function useHybridOrders() {
       const response = await apiRequest<any[]>('/api/orders');
       console.log('API orders response:', response);
       setApiOrders(response);
+      setLastFetchTime(now);
       setUseFirebase(false); // Switch to API mode
     } catch (err) {
       console.error('Error fetching orders from API:', err);
@@ -77,12 +88,12 @@ export function useHybridOrders() {
     return [];
   }, [firebaseOrders, apiOrders, useFirebase, apiLoading]);
 
-  // Auto-refresh API orders every 30 seconds when using API mode
+  // Auto-refresh API orders every 60 seconds when using API mode (reduced frequency)
   useEffect(() => {
     if (!useFirebase && !apiLoading) {
       const interval = setInterval(() => {
         fetchOrdersFromAPI();
-      }, 30000); // Refresh every 30 seconds
+      }, 60000); // Refresh every 60 seconds (reduced from 30s)
 
       return () => clearInterval(interval);
     }
@@ -129,8 +140,8 @@ export function useHybridOrders() {
       // Real-time updates don't need manual refetch
       return;
     } else {
-      // Refetch from API
-      fetchOrdersFromAPI();
+      // Force refresh from API
+      fetchOrdersFromAPI(true);
     }
   };
 

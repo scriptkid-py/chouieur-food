@@ -20,20 +20,16 @@ import { useState } from "react";
 export default function KitchenViewPage() {
   const { role } = useStaffAuth();
   const { orders: allOrders, isLoading, updateOrderStatus, refetch, error } = useHybridOrders();
+  const [isUpdating, setIsUpdating] = useState<Set<string>>(new Set());
 
   // Filter orders for kitchen (confirmed, preparing, ready)
   const kitchenOrders = allOrders.filter(order => 
     ['confirmed', 'preparing', 'ready'].includes(order.status?.toLowerCase())
   );
 
-  // Debug logging
-  console.log('Kitchen Dashboard - All orders:', allOrders.length);
-  console.log('Kitchen Dashboard - Kitchen orders:', kitchenOrders.length);
-  console.log('Kitchen Dashboard - Orders:', allOrders.map(o => ({ id: o.orderid || o.id, status: o.status })));
-  if (kitchenOrders.length > 0) {
-    console.log('Kitchen Dashboard - First kitchen order:', kitchenOrders[0]);
-    console.log('Kitchen Dashboard - First order items type:', typeof kitchenOrders[0].items);
-    console.log('Kitchen Dashboard - First order items:', kitchenOrders[0].items);
+  // Debug logging (reduced for performance)
+  if (process.env.NODE_ENV === 'development') {
+    console.log('Kitchen Dashboard - All orders:', allOrders.length, 'Kitchen orders:', kitchenOrders.length);
   }
 
   const getStatusColor = (status: string) => {
@@ -56,10 +52,17 @@ export default function KitchenViewPage() {
 
   const handleUpdateOrderStatus = async (orderId: string, newStatus: string) => {
     try {
+      setIsUpdating(prev => new Set(prev).add(orderId));
       await updateOrderStatus(orderId, newStatus);
       // Orders will be automatically refreshed by the hook
     } catch (error) {
       console.error('Failed to update order status:', error);
+    } finally {
+      setIsUpdating(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(orderId);
+        return newSet;
+      });
     }
   };
 
@@ -250,8 +253,16 @@ export default function KitchenViewPage() {
                             <Button
                               size="sm"
                               onClick={() => handleUpdateOrderStatus(order.orderid || order.id, 'preparing')}
+                              disabled={isUpdating.has(order.orderid || order.id)}
                             >
-                              Start Preparing
+                              {isUpdating.has(order.orderid || order.id) ? (
+                                <>
+                                  <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
+                                  Updating...
+                                </>
+                              ) : (
+                                'Start Preparing'
+                              )}
                             </Button>
                           )}
                           {order.status?.toLowerCase() === 'preparing' && (
@@ -259,8 +270,16 @@ export default function KitchenViewPage() {
                               size="sm"
                               variant="outline"
                               onClick={() => handleUpdateOrderStatus(order.orderid || order.id, 'ready')}
+                              disabled={isUpdating.has(order.orderid || order.id)}
                             >
-                              Mark Ready
+                              {isUpdating.has(order.orderid || order.id) ? (
+                                <>
+                                  <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
+                                  Updating...
+                                </>
+                              ) : (
+                                'Mark Ready'
+                              )}
                             </Button>
                           )}
                           {order.status?.toLowerCase() === 'ready' && (
