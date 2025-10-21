@@ -13,6 +13,7 @@
     "render-start": "next start -p ${PORT:-3000}",
     "backend": "node index.js",
     "backend:hybrid": "node index-hybrid.js",
+    "backend:live": "node index-live.js",
     "backend:mongodb": "node index-mongodb-backup.js",
     "backend:sheets": "node index-google-sheets.js",
     "backend:dev": "nodemon index.js",
