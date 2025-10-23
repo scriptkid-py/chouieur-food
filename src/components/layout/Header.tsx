@@ -36,7 +36,8 @@ export function Header() {
   // Removed Firebase user - using API-only backend
   const user = null;
   const isUserLoading = false;
-  const auth = useAuth();
+  // Removed Firebase auth - using API-only backend
+  const auth = null;
   const router = useRouter();
   const pathname = usePathname();
 
