@@ -2,7 +2,7 @@
 
 import { DeliveryOrderForm } from "@/components/admin/DeliveryOrderForm";
 import { AdminCredentials } from "@/components/admin/AdminCredentials";
-import { LiveOrdersTest } from "@/components/admin/LiveOrdersTest";
+// Removed LiveOrdersTest - using API-only backend
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableRow, TableHeader, TableHead } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -248,7 +248,7 @@ export default function AdminDashboardPage() {
         <TabsContent value="credentials">
           <div className="space-y-6">
             <AdminCredentials />
-            <LiveOrdersTest />
+            {/* LiveOrdersTest component removed - using API-only backend */}
           </div>
         </TabsContent>
       </Tabs>
