@@ -12,7 +12,7 @@ import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
-import { useUser } from '@/firebase';
+// Removed Firebase import - using API-only backend
 import { apiRequest } from '@/lib/api-config';
 import Link from 'next/link';
 import { automateDeliveryNotifications } from '@/ai/flows/automate-delivery-notifications';

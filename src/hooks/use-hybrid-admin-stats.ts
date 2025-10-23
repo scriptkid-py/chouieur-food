@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useRealtimeOrders } from './use-realtime-orders';
+// Removed Firebase realtime orders - using API-only backend
 import { apiRequest } from '@/lib/api-config';
 
 export interface AdminStats {

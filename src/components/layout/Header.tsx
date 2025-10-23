@@ -9,8 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/Logo';
 import { useCart } from '@/context/CartContext';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { useAuth, useUser } from '@/firebase';
-import { signOut } from 'firebase/auth';
+// Removed Firebase imports - using API-only backend
 import { useRouter } from 'next/navigation';
 import {
   DropdownMenu,
