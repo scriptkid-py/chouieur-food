@@ -33,7 +33,9 @@ export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { itemCount } = useCart();
   const isMobile = useIsMobile();
-  const { user, isUserLoading } = useUser();
+  // Removed Firebase user - using API-only backend
+  const user = null;
+  const isUserLoading = false;
   const auth = useAuth();
   const router = useRouter();
   const pathname = usePathname();

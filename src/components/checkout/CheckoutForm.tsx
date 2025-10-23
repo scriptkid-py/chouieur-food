@@ -29,7 +29,9 @@ export function CheckoutForm() {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { register, handleSubmit, formState: { errors }, setValue } = useForm<FormValues>();
-  const { user, isUserLoading } = useUser();
+  // Removed Firebase user - using API-only backend
+  const user = null;
+  const isUserLoading = false;
 
   useEffect(() => {
     if (user) {
