@@ -134,11 +134,19 @@ const corsOptions = {
     const allowedOrigins = [
       process.env.FRONTEND_URL,
       'https://chouieur-express-frontend.onrender.com',
+      'https://chouieur-express-fqy6rwo98-scriptkid-pys-projects.vercel.app',
+      'https://chouieur-express-fgb1y5hir-scriptkid-pys-projects.vercel.app',
       'http://localhost:3000',
       'http://localhost:3001',
       'https://localhost:3000',
       'https://localhost:3001'
     ];
+    
+    // Always allow Vercel deployments
+    if (origin && origin.includes('vercel.app')) {
+      console.log('Allowing Vercel origin:', origin);
+      return callback(null, true);
+    }
     
     // Always allow the specific Render frontend URL
     if (origin === 'https://chouieur-express-frontend.onrender.com') {

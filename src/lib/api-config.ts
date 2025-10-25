@@ -29,13 +29,13 @@
 // Force production API URL for deployed apps
 let API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 
   (typeof window !== 'undefined' && !window.location.hostname.includes('localhost') 
-    ? 'https://chouieur-express-backend.onrender.com'  // Use external backend
+    ? 'https://chouieur-express-fqy6rwo98-scriptkid-pys-projects.vercel.app'  // Use Vercel backend
     : 'http://localhost:3001');
 
-// Override for Vercel deployments - force external backend
+// Override for Vercel deployments - use same domain for API
 if (typeof window !== 'undefined' && window.location.hostname.includes('vercel.app')) {
-  console.log('🚀 Vercel deployment detected - forcing external backend');
-  API_BASE_URL = 'https://chouieur-express-backend.onrender.com';
+  console.log('🚀 Vercel deployment detected - using Vercel backend');
+  API_BASE_URL = `https://${window.location.hostname}`;
 }
 
 export { API_BASE_URL };
