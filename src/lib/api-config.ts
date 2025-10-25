@@ -27,10 +27,18 @@
  * 3. Default to localhost:3001 (for development)
  */
 // Force production API URL for deployed apps
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 
+let API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 
   (typeof window !== 'undefined' && !window.location.hostname.includes('localhost') 
     ? 'https://chouieur-express-backend.onrender.com'  // Use external backend
     : 'http://localhost:3001');
+
+// Override for Vercel deployments - force external backend
+if (typeof window !== 'undefined' && window.location.hostname.includes('vercel.app')) {
+  console.log('🚀 Vercel deployment detected - forcing external backend');
+  API_BASE_URL = 'https://chouieur-express-backend.onrender.com';
+}
+
+export { API_BASE_URL };
 
 // Debug logging for API configuration
 if (typeof window !== 'undefined') {
