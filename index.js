@@ -133,11 +133,19 @@ const corsOptions = {
     const allowedOrigins = [
       process.env.FRONTEND_URL,
       'https://chouieur-express-frontend.onrender.com',
+      'https://chouieur-express-fqy6rwo98-scriptkid-pys-projects.vercel.app',
+      'https://chouieur-express-fgb1y5hir-scriptkid-pys-projects.vercel.app',
       'http://localhost:3000',
       'http://localhost:3001',
       'https://localhost:3000',
       'https://localhost:3001'
     ];
+    
+    // Always allow Vercel deployments
+    if (origin.includes('vercel.app')) {
+      console.log('Allowing Vercel origin:', origin);
+      return callback(null, true);
+    }
     
     // Always allow the specific Render frontend URL
     if (origin === 'https://chouieur-express-frontend.onrender.com') {
@@ -202,7 +210,22 @@ app.get('/api/test-cors', (req, res) => {
     success: true,
     message: 'CORS is working!',
     timestamp: new Date().toISOString(),
-    origin: req.headers.origin
+    origin: req.headers.origin,
+    hostname: req.hostname,
+    headers: req.headers
+  });
+});
+
+// Health check endpoint for debugging
+app.get('/api/debug', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Backend is running',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV,
+    port: PORT,
+    origin: req.headers.origin,
+    userAgent: req.headers['user-agent']
   });
 });
 
