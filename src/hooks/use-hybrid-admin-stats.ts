@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 // Removed Firebase realtime orders - using API-only backend
 import { apiRequest } from '@/lib/api-config';
+import { useHybridOrders } from './use-hybrid-orders';
 
 export interface AdminStats {
   orders: {
@@ -32,11 +33,11 @@ export interface AdminStats {
 }
 
 export function useHybridAdminStats() {
-  const { orders: firebaseOrders, isLoading: firebaseLoading, error: firebaseError } = useRealtimeOrders();
+  const { orders: hybridOrders, isLoading: hybridLoading, error: hybridError } = useHybridOrders();
   const [apiOrders, setApiOrders] = useState<any[]>([]);
   const [apiLoading, setApiLoading] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
-  const [useFirebase, setUseFirebase] = useState(true);
+  const [useHybrid, setUseHybrid] = useState(true);
 
   // Fetch orders from API as fallback
   const fetchOrdersFromAPI = async () => {
@@ -46,7 +47,7 @@ export function useHybridAdminStats() {
       
       const response = await apiRequest<any[]>('/api/orders');
       setApiOrders(response);
-      setUseFirebase(false); // Switch to API mode
+      setUseHybrid(false); // Switch to API mode
     } catch (err) {
       console.error('Error fetching orders from API:', err);
       setApiError(err instanceof Error ? err.message : 'Failed to fetch orders');
@@ -55,35 +56,35 @@ export function useHybridAdminStats() {
     }
   };
 
-  // Use Firebase orders if available, otherwise fall back to API
+  // Use hybrid orders if available, otherwise fall back to API
   const orders = useMemo(() => {
-    if (useFirebase && firebaseOrders && firebaseOrders.length > 0) {
-      return firebaseOrders;
-    } else if (!useFirebase && apiOrders.length > 0) {
+    if (useHybrid && hybridOrders && hybridOrders.length > 0) {
+      return hybridOrders;
+    } else if (!useHybrid && apiOrders.length > 0) {
       return apiOrders;
-    } else if (useFirebase && firebaseOrders && firebaseOrders.length === 0) {
-      // Firebase is connected but has no orders, try API
+    } else if (useHybrid && hybridOrders && hybridOrders.length === 0) {
+      // Hybrid is connected but has no orders, try API
       if (!apiLoading && apiOrders.length === 0) {
         fetchOrdersFromAPI();
       }
       return [];
     }
     return [];
-  }, [firebaseOrders, apiOrders, useFirebase, apiLoading]);
+  }, [hybridOrders, apiOrders, useHybrid, apiLoading]);
 
   // Auto-refresh API orders every 30 seconds when using API mode
   useEffect(() => {
-    if (!useFirebase && !apiLoading) {
+    if (!useHybrid && !apiLoading) {
       const interval = setInterval(() => {
         fetchOrdersFromAPI();
       }, 30000); // Refresh every 30 seconds
 
       return () => clearInterval(interval);
     }
-  }, [useFirebase, apiLoading]);
+  }, [useHybrid, apiLoading]);
 
-  const isLoading = useFirebase ? firebaseLoading : apiLoading;
-  const error = useFirebase ? firebaseError : apiError;
+  const isLoading = useHybrid ? hybridLoading : apiLoading;
+  const error = useHybrid ? hybridError : apiError;
 
   const stats = useMemo(() => {
     if (!orders || orders.length === 0) return null;
@@ -152,7 +153,7 @@ export function useHybridAdminStats() {
   }, [orders]);
 
   const refetch = () => {
-    if (useFirebase) {
+    if (useHybrid) {
       // Real-time updates don't need manual refetch
       return;
     } else {
@@ -166,7 +167,7 @@ export function useHybridAdminStats() {
     isLoading,
     error,
     refetch,
-    source: useFirebase ? 'firebase' : 'api',
+    source: useHybrid ? 'hybrid' : 'api',
     ordersCount: orders.length
   };
 }
