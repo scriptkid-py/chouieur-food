@@ -13,7 +13,9 @@ export function useMenuItems() {
         setIsLoading(true);
         setError(null);
         
+        console.log('🍽️ Fetching menu items...');
         const response = await apiRequest('/api/menu-items');
+        console.log('📋 Menu items response:', response);
         
         // Transform the response to match MenuItem interface
         const transformedItems: MenuItem[] = response.map((item: any) => ({

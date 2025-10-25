@@ -31,6 +31,14 @@ export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ||
     ? 'https://chouieur-express-backend.onrender.com'  // Use external backend
     : 'http://localhost:3001');
 
+// Debug logging for API configuration
+if (typeof window !== 'undefined') {
+  console.log('🌐 API Configuration Debug:');
+  console.log('📍 Hostname:', window.location.hostname);
+  console.log('🔗 API_BASE_URL:', API_BASE_URL);
+  console.log('🔧 NEXT_PUBLIC_API_URL:', process.env.NEXT_PUBLIC_API_URL);
+}
+
 /**
  * API endpoints configuration
  */
