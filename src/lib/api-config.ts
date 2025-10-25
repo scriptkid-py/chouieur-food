@@ -28,7 +28,7 @@
  */
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 
   (typeof window !== 'undefined' && window.location.hostname !== 'localhost' 
-    ? window.location.origin  // Use same domain for Vercel deployment
+    ? 'https://chouieur-express-backend.onrender.com'  // Use external backend
     : 'http://localhost:3001');
 
 /**
