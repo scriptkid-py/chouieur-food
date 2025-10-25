@@ -62,7 +62,7 @@ let inMemoryOrders = [
 ];
 let inMemoryMenuItems = [];
 
-// Firebase Admin configuration
+// Firebase Admin configuration (optional - app works without it)
 let db;
 try {
   if (!admin.apps.length) {
@@ -74,7 +74,8 @@ try {
   db = admin.firestore();
   console.log('Firebase Admin initialized successfully');
 } catch (error) {
-  console.error('Firebase Admin initialization failed:', error);
+  console.log('Firebase Admin initialization failed (app will work with Google Sheets only):', error.message);
+  db = null; // Set to null to indicate Firebase is not available
 }
 
 // Image upload configuration
