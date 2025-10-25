@@ -23,9 +23,13 @@
  * 
  * Priority:
  * 1. NEXT_PUBLIC_API_URL environment variable (for production)
- * 2. Default to localhost:5000 (for development)
+ * 2. Production backend URL (for deployed frontend)
+ * 3. Default to localhost:3001 (for development)
  */
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 
+  (typeof window !== 'undefined' && window.location.hostname !== 'localhost' 
+    ? 'https://chouieur-express-backend.onrender.com' 
+    : 'http://localhost:3001');
 
 /**
  * API endpoints configuration
