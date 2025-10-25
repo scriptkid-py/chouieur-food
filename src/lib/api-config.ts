@@ -26,8 +26,9 @@
  * 2. Production backend URL (for deployed frontend)
  * 3. Default to localhost:3001 (for development)
  */
+// Force production API URL for deployed apps
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 
-  (typeof window !== 'undefined' && window.location.hostname !== 'localhost' 
+  (typeof window !== 'undefined' && !window.location.hostname.includes('localhost') 
     ? 'https://chouieur-express-backend.onrender.com'  // Use external backend
     : 'http://localhost:3001');
 
