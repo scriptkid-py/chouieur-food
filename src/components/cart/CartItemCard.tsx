@@ -28,14 +28,27 @@ export function CartItemCard({ item }: CartItemCardProps) {
     <Card className="overflow-hidden shadow-md">
       <CardContent className="flex flex-col gap-4 p-4 md:flex-row md:items-start">
         <div className="relative h-32 w-full flex-shrink-0 md:h-40 md:w-40">
-          {image && (
+          {image ? (
             <Image
               src={image.imageUrl}
               alt={item.menuItem.name}
               data-ai-hint={image.imageHint}
               fill
               className="rounded-md object-cover"
+              onError={(e) => {
+                // Fallback to a simple placeholder if image fails to load
+                const target = e.target as HTMLImageElement;
+                target.style.display = 'none';
+                const parent = target.parentElement;
+                if (parent) {
+                  parent.innerHTML = '<div class="flex h-full w-full items-center justify-center bg-secondary rounded-md"><span class="text-muted-foreground text-sm">No Image</span></div>';
+                }
+              }}
             />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center bg-secondary rounded-md">
+              <span className="text-muted-foreground text-sm">No Image</span>
+            </div>
           )}
         </div>
         <div className="flex-grow">

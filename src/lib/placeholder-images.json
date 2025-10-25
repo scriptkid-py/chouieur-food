@@ -3,55 +3,55 @@
     {
       "id": "hero",
       "description": "A vibrant and appetizing spread of fast food from the restaurant.",
-      "imageUrl": "https://picsum.photos/seed/1/1920/1080",
+      "imageUrl": "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=1920&h=1080&fit=crop&crop=center",
       "imageHint": "restaurant food"
     },
     {
       "id": "sandwich-pilon",
       "description": "A delicious Sandwich Pilon.",
-      "imageUrl": "https://picsum.photos/seed/101/400/300",
+      "imageUrl": "https://images.unsplash.com/photo-1551782450-a2132b4ba21d?w=400&h=300&fit=crop&crop=center",
       "imageHint": "gourmet sandwich"
     },
     {
       "id": "pizza-fromage",
       "description": "A cheesy Pizza Fromage.",
-      "imageUrl": "https://picsum.photos/seed/102/400/300",
+      "imageUrl": "https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400&h=300&fit=crop&crop=center",
       "imageHint": "cheese pizza"
     },
     {
       "id": "tacos-viande",
       "description": "Savory Tacos Viande.",
-      "imageUrl": "https://picsum.photos/seed/103/400/300",
+      "imageUrl": "https://images.unsplash.com/photo-1565299585323-38174c4aabaa?w=400&h=300&fit=crop&crop=center",
       "imageHint": "meat tacos"
     },
     {
       "id": "poulet-marine",
       "description": "Flavorful Poulet Mariné.",
-      "imageUrl": "https://picsum.photos/seed/104/400/300",
+      "imageUrl": "https://images.unsplash.com/photo-1532550907401-a500c9a57435?w=400&h=300&fit=crop&crop=center",
       "imageHint": "grilled chicken"
     },
     {
       "id": "hamburger-double-cheese",
       "description": "A juicy Hamburger Double Cheese.",
-      "imageUrl": "https://picsum.photos/seed/105/400/300",
+      "imageUrl": "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400&h=300&fit=crop&crop=center",
       "imageHint": "double cheeseburger"
     },
     {
       "id": "panini",
       "description": "A pressed Panini.",
-      "imageUrl": "https://picsum.photos/seed/106/400/300",
+      "imageUrl": "https://images.unsplash.com/photo-1528735602780-2552fd46c7af?w=400&h=300&fit=crop&crop=center",
       "imageHint": "panini sandwich"
     },
     {
       "id": "fajitas",
       "description": "Sizzling Fajitas.",
-      "imageUrl": "https://picsum.photos/seed/107/400/300",
+      "imageUrl": "https://images.unsplash.com/photo-1565299585323-38174c4aabaa?w=400&h=300&fit=crop&crop=center",
       "imageHint": "chicken fajitas"
     },
     {
       "id": "plat",
       "description": "A restaurant plate special.",
-      "imageUrl": "https://picsum.photos/seed/108/400/300",
+      "imageUrl": "https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400&h=300&fit=crop&crop=center",
       "imageHint": "plated meal"
     }
   ]

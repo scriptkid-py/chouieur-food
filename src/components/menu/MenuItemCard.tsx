@@ -44,6 +44,15 @@ export function MenuItemCard({ item }: MenuItemCardProps) {
                 fill
                 className="object-cover"
                 sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                onError={(e) => {
+                  // Fallback to a simple placeholder if image fails to load
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = 'none';
+                  const parent = target.parentElement;
+                  if (parent) {
+                    parent.innerHTML = '<div class="flex h-full w-full items-center justify-center bg-secondary"><span class="text-muted-foreground">No Image</span></div>';
+                  }
+                }}
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center bg-secondary">

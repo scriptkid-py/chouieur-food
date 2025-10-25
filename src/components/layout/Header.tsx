@@ -48,7 +48,9 @@ export function Header() {
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
 
   const handleLogout = async () => {
-    await signOut(auth);
+    // Simple logout - clear any stored auth data
+    localStorage.removeItem('user_token');
+    localStorage.removeItem('user_data');
     router.push('/');
   };
 
