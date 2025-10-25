@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: chouieur-express-backend
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node index.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: FRONTEND_URL
+        value: https://chouieur-express-fqy6rwo98-scriptkid-pys-projects.vercel.app
+    healthCheckPath: /api/health
+    autoDeploy: true
+    branch: master
