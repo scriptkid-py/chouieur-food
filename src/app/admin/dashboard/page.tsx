@@ -2,14 +2,12 @@
 
 import { DeliveryOrderForm } from "@/components/admin/DeliveryOrderForm";
 import { AdminCredentials } from "@/components/admin/AdminCredentials";
-// Removed LiveOrdersTest - using API-only backend
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableRow, TableHeader, TableHead } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useMenuItems } from "@/hooks/use-menu-items";
-import { useStaffAuth } from "@/context/StaffAuthContext";
 import { useHybridAdminStats } from "@/hooks/use-hybrid-admin-stats";
 import { 
   Package, 
@@ -26,7 +24,6 @@ import {
 import Link from "next/link";
 
 export default function AdminDashboardPage() {
-  const { role } = useStaffAuth();
   const { menuItems, isLoading: menuLoading } = useMenuItems();
   const { stats, isLoading: statsLoading, error: statsError, refetch, source, ordersCount } = useHybridAdminStats();
 
@@ -49,7 +46,7 @@ export default function AdminDashboardPage() {
         </div>
         <div className="flex items-center gap-2">
           <Badge variant="outline" className="text-sm">
-            {role?.toUpperCase()} ACCESS
+            ADMIN ACCESS
           </Badge>
           <Badge variant="secondary" className="text-xs">
             {source?.toUpperCase()} • {ordersCount} orders

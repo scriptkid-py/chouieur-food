@@ -10,11 +10,9 @@ import { useForm, SubmitHandler } from 'react-hook-form';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
-// Removed Firebase import - using API-only backend
 import { apiRequest } from '@/lib/api-config';
-import Link from 'next/link';
 import { automateDeliveryNotifications } from '@/ai/flows/automate-delivery-notifications';
 
 type FormValues = {
@@ -28,27 +26,9 @@ export function CheckoutForm() {
   const router = useRouter();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { register, handleSubmit, formState: { errors }, setValue } = useForm<FormValues>();
-  // Removed Firebase user - using API-only backend
-  const user = null;
-  const isUserLoading = false;
-
-  useEffect(() => {
-    if (user) {
-      setValue('name', user.displayName || '');
-    }
-  }, [user, setValue]);
+  const { register, handleSubmit, formState: { errors } } = useForm<FormValues>();
 
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
-    if (!user) {
-      toast({
-        title: 'Authentication Required',
-        description: 'You must be logged in to place an order.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
     if (cartItems.length === 0) {
       toast({
         title: 'Your cart is empty',
@@ -61,21 +41,20 @@ export function CheckoutForm() {
     setIsSubmitting(true);
 
     try {
-      // Prepare order data for Google Sheets
+      // Prepare order data
       const newOrder = {
-        userId: user.uid,
         customerName: data.name,
         customerPhone: data.phone,
         customerAddress: data.address,
         items: cartItems,
         total: cartTotal,
         status: 'pending',
-        email: user.email || '',
+        email: '',
         orderType: 'delivery',
         paymentMethod: 'cash'
       };
 
-      // Send order to Google Sheets via API
+      // Send order to API
       const response = await apiRequest('/api/orders', {
         method: 'POST',
         body: JSON.stringify(newOrder)
@@ -112,25 +91,6 @@ export function CheckoutForm() {
       setIsSubmitting(false);
     }
   };
-
-  if (isUserLoading) {
-    return (
-      <div className="flex justify-center p-8">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <div className="text-center">
-        <p className="mb-4">Please log in to proceed with your order.</p>
-        <Button asChild>
-          <Link href="/login">Login</Link>
-        </Button>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-8">

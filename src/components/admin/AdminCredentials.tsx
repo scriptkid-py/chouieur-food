@@ -108,16 +108,19 @@ export function AdminCredentials() {
           </div>
         ))}
 
-        <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-950 rounded-lg">
-          <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">
-            🚀 How to Access Admin Panel
+        <div className="mt-6 p-4 bg-green-50 dark:bg-green-950 rounded-lg">
+          <h4 className="font-semibold text-green-900 dark:text-green-100 mb-2">
+            🚀 Direct Access Available
           </h4>
-          <ol className="text-sm text-blue-800 dark:text-blue-200 space-y-1 list-decimal list-inside">
-            <li>Go to <code className="bg-blue-100 dark:bg-blue-900 px-1 rounded">/staff/login</code></li>
-            <li>Use the admin credentials above</li>
-            <li>You'll be redirected to the admin dashboard</li>
-            <li>Click "Menu Items" in the sidebar to manage your menu</li>
-          </ol>
+          <p className="text-sm text-green-800 dark:text-green-200">
+            All admin features are now accessible without authentication. You can directly access:
+          </p>
+          <ul className="text-sm text-green-800 dark:text-green-200 mt-2 space-y-1 list-disc list-inside">
+            <li><code className="bg-green-100 dark:bg-green-900 px-1 rounded">/admin/dashboard</code> - Main admin dashboard</li>
+            <li><code className="bg-green-100 dark:bg-green-900 px-1 rounded">/admin/menu</code> - Menu management</li>
+            <li><code className="bg-green-100 dark:bg-green-900 px-1 rounded">/admin/orders</code> - Order management</li>
+            <li><code className="bg-green-100 dark:bg-green-900 px-1 rounded">/kitchen</code> - Kitchen view</li>
+          </ul>
         </div>
 
         <div className="mt-4 p-4 bg-yellow-50 dark:bg-yellow-950 rounded-lg">

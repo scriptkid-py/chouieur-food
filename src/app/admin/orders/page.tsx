@@ -6,12 +6,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { useHybridOrders } from "@/hooks/use-hybrid-orders";
-import { useStaffAuth } from "@/context/StaffAuthContext";
 import { Loader2, RefreshCw, Eye, CheckCircle, XCircle, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function AdminOrdersPage() {
-  const { role } = useStaffAuth();
   const { orders, isLoading, error, refetch, updateOrderStatus, source } = useHybridOrders();
   const [updatingOrders, setUpdatingOrders] = useState<Set<string>>(new Set());
 
@@ -83,7 +81,7 @@ export default function AdminOrdersPage() {
         </div>
         <div className="flex items-center gap-2">
           <Badge variant="outline" className="text-sm">
-            {role?.toUpperCase()} ACCESS
+            ADMIN ACCESS
           </Badge>
           <Badge variant="secondary" className="text-xs">
             {source?.toUpperCase()} • {orders.length} orders

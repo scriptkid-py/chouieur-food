@@ -14,10 +14,8 @@ import { apiRequest } from '@/lib/api-config';
 import type { MenuItem } from '@/lib/types';
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { useStaffAuth } from '@/context/StaffAuthContext';
 
 export default function AdminMenuItemsPage() {
-  const { role } = useStaffAuth();
   const { menuItems, isLoading, refetch } = useMenuItems();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
@@ -105,7 +103,7 @@ export default function AdminMenuItemsPage() {
           <p className="text-muted-foreground">Manage your restaurant's menu items and images.</p>
         </div>
         <Badge variant="outline" className="text-sm">
-          {role?.toUpperCase()} ACCESS
+            ADMIN ACCESS
         </Badge>
       </div>
 

@@ -14,29 +14,8 @@ import {
   ChefHat
 } from 'lucide-react';
 import Link from 'next/link';
-import { useStaffAuth } from '@/context/StaffAuthContext';
 
 export default function AdminLandingPage() {
-  const { isAuthenticated, role } = useStaffAuth();
-
-  if (isAuthenticated && role === 'admin') {
-    // Redirect to dashboard if already authenticated
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <h2 className="text-xl font-semibold mb-2">Redirecting to Dashboard...</h2>
-          <p className="text-muted-foreground">You're already logged in as admin.</p>
-          <Button asChild className="mt-4">
-            <Link href="/admin/dashboard">
-              Go to Dashboard
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Link>
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-muted/30 p-4 sm:p-6 lg:p-8">
       <div className="max-w-6xl mx-auto space-y-8">
@@ -62,7 +41,7 @@ export default function AdminLandingPage() {
             </CardHeader>
             <CardContent>
               <Button asChild className="w-full">
-                <Link href="/staff/login">
+                <Link href="/admin/dashboard">
                   Access Dashboard
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
@@ -78,7 +57,7 @@ export default function AdminLandingPage() {
             </CardHeader>
             <CardContent>
               <Button asChild variant="outline" className="w-full">
-                <Link href="/staff/login">
+                <Link href="/admin/menu">
                   Manage Menu
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
@@ -94,7 +73,7 @@ export default function AdminLandingPage() {
             </CardHeader>
             <CardContent>
               <Button asChild variant="outline" className="w-full">
-                <Link href="/staff/login">
+                <Link href="/admin/orders">
                   View Orders
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
@@ -110,7 +89,7 @@ export default function AdminLandingPage() {
             </CardHeader>
             <CardContent>
               <Button asChild variant="outline" className="w-full">
-                <Link href="/staff/login">
+                <Link href="/kitchen">
                   Kitchen Access
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
@@ -166,20 +145,20 @@ export default function AdminLandingPage() {
           </Card>
         </div>
 
-        {/* Login Section */}
+        {/* Direct Access Section */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-center">Get Started</CardTitle>
+            <CardTitle className="text-center">Direct Access</CardTitle>
             <CardDescription className="text-center">
-              Use the credentials below to access the admin portal
+              All admin features are now accessible without authentication
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex justify-center">
               <Button asChild size="lg">
-                <Link href="/staff/login">
+                <Link href="/admin/dashboard">
                   <Shield className="mr-2 h-5 w-5" />
-                  Login to Admin Portal
+                  Go to Dashboard
                 </Link>
               </Button>
             </div>

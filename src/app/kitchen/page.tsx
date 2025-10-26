@@ -4,7 +4,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { useStaffAuth } from "@/context/StaffAuthContext";
 import { useHybridOrders } from "@/hooks/use-hybrid-orders";
 import { 
   UtensilsCrossed, 
@@ -18,7 +17,6 @@ import {
 import { useState } from "react";
 
 export default function KitchenViewPage() {
-  const { role } = useStaffAuth();
   const { orders: allOrders, isLoading, updateOrderStatus, refetch, error } = useHybridOrders();
   const [isUpdating, setIsUpdating] = useState<Set<string>>(new Set());
 
@@ -88,7 +86,7 @@ export default function KitchenViewPage() {
             Refresh
           </Button>
           <Badge variant="outline" className="text-sm">
-            {role?.toUpperCase()} ACCESS
+            KITCHEN ACCESS
           </Badge>
         </div>
       </header>

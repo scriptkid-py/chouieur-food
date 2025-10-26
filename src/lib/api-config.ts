@@ -62,10 +62,6 @@ export const API_ENDPOINTS = {
   // Menu items
   MENU_ITEMS: `${API_BASE_URL}/api/menu-items`,
   MENU_ITEM: (id: string) => `${API_BASE_URL}/api/menu-items/${id}`,
-  
-  // Users
-  USERS: `${API_BASE_URL}/api/users`,
-  USER_BY_FIREBASE_UID: (firebaseUid: string) => `${API_BASE_URL}/api/users/${firebaseUid}`,
 } as const;
 
 // =============================================================================
@@ -217,29 +213,6 @@ export async function getMenuItem(id: string) {
     success: boolean;
     menuItem: any;
   }>(API_ENDPOINTS.MENU_ITEM(id));
-}
-
-/**
- * Get user by Firebase UID
- */
-export async function getUserByFirebaseUid(firebaseUid: string) {
-  return apiRequest<{
-    success: boolean;
-    user: any;
-  }>(API_ENDPOINTS.USER_BY_FIREBASE_UID(firebaseUid));
-}
-
-/**
- * Create a new user
- */
-export async function createUser(userData: any) {
-  return apiRequest<{
-    success: boolean;
-    user: any;
-  }>(API_ENDPOINTS.USERS, {
-    method: 'POST',
-    body: JSON.stringify(userData),
-  });
 }
 
 // =============================================================================

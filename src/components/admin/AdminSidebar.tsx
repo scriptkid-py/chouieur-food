@@ -1,8 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, Package, LogOut, Utensils } from 'lucide-react';
+import { usePathname } from 'next/navigation';
+import { LayoutDashboard, Package, Utensils } from 'lucide-react';
 import {
   Sidebar,
   SidebarHeader,
@@ -12,17 +12,9 @@ import {
   SidebarMenuButton,
   SidebarFooter,
 } from '@/components/ui/sidebar';
-import { useStaffAuth } from '@/context/StaffAuthContext';
 
 export function AdminSidebar() {
   const pathname = usePathname();
-  const router = useRouter();
-  const { logout } = useStaffAuth();
-
-  const handleLogout = () => {
-    logout();
-    router.push('/staff/login');
-  };
 
   const menuItems = [
     {
@@ -43,27 +35,23 @@ export function AdminSidebar() {
   ];
 
   return (
-    <Sidebar>
+    <Sidebar className="border-r">
       <SidebarHeader>
-        <div className="flex items-center gap-2 px-4 py-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <Package className="h-4 w-4" />
+        <div className="flex items-center gap-2 px-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded bg-primary text-primary-foreground">
+            <LayoutDashboard className="h-4 w-4" />
           </div>
-          <div className="grid flex-1 text-left text-sm leading-tight">
-            <span className="truncate font-semibold">Chouieur Express</span>
-            <span className="truncate text-xs">Admin Panel</span>
+          <div className="flex flex-col">
+            <span className="text-sm font-semibold">Admin Panel</span>
+            <span className="text-xs text-muted-foreground">Chouieur Express</span>
           </div>
         </div>
       </SidebarHeader>
-      
       <SidebarContent>
         <SidebarMenu>
           {menuItems.map((item) => (
             <SidebarMenuItem key={item.href}>
-              <SidebarMenuButton
-                asChild
-                isActive={pathname === item.href}
-              >
+              <SidebarMenuButton asChild isActive={pathname === item.href}>
                 <Link href={item.href}>
                   <item.icon className="h-4 w-4" />
                   <span>{item.title}</span>
@@ -73,16 +61,12 @@ export function AdminSidebar() {
           ))}
         </SidebarMenu>
       </SidebarContent>
-      
       <SidebarFooter>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton onClick={handleLogout}>
-              <LogOut className="h-4 w-4" />
-              <span>Logout</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
+        <div className="px-2 py-2">
+          <div className="text-xs text-muted-foreground">
+            Admin access enabled
+          </div>
+        </div>
       </SidebarFooter>
     </Sidebar>
   );
