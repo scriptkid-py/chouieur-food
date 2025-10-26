@@ -162,6 +162,7 @@ const sampleUsers = [
     email: 'admin@chouieur.com',
     name: 'Admin User',
     phone: '+237111111111',
+    password: 'admin123',
     role: 'admin',
     isActive: true
   },
@@ -169,14 +170,8 @@ const sampleUsers = [
     email: 'kitchen@chouieur.com',
     name: 'Kitchen Staff',
     phone: '+237222222222',
+    password: 'kitchen123',
     role: 'kitchen',
-    isActive: true
-  },
-  {
-    email: 'customer@example.com',
-    name: 'Test Customer',
-    phone: '+237333333333',
-    role: 'customer',
     isActive: true
   }
 ];

@@ -8,6 +8,7 @@
  */
 
 const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
 
 // =============================================================================
 // USER SCHEMA
@@ -33,10 +34,14 @@ const userSchema = new mongoose.Schema({
     trim: true,
     maxlength: [20, 'Phone number cannot exceed 20 characters']
   },
+  password: {
+    type: String,
+    required: true,
+    minlength: 6
+  },
   role: {
     type: String,
-    enum: ['admin', 'kitchen', 'customer'],
-    default: 'customer',
+    enum: ['admin', 'kitchen'],
     required: true
   },
   isActive: {
@@ -118,13 +123,16 @@ userSchema.virtual('isKitchen').get(function() {
   return this.role === 'kitchen';
 });
 
-userSchema.virtual('isCustomer').get(function() {
-  return this.role === 'customer';
-});
+// Removed customer role - only admin and kitchen users
 
 // =============================================================================
 // INSTANCE METHODS
 // =============================================================================
+
+// Password comparison method
+userSchema.methods.comparePassword = async function(candidatePassword) {
+  return bcrypt.compare(candidatePassword, this.password);
+};
 
 userSchema.methods.updateLastLogin = function() {
   this.lastLogin = new Date();
@@ -195,7 +203,17 @@ userSchema.statics.getUserStats = function() {
 // PRE-SAVE MIDDLEWARE
 // =============================================================================
 
-userSchema.pre('save', function(next) {
+userSchema.pre('save', async function(next) {
+  // Hash password before saving
+  if (this.isModified('password')) {
+    try {
+      const salt = await bcrypt.genSalt(10);
+      this.password = await bcrypt.hash(this.password, salt);
+    } catch (error) {
+      return next(error);
+    }
+  }
+  
   // Ensure email is lowercase
   if (this.email) {
     this.email = this.email.toLowerCase().trim();
