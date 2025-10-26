@@ -27,7 +27,16 @@ const mongoose = require('mongoose');
 // CONNECTION CONFIGURATION
 // =============================================================================
 
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/chouieur-express';
+// Ensure the MongoDB URI includes the database name
+let MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/chouieur-express';
+
+// If the URI doesn't include a database name, add it
+if (MONGO_URI.includes('mongodb+srv://') && !MONGO_URI.includes('/chouieur-express')) {
+  MONGO_URI = MONGO_URI.replace('?', '/chouieur-express?');
+  if (!MONGO_URI.includes('?')) {
+    MONGO_URI += '/chouieur-express';
+  }
+}
 
 const connectionOptions = {
   maxPoolSize: 10, // Maintain up to 10 socket connections
