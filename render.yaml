@@ -1,17 +1,15 @@
 services:
   - type: web
-    name: chouieur-express-backend
-    env: node
-    plan: free
+    name: chouieur-express-api
+    runtime: node
     buildCommand: npm install
-    startCommand: node index.js
+    startCommand: npm start
     envVars:
       - key: NODE_ENV
         value: production
+      - key: MONGO_URI
+        value: mongodb+srv://ammizaidghost_db_user:hkkCoMiLSr86kpn4@cluster0.p1rvxol.mongodb.net/?appName=Cluster0
+      - key: JWT_SECRET
+        value: hkkCoMiLSr86kpn4
       - key: PORT
-        value: 10000
-      - key: FRONTEND_URL
-        value: https://chouieur-express-fqy6rwo98-scriptkid-pys-projects.vercel.app
-    healthCheckPath: /api/health
-    autoDeploy: true
-    branch: master
+        value: 3001
