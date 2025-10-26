@@ -60,7 +60,65 @@ let inMemoryOrders = [
     orderType: 'delivery'
   }
 ];
-let inMemoryMenuItems = [];
+
+let inMemoryMenuItems = [
+  {
+    id: '1',
+    name: 'Pizza Margherita',
+    category: 'Pizza',
+    price: 5000,
+    megaPrice: 7000,
+    description: 'Classic Italian pizza with fresh tomatoes, mozzarella, and basil',
+    imageUrl: 'https://images.unsplash.com/photo-1604382354936-07c5d9983bd3?w=400&h=300&fit=crop',
+    isActive: true
+  },
+  {
+    id: '2',
+    name: 'Burger Deluxe',
+    category: 'Burgers',
+    price: 8000,
+    megaPrice: 10000,
+    description: 'Juicy beef patty with lettuce, tomato, onion, and special sauce',
+    imageUrl: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400&h=300&fit=crop',
+    isActive: true
+  },
+  {
+    id: '3',
+    name: 'Chicken Wings',
+    category: 'Appetizers',
+    price: 4000,
+    description: 'Crispy chicken wings with your choice of sauce',
+    imageUrl: 'https://images.unsplash.com/photo-1567620832904-9fe5cf23db13?w=400&h=300&fit=crop',
+    isActive: true
+  },
+  {
+    id: '4',
+    name: 'Caesar Salad',
+    category: 'Salads',
+    price: 3500,
+    description: 'Fresh romaine lettuce with caesar dressing, croutons, and parmesan',
+    imageUrl: 'https://images.unsplash.com/photo-1546793665-c74683f339c1?w=400&h=300&fit=crop',
+    isActive: true
+  },
+  {
+    id: '5',
+    name: 'Coca Cola',
+    category: 'Beverages',
+    price: 1000,
+    description: 'Refreshing cola drink',
+    imageUrl: 'https://images.unsplash.com/photo-1581636625402-29b2a704ef13?w=400&h=300&fit=crop',
+    isActive: true
+  },
+  {
+    id: '6',
+    name: 'French Fries',
+    category: 'Sides',
+    price: 2500,
+    description: 'Crispy golden french fries',
+    imageUrl: 'https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=400&h=300&fit=crop',
+    isActive: true
+  }
+];
 
 // Firebase Admin configuration (optional - app works without it)
 let db;
@@ -205,14 +263,53 @@ app.options('*', (req, res) => {
 
 app.use(express.json());
 
-// Test endpoint to verify CORS is working
-app.get('/api/test-cors', (req, res) => {
-  res.json({
-    success: true,
-    message: 'CORS is working!',
-    timestamp: new Date().toISOString(),
-    origin: req.headers.origin
-  });
+// Debug endpoint for menu items
+app.get('/api/menu-items/debug', async (req, res) => {
+  try {
+    const debugInfo = {
+      timestamp: new Date().toISOString(),
+      googleSheetsConfigured: !!sheets,
+      environmentVariables: {
+        GOOGLE_SHEETS_ID: GOOGLE_SHEETS_ID ? 'Set' : 'Not set',
+        GOOGLE_SERVICE_ACCOUNT_EMAIL: GOOGLE_SERVICE_ACCOUNT_EMAIL ? 'Set' : 'Not set',
+        GOOGLE_PRIVATE_KEY: GOOGLE_PRIVATE_KEY ? 'Set' : 'Not set'
+      },
+      fallbackDataAvailable: inMemoryMenuItems.length > 0,
+      fallbackDataCount: inMemoryMenuItems.length
+    };
+
+    if (sheets) {
+      try {
+        // Test Google Sheets connection
+        const testResponse = await sheets.spreadsheets.values.get({
+          spreadsheetId: GOOGLE_SHEETS_ID,
+          range: 'MenuItems!A1:H5',
+        });
+        debugInfo.googleSheetsTest = {
+          success: true,
+          dataRows: testResponse.data.values?.length || 0,
+          message: 'Google Sheets connection successful'
+        };
+      } catch (sheetsError) {
+        debugInfo.googleSheetsTest = {
+          success: false,
+          error: sheetsError.message,
+          message: 'Google Sheets connection failed'
+        };
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      debug: debugInfo
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Debug endpoint failed',
+      message: error.message
+    });
+  }
 });
 
 // Serve uploaded images statically
@@ -760,12 +857,20 @@ app.get('/api/menu-items', async (req, res) => {
   res.header('Access-Control-Allow-Credentials', 'true');
   
   try {
+    console.log('📋 Fetching menu items...');
+    
     if (!sheets) {
-      return res.status(500).json({
-        error: 'Google Sheets not initialized'
+      console.log('⚠️  Google Sheets not available, using fallback menu items');
+      return res.status(200).json({
+        success: true,
+        data: inMemoryMenuItems,
+        source: 'fallback',
+        message: 'Using fallback menu items (Google Sheets not configured)'
       });
     }
 
+    console.log('📊 Reading from Google Sheets...');
+    
     // Read from MenuItems sheet
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: GOOGLE_SHEETS_ID,
@@ -775,8 +880,16 @@ app.get('/api/menu-items', async (req, res) => {
     const values = response.data.values || [];
     
     if (values.length === 0) {
-      return res.json([]);
+      console.log('📋 No data in Google Sheets, using fallback menu items');
+      return res.status(200).json({
+        success: true,
+        data: inMemoryMenuItems,
+        source: 'fallback',
+        message: 'No data in Google Sheets, using fallback menu items'
+      });
     }
+
+    console.log(`📋 Found ${values.length} rows in Google Sheets`);
 
     const headers = values[0];
     const menuItems = values.slice(1).map((row, index) => {
@@ -788,13 +901,38 @@ app.get('/api/menu-items', async (req, res) => {
       return item;
     });
 
-    res.json(menuItems);
-  } catch (error) {
-    console.error('Error fetching menu items:', error);
-    res.status(500).json({
-      error: 'Failed to fetch menu items',
-      message: error.message
+    console.log(`✅ Successfully fetched ${menuItems.length} menu items from Google Sheets`);
+
+    res.status(200).json({
+      success: true,
+      data: menuItems,
+      source: 'google_sheets',
+      message: `Successfully fetched ${menuItems.length} menu items`
     });
+  } catch (error) {
+    console.error('❌ Error fetching menu items:', error);
+    
+    // If Google Sheets fails, try to return fallback data
+    console.log('🔄 Google Sheets failed, attempting to use fallback data');
+    
+    try {
+      res.status(200).json({
+        success: true,
+        data: inMemoryMenuItems,
+        source: 'fallback',
+        message: 'Google Sheets error, using fallback menu items',
+        warning: error.message
+      });
+    } catch (fallbackError) {
+      console.error('❌ Fallback also failed:', fallbackError);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to fetch menu items',
+        message: 'Both Google Sheets and fallback data failed',
+        details: error.message,
+        timestamp: new Date().toISOString()
+      });
+    }
   }
 });
 
