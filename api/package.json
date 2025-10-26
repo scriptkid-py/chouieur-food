@@ -5,7 +5,10 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "dev": "nodemon index.js"
+    "dev": "nodemon index.js",
+    "dev:local": "MONGO_URI=mongodb://localhost:27017/chouieur-express nodemon index.js",
+    "test:connection": "node test-connection.js",
+    "seed": "node seed.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",

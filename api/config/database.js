@@ -30,13 +30,13 @@ const mongoose = require('mongoose');
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/chouieur-express';
 
 const connectionOptions = {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
   maxPoolSize: 10, // Maintain up to 10 socket connections
-  serverSelectionTimeoutMS: 5000, // Keep trying to send operations for 5 seconds
+  serverSelectionTimeoutMS: 30000, // Keep trying to send operations for 30 seconds
   socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
-  bufferMaxEntries: 0, // Disable mongoose buffering
   bufferCommands: false, // Disable mongoose buffering
+  retryWrites: true, // Enable retryable writes
+  w: 'majority', // Write concern
+  retryReads: true, // Enable retryable reads
 };
 
 // =============================================================================
