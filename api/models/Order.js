@@ -1,0 +1,328 @@
+/**
+ * =============================================================================
+ * ORDER MODEL
+ * =============================================================================
+ * 
+ * This file defines the Order schema for MongoDB using Mongoose.
+ * It stores customer orders with their details, items, and status.
+ */
+
+const mongoose = require('mongoose');
+
+// =============================================================================
+// ORDER ITEM SUB-SCHEMA
+// =============================================================================
+
+const orderItemSchema = new mongoose.Schema({
+  menuItemId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'MenuItem',
+    required: true
+  },
+  name: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  quantity: {
+    type: Number,
+    required: true,
+    min: [1, 'Quantity must be at least 1']
+  },
+  price: {
+    type: Number,
+    required: true,
+    min: [0, 'Price cannot be negative']
+  },
+  totalPrice: {
+    type: Number,
+    required: true,
+    min: [0, 'Total price cannot be negative']
+  },
+  size: {
+    type: String,
+    enum: ['regular', 'mega'],
+    default: 'regular'
+  },
+  specialInstructions: {
+    type: String,
+    trim: true,
+    maxlength: [200, 'Special instructions cannot exceed 200 characters']
+  }
+}, { _id: false });
+
+// =============================================================================
+// ORDER SCHEMA
+// =============================================================================
+
+const orderSchema = new mongoose.Schema({
+  orderId: {
+    type: String,
+    required: true,
+    unique: true,
+    trim: true
+  },
+  customerName: {
+    type: String,
+    required: [true, 'Customer name is required'],
+    trim: true,
+    maxlength: [100, 'Customer name cannot exceed 100 characters']
+  },
+  customerPhone: {
+    type: String,
+    required: [true, 'Customer phone is required'],
+    trim: true,
+    maxlength: [20, 'Phone number cannot exceed 20 characters']
+  },
+  customerAddress: {
+    type: String,
+    required: [true, 'Customer address is required'],
+    trim: true,
+    maxlength: [200, 'Address cannot exceed 200 characters']
+  },
+  customerEmail: {
+    type: String,
+    trim: true,
+    lowercase: true,
+    maxlength: [100, 'Email cannot exceed 100 characters']
+  },
+  items: [orderItemSchema],
+  subtotal: {
+    type: Number,
+    required: true,
+    min: [0, 'Subtotal cannot be negative']
+  },
+  tax: {
+    type: Number,
+    default: 0,
+    min: [0, 'Tax cannot be negative']
+  },
+  deliveryFee: {
+    type: Number,
+    default: 0,
+    min: [0, 'Delivery fee cannot be negative']
+  },
+  total: {
+    type: Number,
+    required: true,
+    min: [0, 'Total cannot be negative']
+  },
+  status: {
+    type: String,
+    enum: ['pending', 'confirmed', 'preparing', 'ready', 'delivered', 'cancelled'],
+    default: 'pending'
+  },
+  orderType: {
+    type: String,
+    enum: ['delivery', 'pickup'],
+    default: 'delivery'
+  },
+  paymentMethod: {
+    type: String,
+    enum: ['cash', 'card', 'online'],
+    default: 'cash'
+  },
+  paymentStatus: {
+    type: String,
+    enum: ['pending', 'paid', 'failed', 'refunded'],
+    default: 'pending'
+  },
+  notes: {
+    type: String,
+    trim: true,
+    maxlength: [500, 'Notes cannot exceed 500 characters']
+  },
+  estimatedDeliveryTime: {
+    type: Date
+  },
+  actualDeliveryTime: {
+    type: Date
+  },
+  deliveryInstructions: {
+    type: String,
+    trim: true,
+    maxlength: [200, 'Delivery instructions cannot exceed 200 characters']
+  },
+  // Tracking fields
+  confirmedAt: {
+    type: Date
+  },
+  preparingAt: {
+    type: Date
+  },
+  readyAt: {
+    type: Date
+  },
+  deliveredAt: {
+    type: Date
+  },
+  cancelledAt: {
+    type: Date
+  },
+  cancellationReason: {
+    type: String,
+    trim: true
+  }
+}, {
+  timestamps: true, // Automatically adds createdAt and updatedAt
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true }
+});
+
+// =============================================================================
+// INDEXES FOR PERFORMANCE
+// =============================================================================
+
+orderSchema.index({ orderId: 1 });
+orderSchema.index({ customerPhone: 1 });
+orderSchema.index({ customerEmail: 1 });
+orderSchema.index({ status: 1 });
+orderSchema.index({ orderType: 1 });
+orderSchema.index({ createdAt: -1 });
+orderSchema.index({ 'items.menuItemId': 1 });
+
+// =============================================================================
+// VIRTUAL FIELDS
+// =============================================================================
+
+orderSchema.virtual('formattedTotal').get(function() {
+  return `$${(this.total / 100).toFixed(2)}`;
+});
+
+orderSchema.virtual('formattedSubtotal').get(function() {
+  return `$${(this.subtotal / 100).toFixed(2)}`;
+});
+
+orderSchema.virtual('itemCount').get(function() {
+  return this.items.reduce((total, item) => total + item.quantity, 0);
+});
+
+orderSchema.virtual('isActive').get(function() {
+  return !['delivered', 'cancelled'].includes(this.status);
+});
+
+orderSchema.virtual('processingTime').get(function() {
+  if (this.deliveredAt && this.confirmedAt) {
+    return Math.round((this.deliveredAt - this.confirmedAt) / (1000 * 60)); // minutes
+  }
+  return null;
+});
+
+// =============================================================================
+// INSTANCE METHODS
+// =============================================================================
+
+orderSchema.methods.updateStatus = function(newStatus, reason = null) {
+  const statusHistory = {
+    pending: null,
+    confirmed: 'confirmedAt',
+    preparing: 'preparingAt',
+    ready: 'readyAt',
+    delivered: 'deliveredAt',
+    cancelled: 'cancelledAt'
+  };
+  
+  this.status = newStatus;
+  
+  if (statusHistory[newStatus]) {
+    this[statusHistory[newStatus]] = new Date();
+  }
+  
+  if (newStatus === 'cancelled' && reason) {
+    this.cancellationReason = reason;
+  }
+  
+  return this.save();
+};
+
+orderSchema.methods.addItem = function(item) {
+  this.items.push(item);
+  this.recalculateTotals();
+  return this.save();
+};
+
+orderSchema.methods.removeItem = function(itemIndex) {
+  if (itemIndex >= 0 && itemIndex < this.items.length) {
+    this.items.splice(itemIndex, 1);
+    this.recalculateTotals();
+    return this.save();
+  }
+  throw new Error('Invalid item index');
+};
+
+orderSchema.methods.recalculateTotals = function() {
+  this.subtotal = this.items.reduce((total, item) => total + item.totalPrice, 0);
+  this.total = this.subtotal + this.tax + this.deliveryFee;
+};
+
+// =============================================================================
+// STATIC METHODS
+// =============================================================================
+
+orderSchema.statics.findByStatus = function(status) {
+  return this.find({ status: status }).sort({ createdAt: -1 });
+};
+
+orderSchema.statics.findByCustomer = function(phone) {
+  return this.find({ customerPhone: phone }).sort({ createdAt: -1 });
+};
+
+orderSchema.statics.findToday = function() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  
+  return this.find({
+    createdAt: {
+      $gte: today,
+      $lt: tomorrow
+    }
+  }).sort({ createdAt: -1 });
+};
+
+orderSchema.statics.getOrderStats = function() {
+  return this.aggregate([
+    {
+      $group: {
+        _id: '$status',
+        count: { $sum: 1 },
+        totalValue: { $sum: '$total' }
+      }
+    }
+  ]);
+};
+
+// =============================================================================
+// PRE-SAVE MIDDLEWARE
+// =============================================================================
+
+orderSchema.pre('save', function(next) {
+  // Generate order ID if not provided
+  if (!this.orderId) {
+    const timestamp = Date.now();
+    const random = Math.random().toString(36).substr(2, 9);
+    this.orderId = `ORD-${timestamp}-${random}`;
+  }
+  
+  // Recalculate totals before saving
+  this.recalculateTotals();
+  
+  next();
+});
+
+// =============================================================================
+// POST-SAVE MIDDLEWARE
+// =============================================================================
+
+orderSchema.post('save', function(doc) {
+  console.log(`📦 Order ${doc.orderId} saved with status: ${doc.status}`);
+});
+
+// =============================================================================
+// EXPORT MODEL
+// =============================================================================
+
+const Order = mongoose.models.Order || mongoose.model('Order', orderSchema);
+
+module.exports = Order;
