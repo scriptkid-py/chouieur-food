@@ -23,18 +23,21 @@ export function CartItemCard({ item }: CartItemCardProps) {
   const { removeItem, updateQuantity, updateSize, toggleSupplement } = useCart();
   const image = PlaceHolderImages.find(p => p.id === item.menuItem.imageId);
   const hasSizeOption = item.menuItem.megaPrice !== undefined;
+  
+  // Use actual image URL if available, otherwise fall back to placeholder
+  const imageUrl = item.menuItem.imageUrl || image?.imageUrl;
 
   return (
     <Card className="overflow-hidden shadow-md">
       <CardContent className="flex flex-col gap-4 p-4 md:flex-row md:items-start">
         <div className="relative h-32 w-full flex-shrink-0 md:h-40 md:w-40">
-          {image ? (
+          {imageUrl ? (
             <Image
-              src={image.imageUrl}
+              src={imageUrl}
               alt={item.menuItem.name}
-              data-ai-hint={image.imageHint}
               fill
               className="rounded-md object-cover"
+              sizes="(max-width: 768px) 100vw, 160px"
               onError={(e) => {
                 // Fallback to a simple placeholder if image fails to load
                 const target = e.target as HTMLImageElement;
