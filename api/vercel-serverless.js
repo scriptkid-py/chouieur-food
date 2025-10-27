@@ -39,6 +39,30 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // =============================================================================
+// DATABASE CONNECTION MIDDLEWARE
+// =============================================================================
+
+const ensureDbConnection = async (req, res, next) => {
+  try {
+    const connected = await connectToMongoDB();
+    if (!connected) {
+      console.error('❌ Database connection failed');
+      return res.status(503).json({ 
+        success: false, 
+        error: 'Database connection failed' 
+      });
+    }
+    next();
+  } catch (error) {
+    console.error('❌ Database connection error:', error);
+    return res.status(503).json({ 
+      success: false, 
+      error: 'Database connection error' 
+    });
+  }
+};
+
+// =============================================================================
 // HEALTH CHECK ENDPOINT
 // =============================================================================
 
@@ -72,20 +96,24 @@ app.get('/api/health', async (req, res) => {
 // MENU ITEMS ENDPOINTS
 // =============================================================================
 
-app.get('/api/menu-items', async (req, res) => {
+app.get('/api/menu-items', ensureDbConnection, async (req, res) => {
   try {
-    await connectToMongoDB();
+    console.log('📦 Fetching menu items...');
     const menuItems = await MenuItem.find({ isActive: true });
+    console.log(`✅ Found ${menuItems.length} menu items`);
+    
     res.json({ success: true, menuItems });
   } catch (error) {
-    console.error('Error fetching menu items:', error);
-    res.status(500).json({ success: false, error: error.message });
+    console.error('❌ Error fetching menu items:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message
+    });
   }
 });
 
-app.post('/api/menu-items', async (req, res) => {
+app.post('/api/menu-items', ensureDbConnection, async (req, res) => {
   try {
-    await connectToMongoDB();
     const menuItem = new MenuItem(req.body);
     await menuItem.save();
     res.status(201).json({ success: true, menuItem });
@@ -94,9 +122,8 @@ app.post('/api/menu-items', async (req, res) => {
   }
 });
 
-app.put('/api/menu-items/:id', async (req, res) => {
+app.put('/api/menu-items/:id', ensureDbConnection, async (req, res) => {
   try {
-    await connectToMongoDB();
     const menuItem = await MenuItem.findByIdAndUpdate(req.params.id, req.body, { new: true });
     if (!menuItem) {
       return res.status(404).json({ success: false, error: 'Menu item not found' });
@@ -107,9 +134,8 @@ app.put('/api/menu-items/:id', async (req, res) => {
   }
 });
 
-app.delete('/api/menu-items/:id', async (req, res) => {
+app.delete('/api/menu-items/:id', ensureDbConnection, async (req, res) => {
   try {
-    await connectToMongoDB();
     await MenuItem.findByIdAndDelete(req.params.id);
     res.json({ success: true, message: 'Menu item deleted' });
   } catch (error) {
@@ -121,9 +147,8 @@ app.delete('/api/menu-items/:id', async (req, res) => {
 // ORDERS ENDPOINTS
 // =============================================================================
 
-app.get('/api/orders', async (req, res) => {
+app.get('/api/orders', ensureDbConnection, async (req, res) => {
   try {
-    await connectToMongoDB();
     const orders = await Order.find().sort({ createdAt: -1 });
     res.json({ success: true, orders });
   } catch (error) {
@@ -131,9 +156,8 @@ app.get('/api/orders', async (req, res) => {
   }
 });
 
-app.post('/api/orders', async (req, res) => {
+app.post('/api/orders', ensureDbConnection, async (req, res) => {
   try {
-    await connectToMongoDB();
     const order = new Order(req.body);
     await order.save();
     res.status(201).json({ success: true, order });
@@ -142,9 +166,8 @@ app.post('/api/orders', async (req, res) => {
   }
 });
 
-app.put('/api/orders/:id', async (req, res) => {
+app.put('/api/orders/:id', ensureDbConnection, async (req, res) => {
   try {
-    await connectToMongoDB();
     const order = await Order.findByIdAndUpdate(req.params.id, req.body, { new: true });
     if (!order) {
       return res.status(404).json({ success: false, error: 'Order not found' });
@@ -159,9 +182,8 @@ app.put('/api/orders/:id', async (req, res) => {
 // USER ENDPOINTS (LOGIN)
 // =============================================================================
 
-app.post('/api/login', async (req, res) => {
+app.post('/api/login', ensureDbConnection, async (req, res) => {
   try {
-    await connectToMongoDB();
     const { email, password } = req.body;
     
     const user = await User.findOne({ email });
@@ -180,9 +202,8 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
-app.get('/api/users', async (req, res) => {
+app.get('/api/users', ensureDbConnection, async (req, res) => {
   try {
-    await connectToMongoDB();
     const users = await User.find().select('-password');
     res.json({ success: true, users });
   } catch (error) {

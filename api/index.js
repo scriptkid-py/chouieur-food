@@ -695,7 +695,7 @@ app.get('/api/admin/stats', async (req, res) => {
     };
     
     res.status(200).json({
-        success: true,
+      success: true,
       data: stats,
       message: 'Admin statistics fetched successfully'
     });

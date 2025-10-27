@@ -39,18 +39,23 @@ if (MONGO_URI.includes('mongodb+srv://') && !MONGO_URI.includes('/chouieur-expre
 }
 
 const connectionOptions = {
-  maxPoolSize: 10, // Maintain up to 10 socket connections
-  serverSelectionTimeoutMS: 30000, // Keep trying to send operations for 30 seconds
-  socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
-  bufferCommands: false, // Disable mongoose buffering
+  maxPoolSize: 5, // Reduced for serverless
+  serverSelectionTimeoutMS: 5000, // Faster timeout for serverless
+  socketTimeoutMS: 30000, // Close sockets after 30 seconds
+  bufferCommands: true, // Enable mongoose buffering for serverless
   retryWrites: true, // Enable retryable writes
   w: 'majority', // Write concern
   retryReads: true, // Enable retryable reads
+  useNewUrlParser: true, // Use new URL parser
+  useUnifiedTopology: true, // Use unified topology
 };
 
 // =============================================================================
 // CONNECTION FUNCTIONS
 // =============================================================================
+
+// Cache connection promise to prevent multiple simultaneous connections
+let connectionPromise = null;
 
 /**
  * Connect to MongoDB
@@ -59,24 +64,31 @@ async function connectToMongoDB() {
   try {
     // Check if already connected
     if (mongoose.connection.readyState === 1) {
-      console.log('✅ Already connected to MongoDB');
       return true;
     }
     
-    console.log('🔄 Connecting to MongoDB...');
-    console.log('📍 MongoDB URI:', MONGO_URI.replace(/\/\/.*@/, '//***:***@')); // Hide credentials in logs
+    // If there's already a connection attempt in progress, wait for it
+    if (connectionPromise) {
+      return connectionPromise;
+    }
     
-    await mongoose.connect(MONGO_URI, connectionOptions);
+    console.log('🔄 Connecting to MongoDB...');
+    console.log('📍 MongoDB URI:', MONGO_URI.replace(/\/\/.*@/, '//***:***@'));
+    
+    // Create connection promise
+    connectionPromise = mongoose.connect(MONGO_URI, connectionOptions);
+    
+    await connectionPromise;
+    
+    connectionPromise = null; // Clear the promise after success
     
     console.log('✅ MongoDB connected successfully');
-    console.log('🗄️  Database:', mongoose.connection.db.databaseName);
-    console.log('🌐 Host:', mongoose.connection.host);
-    console.log('🔌 Port:', mongoose.connection.port);
     
     return true;
   } catch (error) {
+    connectionPromise = null; // Clear the promise on failure
     console.error('❌ MongoDB connection error:', error.message);
-    console.error('🔧 Make sure MongoDB is running and MONGO_URI is correct');
+    console.error('Full error:', error);
     return false;
   }
 }
