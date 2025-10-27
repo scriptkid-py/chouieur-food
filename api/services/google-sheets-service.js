@@ -64,16 +64,19 @@ async function getMenuItemsFromSheets() {
     return rows.map((row, index) => {
       const [id, name, category, price, megaPrice, description, imageId, imageUrl, isActive] = row;
       
+      const priceValue = typeof price === 'number' ? price : parseFloat(String(price || 0));
+      const megaPriceValue = megaPrice ? (typeof megaPrice === 'number' ? megaPrice : parseFloat(String(megaPrice))) : null;
+      
       return {
-        id: id || `item-${index}`,
-        name: name || '',
-        category: category || 'Pizza',
-        price: parseFloat(price) || 0,
-        megaPrice: megaPrice ? parseFloat(megaPrice) : undefined,
-        description: description || '',
-        imageId: imageId || '',
-        imageUrl: imageUrl || '',
-        isActive: isActive === 'TRUE' || isActive === true,
+        id: String(id || `item-${index}`),
+        name: String(name || ''),
+        category: String(category || 'Pizza'),
+        price: isNaN(priceValue) ? 0 : priceValue,
+        megaPrice: (megaPriceValue && !isNaN(megaPriceValue)) ? megaPriceValue : null,
+        description: String(description || ''),
+        imageId: String(imageId || ''),
+        imageUrl: String(imageUrl || ''),
+        isActive: isActive === 'TRUE' || isActive === 'true' || isActive === true,
       };
     }).filter(item => item.isActive);
     

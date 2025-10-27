@@ -35,7 +35,7 @@ const menuItemSchema = new mongoose.Schema({
   megaPrice: {
     type: Number,
     min: [0, 'Mega price cannot be negative'],
-    default: null
+    default: undefined
   },
   description: {
     type: String,

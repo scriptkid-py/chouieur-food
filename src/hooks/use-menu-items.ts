@@ -32,11 +32,11 @@ export function useMenuItems() {
             name: String(item.name || 'Unknown Item'),
             category: String(item.category || 'Pizza') as MenuItemCategory,
             price: isNaN(price) ? 0 : price,
-            megaPrice: megaPrice && !isNaN(megaPrice) ? megaPrice : undefined,
+            megaPrice: (megaPrice !== null && megaPrice !== undefined && !isNaN(megaPrice)) ? megaPrice : undefined,
             description: String(item.description || ''),
             imageId: String(item.imageId || ''),
             imageUrl: String(item.imageUrl || ''),
-            isActive: item.isActive === true || item.isActive === 'TRUE' || item.isActive === true
+            isActive: item.isActive === true || item.isActive === 'TRUE' || String(item.isActive).toUpperCase() === 'TRUE'
           };
           
           console.log(`Transformed item ${index}:`, transformed);
