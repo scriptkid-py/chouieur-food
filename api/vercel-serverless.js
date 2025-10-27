@@ -179,11 +179,45 @@ app.get('/api/orders', ensureDbConnection, async (req, res) => {
 
 app.post('/api/orders', ensureDbConnection, async (req, res) => {
   try {
+    console.log('📦 Creating order...');
+    console.log('📋 Request body:', JSON.stringify(req.body, null, 2));
+    
+    // Validate required fields
+    const { customerName, customerPhone, customerAddress, items, total } = req.body;
+    
+    if (!customerName || !customerPhone || !customerAddress) {
+      console.error('❌ Missing required fields');
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Missing required fields: customerName, customerPhone, customerAddress' 
+      });
+    }
+    
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      console.error('❌ No items in order');
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Order must contain at least one item' 
+      });
+    }
+    
+    console.log('✅ Validated order data');
+    
     const order = new Order(req.body);
     await order.save();
+    
+    console.log('✅ Order saved successfully:', order.orderId);
+    
     res.status(201).json({ success: true, order });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    console.error('❌ Error creating order:', error.message);
+    console.error('Stack trace:', error.stack);
+    
+    res.status(500).json({ 
+      success: false, 
+      error: error.message,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 
