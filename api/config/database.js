@@ -27,29 +27,30 @@ const mongoose = require('mongoose');
 // CONNECTION CONFIGURATION
 // =============================================================================
 
-// Ensure the MongoDB URI includes the database name
 // Support both MONGO_URI and MONGODB_URI for compatibility
 let MONGO_URI = process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017/chouieur-express';
 
-// If the URI doesn't include a database name, add it
-// Atlas URIs should have the database name before the query string
+// Log the connection string for debugging
+console.log('🔍 MongoDB URI:', MONGO_URI.replace(/\/\/.*@/, '//***:***@'));
+
+// For MongoDB Atlas, we need to ensure the database name is in the URI
+// If it's an Atlas URI without a database name, we need to add it
 if (MONGO_URI.includes('mongodb+srv://')) {
-  // Check if database name is already in the URI
-  const match = MONGO_URI.match(/mongodb\+srv:\/\/[^\/]+\/([^?]+)/);
-  const hasDatabase = match && match[1] && match[1] !== '';
+  // Check if there's already a database name in the path
+  // Format: mongodb+srv://user:pass@cluster.mongodb.net/database?options
+  const uriWithoutQuery = MONGO_URI.split('?')[0];
+  const pathParts = uriWithoutQuery.split('/');
   
-  console.log('🔍 Checking MongoDB URI:', MONGO_URI.replace(/\/\/.*@/, '//***:***@'));
-  console.log('🔍 Has database:', hasDatabase);
-  console.log('🔍 Match:', match ? match[1] : 'none');
-  
-  if (!hasDatabase) {
-    // Insert database name before query string
+  // If there's no database name after the cluster (just query params), add it
+  if (pathParts.length === 2 || pathParts[2] === '') {
     if (MONGO_URI.includes('?')) {
       MONGO_URI = MONGO_URI.replace('?', '/chouieur-express?');
     } else {
       MONGO_URI += '/chouieur-express';
     }
-    console.log('🔧 Added database name');
+    console.log('🔧 Added database name to URI');
+  } else {
+    console.log('✅ Database name already in URI:', pathParts[2]);
   }
 }
 
@@ -61,8 +62,6 @@ const connectionOptions = {
   retryWrites: true, // Enable retryable writes
   w: 'majority', // Write concern
   retryReads: true, // Enable retryable reads
-  useNewUrlParser: true, // Use new URL parser
-  useUnifiedTopology: true, // Use unified topology
 };
 
 // =============================================================================
