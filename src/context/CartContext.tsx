@@ -132,9 +132,17 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     console.log('🛒 Cart updated:', state.items);
     console.log('📊 Total items:', state.items.length);
+    console.log('📦 Items:', state.items);
     
     if (typeof window !== 'undefined') {
-      localStorage.setItem('cart', JSON.stringify(state));
+      try {
+        // Stringify the entire state
+        const dataToSave = JSON.stringify(state);
+        localStorage.setItem('cart', dataToSave);
+        console.log('💾 Saved to localStorage:', dataToSave.substring(0, 100) + '...');
+      } catch (e) {
+        console.error('❌ Failed to save to localStorage:', e);
+      }
     }
   }, [state]);
 
