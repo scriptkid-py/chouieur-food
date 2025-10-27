@@ -114,6 +114,7 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 export const CartProvider = ({ children }: { children: ReactNode }) => {
   // Use a ref to prevent infinite loops
   const isLoadingRef = React.useRef(true);
+  const previousItemsRef = useRef<string>('');
   
   // Load cart from localStorage on mount
   const [state, dispatch] = useReducer(cartReducer, initialState, () => {
@@ -144,6 +145,14 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (isLoadingRef.current) return; // Skip saving during initial load
     
+    // Create a serialized version of items to compare
+    const currentItemsSerialized = JSON.stringify(state.items);
+    
+    // Only save if items have actually changed
+    if (currentItemsSerialized === previousItemsRef.current) return;
+    
+    previousItemsRef.current = currentItemsSerialized;
+    
     console.log('🛒 Cart updated:', state.items);
     console.log('📊 Total items:', state.items.length);
     
@@ -152,12 +161,12 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         // Stringify the entire state
         const dataToSave = JSON.stringify(state);
         localStorage.setItem('cart', dataToSave);
-        console.log('💾 Saved to localStorage');
+        console.log('💾 Saved to localStorage, length:', dataToSave.length);
       } catch (e) {
         console.error('❌ Failed to save to localStorage:', e);
       }
     }
-  }, [state.items.length]); // Only depend on the count, not the full state
+  }, [state.items]); // Depend on items array
 
   const addItem = (item: MenuItem, size: 'Normal' | 'Mega' = 'Normal') => {
     console.log('🛒 Adding item to cart:', item);
