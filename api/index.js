@@ -741,12 +741,15 @@ app.use((error, req, res, next) => {
 
 async function startServer() {
   try {
-    // Connect to MongoDB
-    const dbConnected = await connectToMongoDB();
-    
-    if (!dbConnected) {
-      console.error('❌ Failed to connect to MongoDB. Server will not start.');
-      process.exit(1);
+    // Try to connect to MongoDB (don't exit if fails - allow for retry)
+    try {
+      const dbConnected = await connectToMongoDB();
+      if (!dbConnected) {
+        console.warn('⚠️  MongoDB connection failed, but server will start anyway');
+      }
+    } catch (dbError) {
+      console.error('⚠️  MongoDB connection error:', dbError.message);
+      console.log('🚀 Starting server anyway to allow for retry...');
     }
     
     // Start the server
@@ -765,3 +768,6 @@ async function startServer() {
 
 // Start the server
 startServer();
+
+// Export app for serverless functions
+module.exports = app;

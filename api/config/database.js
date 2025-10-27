@@ -57,6 +57,12 @@ const connectionOptions = {
  */
 async function connectToMongoDB() {
   try {
+    // Check if already connected
+    if (mongoose.connection.readyState === 1) {
+      console.log('✅ Already connected to MongoDB');
+      return true;
+    }
+    
     console.log('🔄 Connecting to MongoDB...');
     console.log('📍 MongoDB URI:', MONGO_URI.replace(/\/\/.*@/, '//***:***@')); // Hide credentials in logs
     
