@@ -8,6 +8,8 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  // Disable minification to see real errors
+  swcMinify: false,
   images: {
     unoptimized: true, // Disable Image Optimization for Vercel compatibility
     remotePatterns: [

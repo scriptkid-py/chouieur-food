@@ -21,14 +21,16 @@ export function useMenuItems() {
         const items = response.menuItems || response;
         
         // Transform the response to match MenuItem interface
-        const transformedItems: MenuItem[] = items.map((item: any) => {
+        const transformedItems: MenuItem[] = items.map((item: any, index: number) => {
+          console.log(`Processing item ${index}:`, item);
+          
           const price = typeof item.price === 'number' ? item.price : parseFloat(String(item.price || 0));
           const megaPrice = item.megaPrice ? (typeof item.megaPrice === 'number' ? item.megaPrice : parseFloat(String(item.megaPrice))) : undefined;
           
-          return {
+          const transformed = {
             id: String(item._id || item.id || ''),
             name: String(item.name || 'Unknown Item'),
-            category: String(item.category || 'Pizza'),
+            category: String(item.category || 'Pizza') as MenuItemCategory,
             price: isNaN(price) ? 0 : price,
             megaPrice: megaPrice && !isNaN(megaPrice) ? megaPrice : undefined,
             description: String(item.description || ''),
@@ -36,6 +38,9 @@ export function useMenuItems() {
             imageUrl: String(item.imageUrl || ''),
             isActive: item.isActive === true || item.isActive === 'TRUE' || item.isActive === true
           };
+          
+          console.log(`Transformed item ${index}:`, transformed);
+          return transformed;
         });
 
         setMenuItems(transformedItems);
