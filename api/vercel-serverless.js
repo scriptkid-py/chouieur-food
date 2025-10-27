@@ -92,6 +92,14 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
+app.get('/api/debug', (req, res) => {
+  res.json({
+    MONGO_URI: process.env.MONGO_URI ? 'SET' : 'NOT SET',
+    MONGODB_URI: process.env.MONGODB_URI ? 'SET' : 'NOT SET',
+    hasURI: !!(process.env.MONGO_URI || process.env.MONGODB_URI),
+  });
+});
+
 // =============================================================================
 // MENU ITEMS ENDPOINTS
 // =============================================================================
