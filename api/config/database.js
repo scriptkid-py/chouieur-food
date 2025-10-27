@@ -32,10 +32,17 @@ const mongoose = require('mongoose');
 let MONGO_URI = process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017/chouieur-express';
 
 // If the URI doesn't include a database name, add it
-if (MONGO_URI.includes('mongodb+srv://') && !MONGO_URI.includes('/chouieur-express')) {
-  MONGO_URI = MONGO_URI.replace('?', '/chouieur-express?');
-  if (!MONGO_URI.includes('?')) {
-    MONGO_URI += '/chouieur-express';
+// Atlas URIs should have the database name before the query string
+if (MONGO_URI.includes('mongodb+srv://')) {
+  // Check if database name is already in the URI
+  const hasDatabase = /mongodb\+srv:\/\/[^\/]+\/([^?]+)/.test(MONGO_URI);
+  if (!hasDatabase) {
+    // Insert database name before query string
+    if (MONGO_URI.includes('?')) {
+      MONGO_URI = MONGO_URI.replace('?', '/chouieur-express?');
+    } else {
+      MONGO_URI += '/chouieur-express';
+    }
   }
 }
 
