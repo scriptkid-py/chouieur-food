@@ -22,15 +22,15 @@ export function useMenuItems() {
         
         // Transform the response to match MenuItem interface
         const transformedItems: MenuItem[] = items.map((item: any) => ({
-          id: item.id || item.id,
-          name: item.name || item.name,
-          category: item.category || item.category,
-          price: parseFloat(item.price || item.price) || 0,
-          megaPrice: item.megaprice ? parseFloat(item.megaprice) : undefined,
-          description: item.description || item.description,
-          imageId: item.imageid || item.imageId,
-          imageUrl: item.imageurl || item.imageUrl, // New field for actual image URLs
-          isActive: item.isactive === 'TRUE' || item.isActive === true
+          id: item._id || item.id || '',
+          name: item.name || '',
+          category: item.category || 'Pizza',
+          price: parseFloat(item.price) || 0,
+          megaPrice: item.megaPrice ? parseFloat(item.megaPrice) : undefined,
+          description: item.description || '',
+          imageId: item.imageId || '',
+          imageUrl: item.imageUrl || '', // New field for actual image URLs
+          isActive: item.isActive === true
         }));
 
         setMenuItems(transformedItems);
