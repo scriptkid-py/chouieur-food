@@ -35,7 +35,13 @@ let MONGO_URI = process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://l
 // Atlas URIs should have the database name before the query string
 if (MONGO_URI.includes('mongodb+srv://')) {
   // Check if database name is already in the URI
-  const hasDatabase = /mongodb\+srv:\/\/[^\/]+\/([^?]+)/.test(MONGO_URI);
+  const match = MONGO_URI.match(/mongodb\+srv:\/\/[^\/]+\/([^?]+)/);
+  const hasDatabase = match && match[1] && match[1] !== '';
+  
+  console.log('🔍 Checking MongoDB URI:', MONGO_URI.replace(/\/\/.*@/, '//***:***@'));
+  console.log('🔍 Has database:', hasDatabase);
+  console.log('🔍 Match:', match ? match[1] : 'none');
+  
   if (!hasDatabase) {
     // Insert database name before query string
     if (MONGO_URI.includes('?')) {
@@ -43,6 +49,7 @@ if (MONGO_URI.includes('mongodb+srv://')) {
     } else {
       MONGO_URI += '/chouieur-express';
     }
+    console.log('🔧 Added database name');
   }
 }
 
