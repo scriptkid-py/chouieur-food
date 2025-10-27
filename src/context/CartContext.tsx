@@ -21,9 +21,13 @@ const initialState: CartState = {
 };
 
 const calculateItemTotal = (item: CartItem): number => {
+  if (!item.menuItem || typeof item.menuItem.price !== 'number') {
+    console.warn('Invalid menu item:', item.menuItem);
+    return 0;
+  }
   const basePrice = item.size === 'Mega' && item.menuItem.megaPrice ? item.menuItem.megaPrice : item.menuItem.price;
-  const supplementsPrice = item.supplements.reduce((total, sup) => total + sup.price, 0);
-  return (basePrice + supplementsPrice) * item.quantity;
+  const supplementsPrice = item.supplements?.reduce((total, sup) => total + (sup.price || 0), 0) || 0;
+  return (basePrice + supplementsPrice) * (item.quantity || 1);
 };
 
 const cartReducer = (state: CartState, action: CartAction): CartState => {

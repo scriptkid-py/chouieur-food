@@ -21,17 +21,22 @@ export function useMenuItems() {
         const items = response.menuItems || response;
         
         // Transform the response to match MenuItem interface
-        const transformedItems: MenuItem[] = items.map((item: any) => ({
-          id: item._id || item.id || '',
-          name: item.name || '',
-          category: item.category || 'Pizza',
-          price: parseFloat(item.price) || 0,
-          megaPrice: item.megaPrice ? parseFloat(item.megaPrice) : undefined,
-          description: item.description || '',
-          imageId: item.imageId || '',
-          imageUrl: item.imageUrl || '', // New field for actual image URLs
-          isActive: item.isActive === true
-        }));
+        const transformedItems: MenuItem[] = items.map((item: any) => {
+          const price = typeof item.price === 'number' ? item.price : parseFloat(String(item.price || 0));
+          const megaPrice = item.megaPrice ? (typeof item.megaPrice === 'number' ? item.megaPrice : parseFloat(String(item.megaPrice))) : undefined;
+          
+          return {
+            id: String(item._id || item.id || ''),
+            name: String(item.name || 'Unknown Item'),
+            category: String(item.category || 'Pizza'),
+            price: isNaN(price) ? 0 : price,
+            megaPrice: megaPrice && !isNaN(megaPrice) ? megaPrice : undefined,
+            description: String(item.description || ''),
+            imageId: String(item.imageId || ''),
+            imageUrl: String(item.imageUrl || ''),
+            isActive: item.isActive === true || item.isActive === 'TRUE' || item.isActive === true
+          };
+        });
 
         setMenuItems(transformedItems);
       } catch (err) {
