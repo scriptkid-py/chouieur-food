@@ -1,7 +1,7 @@
 'use client';
 
 import type { CartItem, MenuItem, Supplement } from '@/lib/types';
-import React, { createContext, useContext, useReducer, ReactNode, useEffect } from 'react';
+import React, { createContext, useContext, useReducer, ReactNode, useEffect, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
 type CartState = {
@@ -112,39 +112,52 @@ type CartContextType = {
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export const CartProvider = ({ children }: { children: ReactNode }) => {
+  // Use a ref to prevent infinite loops
+  const isLoadingRef = React.useRef(true);
+  
   // Load cart from localStorage on mount
   const [state, dispatch] = useReducer(cartReducer, initialState, () => {
     if (typeof window !== 'undefined') {
       const stored = localStorage.getItem('cart');
       if (stored) {
         try {
-          return JSON.parse(stored);
+          const parsed = JSON.parse(stored);
+          console.log('📥 Loaded cart from localStorage:', parsed.items?.length || 0, 'items');
+          return parsed;
         } catch (e) {
+          console.error('❌ Failed to load cart from localStorage:', e);
           return initialState;
         }
       }
     }
     return initialState;
   });
+  
   const { toast } = useToast();
+
+  // Set loading flag to false after first render
+  useEffect(() => {
+    isLoadingRef.current = false;
+  }, []);
 
   // Save cart to localStorage whenever it changes
   useEffect(() => {
+    if (isLoadingRef.current) return; // Skip saving during initial load
+    
     console.log('🛒 Cart updated:', state.items);
     console.log('📊 Total items:', state.items.length);
-    console.log('📦 Items:', state.items);
     
     if (typeof window !== 'undefined') {
       try {
         // Stringify the entire state
         const dataToSave = JSON.stringify(state);
         localStorage.setItem('cart', dataToSave);
-        console.log('💾 Saved to localStorage:', dataToSave.substring(0, 100) + '...');
+        console.log('💾 Saved to localStorage');
       } catch (e) {
         console.error('❌ Failed to save to localStorage:', e);
       }
     }
-  }, [state]);
+  }, [state.items.length]); // Only depend on the count, not the full state
 
   const addItem = (item: MenuItem, size: 'Normal' | 'Mega' = 'Normal') => {
     console.log('🛒 Adding item to cart:', item);
