@@ -44,20 +44,26 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 const ensureDbConnection = async (req, res, next) => {
   try {
+    console.log('🔄 Ensuring database connection...');
     const connected = await connectToMongoDB();
     if (!connected) {
-      console.error('❌ Database connection failed');
+      console.error('❌ Database connection failed - returning 503');
       return res.status(503).json({ 
         success: false, 
-        error: 'Database connection failed' 
+        error: 'Database connection failed',
+        endpoint: req.path 
       });
     }
+    console.log('✅ Database connected, proceeding to handler');
     next();
   } catch (error) {
     console.error('❌ Database connection error:', error);
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
     return res.status(503).json({ 
       success: false, 
-      error: 'Database connection error' 
+      error: `Database connection error: ${error.message}`,
+      endpoint: req.path
     });
   }
 };
@@ -107,15 +113,22 @@ app.get('/api/debug', (req, res) => {
 app.get('/api/menu-items', ensureDbConnection, async (req, res) => {
   try {
     console.log('📦 Fetching menu items...');
+    console.log('🔍 Connection status:', getConnectionStatus());
+    
     const menuItems = await MenuItem.find({ isActive: true });
     console.log(`✅ Found ${menuItems.length} menu items`);
     
     res.json({ success: true, menuItems });
   } catch (error) {
     console.error('❌ Error fetching menu items:', error);
+    console.error('Error stack:', error.stack);
+    console.error('Error details:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
+    
+    // Always return JSON, never let it fail silently
     res.status(500).json({ 
       success: false, 
-      error: error.message
+      error: error.message || 'Unknown error',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 });
