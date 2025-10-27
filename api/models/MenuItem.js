@@ -24,7 +24,7 @@ const menuItemSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Category is required'],
     trim: true,
-    enum: ['Pizza', 'Burgers', 'Appetizers', 'Salads', 'Beverages', 'Sides', 'Desserts'],
+    enum: ['Pizza', 'Burgers', 'Hamburgers', 'Sandwiches', 'Tacos', 'Poulet', 'Panini / Fajitas', 'Plats', 'Salads', 'Appetizers', 'Beverages', 'Sides', 'Desserts'],
     default: 'Pizza'
   },
   price: {
