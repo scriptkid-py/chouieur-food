@@ -203,20 +203,57 @@ app.post('/api/orders', ensureDbConnection, async (req, res) => {
     
     console.log('✅ Validated order data');
     
-    const order = new Order(req.body);
+    // Transform items to match the Order schema
+    const transformedItems = items.map(item => {
+      const cartItem = item;
+      const menuItem = cartItem.menuItem || cartItem;
+      
+      return {
+        name: menuItem.name,
+        quantity: cartItem.quantity || 1,
+        price: cartItem.size === 'Mega' && menuItem.megaPrice ? menuItem.megaPrice : menuItem.price,
+        totalPrice: cartItem.totalPrice || (cartItem.quantity * (cartItem.size === 'Mega' && menuItem.megaPrice ? menuItem.megaPrice : menuItem.price)),
+        size: cartItem.size === 'Mega' ? 'mega' : 'regular'
+      };
+    });
+    
+    // Calculate subtotal if not provided
+    const subtotal = transformedItems.reduce((sum, item) => sum + item.totalPrice, 0);
+    
+    // Create order object
+    const orderData = {
+      orderId: `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      customerName,
+      customerPhone,
+      customerAddress,
+      items: transformedItems,
+      subtotal: subtotal,
+      tax: 0,
+      deliveryFee: 0,
+      total: total || subtotal,
+      status: 'pending',
+      orderType: req.body.orderType || 'delivery',
+      paymentMethod: req.body.paymentMethod || 'cash',
+      paymentStatus: 'pending'
+    };
+    
+    console.log('📝 Transformed order data:', JSON.stringify(orderData, null, 2));
+    
+    const order = new Order(orderData);
     await order.save();
     
     console.log('✅ Order saved successfully:', order.orderId);
     
-    res.status(201).json({ success: true, order });
+    res.status(201).json({ success: true, order, orderId: order.orderId });
   } catch (error) {
     console.error('❌ Error creating order:', error.message);
     console.error('Stack trace:', error.stack);
+    console.error('Full error:', error);
     
     res.status(500).json({ 
       success: false, 
       error: error.message,
-      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      details: error.stack
     });
   }
 });
