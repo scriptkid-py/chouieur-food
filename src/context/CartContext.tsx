@@ -27,9 +27,11 @@ const calculateItemTotal = (item: CartItem): number => {
 };
 
 const cartReducer = (state: CartState, action: CartAction): CartState => {
+  console.log('🔄 Cart reducer called with action:', action.type);
   switch (action.type) {
     case 'ADD_ITEM': {
       const { item, size } = action.payload;
+      console.log('📝 Creating new cart item:', item.name);
       const newItem: CartItem = {
         cartId: `${item.id}-${size}-${Date.now()}`,
         menuItem: item,
@@ -39,7 +41,9 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
         totalPrice: 0,
       };
       newItem.totalPrice = calculateItemTotal(newItem);
-      return { ...state, items: [...state.items, newItem] };
+      const newState = { ...state, items: [...state.items, newItem] };
+      console.log('🛒 New cart state:', newState.items.length, 'items');
+      return newState;
     }
     case 'REMOVE_ITEM':
       return {
@@ -135,8 +139,10 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   }, [state]);
 
   const addItem = (item: MenuItem, size: 'Normal' | 'Mega' = 'Normal') => {
-    console.log('🛒 Adding item to cart:', item.name, 'Size:', size);
+    console.log('🛒 Adding item to cart:', item);
+    console.log('📦 Item details:', { name: item.name, id: item.id, price: item.price, size });
     dispatch({ type: 'ADD_ITEM', payload: { item, size } });
+    console.log('✅ Dispatch sent');
     toast({
       title: "Added to cart",
       description: `${item.name} has been added to your cart.`,
