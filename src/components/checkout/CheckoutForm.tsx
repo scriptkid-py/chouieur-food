@@ -54,13 +54,18 @@ export function CheckoutForm() {
         paymentMethod: 'cash'
       };
 
+      // Log order data for debugging
+      console.log('📦 Sending order:', JSON.stringify(newOrder, null, 2));
+      
       // Send order to API
       const response = await apiRequest('/api/orders', {
         method: 'POST',
         body: JSON.stringify(newOrder)
       });
 
-      if (response.success) {
+      console.log('📥 API Response:', response);
+
+      if (response && response.success) {
         // Trigger the automation flow
         await automateDeliveryNotifications({
           orderId: response.orderId,
@@ -78,13 +83,18 @@ export function CheckoutForm() {
         clearCart();
         router.push(`/order/confirmation/${response.orderId}`);
       } else {
-        throw new Error('Failed to create order.');
+        const errorMessage = response?.error || response?.message || 'Failed to create order';
+        throw new Error(errorMessage);
       }
-    } catch (error) {
-      console.error('Error placing order:', error);
+    } catch (error: any) {
+      console.error('❌ Error placing order:', error);
+      console.error('Error details:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
+      
+      const errorMessage = error?.message || error?.error || 'Failed to place order. Please try again.';
+      
       toast({
         title: 'Error',
-        description: 'Failed to place order. Please try again.',
+        description: errorMessage,
         variant: 'destructive',
       });
     } finally {

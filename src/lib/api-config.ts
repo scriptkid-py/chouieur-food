@@ -121,7 +121,11 @@ export async function apiRequest<T = any>(
     
     const response = await fetch(url, defaultOptions);
     
+    console.log(`📡 Response status: ${response.status} ${response.statusText}`);
+    
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`❌ Response error:`, errorText);
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
     
@@ -129,7 +133,7 @@ export async function apiRequest<T = any>(
     console.log(`✅ API Response: ${url}`, data);
     
     return data;
-  } catch (error) {
+  } catch (error: any) {
     console.error(`❌ API Error: ${url}`, error);
     throw error;
   }

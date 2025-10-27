@@ -215,16 +215,31 @@ app.post('/api/orders', ensureDbConnection, async (req, res) => {
     console.log('✅ Validated order data');
     
     // Transform items to match the Order schema
-    const transformedItems = items.map(item => {
+    const transformedItems = items.map((item, index) => {
       const cartItem = item;
       const menuItem = cartItem.menuItem || cartItem;
       
+      // Validate menu item has required fields
+      if (!menuItem.name || typeof menuItem.name !== 'string') {
+        console.error(`❌ Invalid menu item at index ${index}:`, menuItem);
+        throw new Error(`Invalid menu item at index ${index}: missing or invalid name`);
+      }
+      
+      const itemName = String(menuItem.name || 'Unknown Item');
+      const itemQuantity = typeof cartItem.quantity === 'number' ? cartItem.quantity : 1;
+      const itemSize = cartItem.size === 'Mega' ? 'mega' : 'regular';
+      
+      // Calculate prices safely
+      const itemPrice = typeof menuItem.price === 'number' ? menuItem.price : 0;
+      const itemMegaPrice = menuItem.megaPrice && typeof menuItem.megaPrice === 'number' ? menuItem.megaPrice : undefined;
+      const finalPrice = itemSize === 'mega' && itemMegaPrice ? itemMegaPrice : itemPrice;
+      
       return {
-        name: menuItem.name,
-        quantity: cartItem.quantity || 1,
-        price: cartItem.size === 'Mega' && menuItem.megaPrice ? menuItem.megaPrice : menuItem.price,
-        totalPrice: cartItem.totalPrice || (cartItem.quantity * (cartItem.size === 'Mega' && menuItem.megaPrice ? menuItem.megaPrice : menuItem.price)),
-        size: cartItem.size === 'Mega' ? 'mega' : 'regular'
+        name: itemName,
+        quantity: itemQuantity,
+        price: finalPrice,
+        totalPrice: typeof cartItem.totalPrice === 'number' ? cartItem.totalPrice : (itemQuantity * finalPrice),
+        size: itemSize
       };
     });
     
