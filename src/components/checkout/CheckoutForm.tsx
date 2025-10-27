@@ -67,7 +67,7 @@ export function CheckoutForm() {
           customerName: newOrder.customerName,
           customerPhoneNumber: newOrder.customerPhone,
           deliveryAddress: newOrder.customerAddress,
-          orderItems: newOrder.items.map(item => `${item.quantity}x ${item.menuItem.name}`),
+          orderItems: newOrder.items.map(item => `${item.quantity}x ${item.menuItem?.name || 'Item'}`),
           totalAmount: newOrder.total,
         });
 
@@ -102,7 +102,7 @@ export function CheckoutForm() {
           <div className="space-y-2">
             {cartItems.map(item => (
               <div key={item.cartId} className="flex justify-between text-sm">
-                <span>{item.quantity} x {item.menuItem.name} ({item.size})</span>
+                <span>{item.quantity} x {item.menuItem?.name || 'Unknown'} ({item.size || 'Normal'})</span>
                 <span>{formatPrice(item.totalPrice)}</span>
               </div>
             ))}
