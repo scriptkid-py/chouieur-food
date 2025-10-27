@@ -28,7 +28,8 @@ const mongoose = require('mongoose');
 // =============================================================================
 
 // Ensure the MongoDB URI includes the database name
-let MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/chouieur-express';
+// Support both MONGO_URI and MONGODB_URI for compatibility
+let MONGO_URI = process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017/chouieur-express';
 
 // If the URI doesn't include a database name, add it
 if (MONGO_URI.includes('mongodb+srv://') && !MONGO_URI.includes('/chouieur-express')) {
@@ -73,6 +74,8 @@ async function connectToMongoDB() {
     }
     
     console.log('🔄 Connecting to MongoDB...');
+    console.log('📍 MONGO_URI env:', process.env.MONGO_URI ? 'SET' : 'NOT SET');
+    console.log('📍 MONGODB_URI env:', process.env.MONGODB_URI ? 'SET' : 'NOT SET');
     console.log('📍 MongoDB URI:', MONGO_URI.replace(/\/\/.*@/, '//***:***@'));
     
     // Create connection promise
