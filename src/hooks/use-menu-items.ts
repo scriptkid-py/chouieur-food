@@ -14,11 +14,14 @@ export function useMenuItems() {
         setError(null);
         
         console.log('🍽️ Fetching menu items...');
-        const response = await apiRequest('/api/menu-items');
+        const response = await apiRequest<{ success: boolean; menuItems: any[] }>('/api/menu-items');
         console.log('📋 Menu items response:', response);
         
+        // Extract menuItems array from response
+        const items = response.menuItems || response;
+        
         // Transform the response to match MenuItem interface
-        const transformedItems: MenuItem[] = response.map((item: any) => ({
+        const transformedItems: MenuItem[] = items.map((item: any) => ({
           id: item.id || item.id,
           name: item.name || item.name,
           category: item.category || item.category,
