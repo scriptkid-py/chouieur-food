@@ -9,7 +9,7 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: true,
   },
   images: {
-    unoptimized: false,
+    unoptimized: true, // Disable Image Optimization for Vercel compatibility
     remotePatterns: [
       {
         protocol: 'https',
