@@ -29,7 +29,7 @@
 // Force production API URL for deployed apps
 let API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 
   (typeof window !== 'undefined' && !window.location.hostname.includes('localhost') 
-    ? 'https://chouieur-express-esgf9scgx-scriptkid-pys-projects.vercel.app'  // Use Vercel backend
+    ? 'https://chouieur-express-a0a09cj8c-scriptkid-pys-projects.vercel.app'  // Use Vercel backend
     : 'http://localhost:3001');
 
 // Override for Vercel deployments - use same domain for API
