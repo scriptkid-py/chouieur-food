@@ -108,14 +108,31 @@ type CartContextType = {
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export const CartProvider = ({ children }: { children: ReactNode }) => {
-  const [state, dispatch] = useReducer(cartReducer, initialState);
+  // Load cart from localStorage on mount
+  const [state, dispatch] = useReducer(cartReducer, initialState, () => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('cart');
+      if (stored) {
+        try {
+          return JSON.parse(stored);
+        } catch (e) {
+          return initialState;
+        }
+      }
+    }
+    return initialState;
+  });
   const { toast } = useToast();
 
-  // Debug cart changes
+  // Save cart to localStorage whenever it changes
   useEffect(() => {
     console.log('🛒 Cart updated:', state.items);
     console.log('📊 Total items:', state.items.length);
-  }, [state.items]);
+    
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('cart', JSON.stringify(state));
+    }
+  }, [state]);
 
   const addItem = (item: MenuItem, size: 'Normal' | 'Mega' = 'Normal') => {
     console.log('🛒 Adding item to cart:', item.name, 'Size:', size);
