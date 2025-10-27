@@ -112,19 +112,15 @@ type CartContextType = {
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export const CartProvider = ({ children }: { children: ReactNode }) => {
-  // Use a ref to prevent infinite loops
-  const isLoadingRef = React.useRef(true);
-  const previousItemsRef = useRef<string>('');
-  
-  // Load cart from localStorage on mount
+  // Load cart items from localStorage on mount
   const [state, dispatch] = useReducer(cartReducer, initialState, () => {
     if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('cart');
+      const stored = localStorage.getItem('cartItems');
       if (stored) {
         try {
-          const parsed = JSON.parse(stored);
-          console.log('📥 Loaded cart from localStorage:', parsed.items?.length || 0, 'items');
-          return parsed;
+          const items = JSON.parse(stored);
+          console.log('📥 Loaded cart from localStorage:', items?.length || 0, 'items');
+          return { items };
         } catch (e) {
           console.error('❌ Failed to load cart from localStorage:', e);
           return initialState;
@@ -135,33 +131,23 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   });
   
   const { toast } = useToast();
+  const hasInitializedRef = useRef(false);
 
-  // Set loading flag to false after first render
+  // Save cart items to localStorage whenever they change
   useEffect(() => {
-    isLoadingRef.current = false;
-  }, []);
-
-  // Save cart to localStorage whenever it changes
-  useEffect(() => {
-    if (isLoadingRef.current) return; // Skip saving during initial load
+    if (!hasInitializedRef.current) {
+      hasInitializedRef.current = true;
+      return;
+    }
     
-    // Create a serialized version of items to compare
-    const currentItemsSerialized = JSON.stringify(state.items);
-    
-    // Only save if items have actually changed
-    if (currentItemsSerialized === previousItemsRef.current) return;
-    
-    previousItemsRef.current = currentItemsSerialized;
-    
-    console.log('🛒 Cart updated:', state.items);
+    console.log('🛒 Cart items changed:', state.items);
     console.log('📊 Total items:', state.items.length);
     
     if (typeof window !== 'undefined') {
       try {
-        // Stringify the entire state
-        const dataToSave = JSON.stringify(state);
-        localStorage.setItem('cart', dataToSave);
-        console.log('💾 Saved to localStorage, length:', dataToSave.length);
+        // Only save the items array, not the entire state
+        localStorage.setItem('cartItems', JSON.stringify(state.items));
+        console.log('💾 Saved cartItems to localStorage');
       } catch (e) {
         console.error('❌ Failed to save to localStorage:', e);
       }
