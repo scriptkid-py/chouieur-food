@@ -2,6 +2,7 @@ const { connectToMongoDB, getConnectionStatus } = require('./config/database');
 const MenuItem = require('./models/MenuItem');
 const Order = require('./models/Order');
 const User = require('./models/User');
+const { getMenuItemsFromSheets } = require('./services/google-sheets-service');
 
 // Import all the middleware and routes from the main server
 const express = require('express');
@@ -113,16 +114,26 @@ app.get('/api/debug', (req, res) => {
 app.get('/api/menu-items', ensureDbConnection, async (req, res) => {
   try {
     console.log('📦 Fetching menu items...');
+    
+    // Try Google Sheets first
+    let menuItems = await getMenuItemsFromSheets();
+    
+    if (menuItems && menuItems.length > 0) {
+      console.log(`✅ Found ${menuItems.length} menu items from Google Sheets`);
+      return res.json({ success: true, menuItems });
+    }
+    
+    // Fallback to MongoDB
+    console.log('📦 Falling back to MongoDB...');
     console.log('🔍 Connection status:', getConnectionStatus());
     
-    const menuItems = await MenuItem.find({ isActive: true });
-    console.log(`✅ Found ${menuItems.length} menu items`);
+    menuItems = await MenuItem.find({ isActive: true });
+    console.log(`✅ Found ${menuItems.length} menu items from MongoDB`);
     
     res.json({ success: true, menuItems });
   } catch (error) {
     console.error('❌ Error fetching menu items:', error);
     console.error('Error stack:', error.stack);
-    console.error('Error details:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
     
     // Always return JSON, never let it fail silently
     res.status(500).json({ 
