@@ -1,7 +1,7 @@
 'use client';
 
 import type { CartItem, MenuItem, Supplement } from '@/lib/types';
-import React, { createContext, useContext, useReducer, ReactNode } from 'react';
+import React, { createContext, useContext, useReducer, ReactNode, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
 type CartState = {
@@ -111,7 +111,14 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [state, dispatch] = useReducer(cartReducer, initialState);
   const { toast } = useToast();
 
+  // Debug cart changes
+  useEffect(() => {
+    console.log('🛒 Cart updated:', state.items);
+    console.log('📊 Total items:', state.items.length);
+  }, [state.items]);
+
   const addItem = (item: MenuItem, size: 'Normal' | 'Mega' = 'Normal') => {
+    console.log('🛒 Adding item to cart:', item.name, 'Size:', size);
     dispatch({ type: 'ADD_ITEM', payload: { item, size } });
     toast({
       title: "Added to cart",
