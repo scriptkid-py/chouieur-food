@@ -86,6 +86,9 @@ export default function AdminOrdersPage() {
           <Badge variant="secondary" className="text-xs">
             {source?.toUpperCase()} • {orders.length} orders
           </Badge>
+          <Badge variant="default" className="text-xs bg-green-600 animate-pulse">
+            🔴 LIVE
+          </Badge>
           <Button
             variant="outline"
             size="sm"

@@ -75,6 +75,9 @@ export default function KitchenViewPage() {
           <p className="text-muted-foreground">Live list of confirmed orders to be prepared.</p>
         </div>
         <div className="flex items-center gap-2">
+          <Badge variant="default" className="text-xs bg-green-600 animate-pulse">
+            🔴 LIVE
+          </Badge>
           <Button
             variant="outline"
             size="sm"
