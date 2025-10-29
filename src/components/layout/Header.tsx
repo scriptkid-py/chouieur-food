@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { Menu as MenuIcon, ShoppingCart, X } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 
 import { Button } from '@/components/ui/button';
@@ -19,9 +19,15 @@ const navLinks = [
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isHydrated, setIsHydrated] = useState(false);
   const { itemCount } = useCart();
   const isMobile = useIsMobile();
   const pathname = usePathname();
+
+  // Track hydration to avoid showing cart count mismatch
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
 
   if (pathname.startsWith('/staff') || pathname.startsWith('/admin')) {
     return null;
@@ -48,7 +54,7 @@ export function Header() {
            <Button asChild variant="ghost" size="icon" className="relative">
               <Link href="/cart">
                 <ShoppingCart className="h-5 w-5" />
-                {itemCount > 0 && (
+                {isHydrated && itemCount > 0 && (
                   <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
                     {itemCount}
                   </span>

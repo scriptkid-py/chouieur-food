@@ -65,7 +65,7 @@ async function getMenuItemsFromSheets() {
       const [id, name, category, price, megaPrice, description, imageId, imageUrl, isActive] = row;
       
       const priceValue = typeof price === 'number' ? price : parseFloat(String(price || 0));
-      const megaPriceValue = megaPrice ? (typeof megaPrice === 'number' ? megaPrice : parseFloat(String(megaPrice))) : null;
+      const megaPriceValue = (megaPrice != null && megaPrice !== '') ? (typeof megaPrice === 'number' ? megaPrice : parseFloat(String(megaPrice))) : null;
       
       return {
         id: String(id || `item-${index}`),

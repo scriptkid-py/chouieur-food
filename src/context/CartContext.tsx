@@ -14,7 +14,8 @@ type CartAction =
   | { type: 'UPDATE_QUANTITY'; payload: { cartId: string; quantity: number } }
   | { type: 'UPDATE_SIZE'; payload: { cartId: string; size: 'Normal' | 'Mega' } }
   | { type: 'TOGGLE_SUPPLEMENT'; payload: { cartId: string; supplement: Supplement } }
-  | { type: 'CLEAR_CART' };
+  | { type: 'CLEAR_CART' }
+  | { type: 'LOAD_CART'; payload: { items: CartItem[] } };
 
 const initialState: CartState = {
   items: [],
@@ -96,6 +97,8 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
     }
     case 'CLEAR_CART':
       return { ...state, items: [] };
+    case 'LOAD_CART':
+      return { ...state, items: action.payload.items };
     default:
       return state;
   }
@@ -116,30 +119,39 @@ type CartContextType = {
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export const CartProvider = ({ children }: { children: ReactNode }) => {
-  // Load cart items from localStorage on mount
-  const [state, dispatch] = useReducer(cartReducer, initialState, () => {
-    if (typeof window !== 'undefined') {
+  // Start with empty state to avoid hydration mismatch
+  // We'll load from localStorage after initial render
+  const [state, dispatch] = useReducer(cartReducer, initialState);
+  
+  const { toast } = useToast();
+  const hasInitializedRef = useRef(false);
+  const hasLoadedFromStorage = useRef(false);
+
+  // Load cart items from localStorage AFTER initial hydration
+  useEffect(() => {
+    if (!hasLoadedFromStorage.current && typeof window !== 'undefined') {
+      hasLoadedFromStorage.current = true;
       const stored = localStorage.getItem('cartItems');
       if (stored) {
         try {
           const items = JSON.parse(stored);
           console.log('📥 Loaded cart from localStorage:', items?.length || 0, 'items');
-          return { items };
+          // Restore the exact cart state
+          dispatch({ 
+            type: 'LOAD_CART', 
+            payload: { items } 
+          });
         } catch (e) {
           console.error('❌ Failed to load cart from localStorage:', e);
-          return initialState;
         }
       }
     }
-    return initialState;
-  });
-  
-  const { toast } = useToast();
-  const hasInitializedRef = useRef(false);
+  }, []);
 
   // Save cart items to localStorage whenever they change
   useEffect(() => {
-    if (!hasInitializedRef.current) {
+    // Skip saving on initial mount and after loading from storage
+    if (!hasInitializedRef.current || !hasLoadedFromStorage.current) {
       hasInitializedRef.current = true;
       return;
     }

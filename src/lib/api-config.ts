@@ -23,50 +23,79 @@
  * 
  * Priority:
  * 1. NEXT_PUBLIC_API_URL environment variable (for production)
- * 2. Production backend URL (for deployed frontend)
- * 3. Default to localhost:3001 (for development)
+ * 2. Default to localhost:3001 (for development)
+ * 
+ * Note: We use environment variables only to avoid hydration mismatches.
+ * Window-based checks happen dynamically via getApiBaseUrl() function.
  */
-// Force production API URL for deployed apps
-let API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 
-  (typeof window !== 'undefined' && !window.location.hostname.includes('localhost') 
-    ? 'https://chouieur-express-9t0a0mvlq-scriptkid-pys-projects.vercel.app'  // Use Vercel backend
+const DEFAULT_API_URL = process.env.NEXT_PUBLIC_API_URL || 
+  (process.env.NODE_ENV === 'production' 
+    ? 'https://chouieur-express-backend-h74v.onrender.com'
     : 'http://localhost:3001');
 
-// Override for Vercel deployments - use same domain for API
-if (typeof window !== 'undefined' && window.location.hostname.includes('vercel.app')) {
-  console.log('🚀 Vercel deployment detected - using Vercel backend');
-  API_BASE_URL = `https://${window.location.hostname}`;
+/**
+ * Get the API base URL - dynamically determines the correct URL
+ * This function can be called at runtime to avoid hydration mismatches
+ */
+export function getApiBaseUrl(): string {
+  // Use environment variable if set
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL;
+  }
+  
+  // For client-side only, check for production deployments
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    
+    // If not localhost, use Render backend for API
+    if (!hostname.includes('localhost')) {
+      return 'https://chouieur-express-backend-h74v.onrender.com';
+    }
+  }
+  
+  // Default to localhost for development
+  return 'http://localhost:3001';
 }
 
-export { API_BASE_URL };
-
-// Debug logging for API configuration
-if (typeof window !== 'undefined') {
-  console.log('🌐 API Configuration Debug:');
-  console.log('📍 Hostname:', window.location.hostname);
-  console.log('🔗 API_BASE_URL:', API_BASE_URL);
-  console.log('🔧 NEXT_PUBLIC_API_URL:', process.env.NEXT_PUBLIC_API_URL);
-}
+// Export a constant that's safe for SSR (uses env var only)
+export const API_BASE_URL = DEFAULT_API_URL;
 
 /**
  * API endpoints configuration
+ * Uses functions to ensure dynamic URL resolution
  */
 export const API_ENDPOINTS = {
   // Health check
-  HEALTH: `${API_BASE_URL}/api/health`,
+  get HEALTH() { return `${getApiBaseUrl()}/api/health`; },
   
   // Orders
-  ORDERS: `${API_BASE_URL}/api/orders`,
-  ORDER_BY_ID: (id: string) => `${API_BASE_URL}/api/orders/${id}`,
+  get ORDERS() { return `${getApiBaseUrl()}/api/orders`; },
+  ORDER_BY_ID: (id: string) => `${getApiBaseUrl()}/api/orders/${id}`,
   
   // Menu items
-  MENU_ITEMS: `${API_BASE_URL}/api/menu-items`,
-  MENU_ITEM: (id: string) => `${API_BASE_URL}/api/menu-items/${id}`,
+  get MENU_ITEMS() { return `${getApiBaseUrl()}/api/menu-items`; },
+  MENU_ITEM: (id: string) => `${getApiBaseUrl()}/api/menu-items/${id}`,
 } as const;
 
 // =============================================================================
 // API UTILITY FUNCTIONS
 // =============================================================================
+
+/**
+ * Safely extract error message from unknown error
+ */
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  if (typeof error === 'string') {
+    return error;
+  }
+  if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
+    return error.message;
+  }
+  return 'An unknown error occurred';
+}
 
 /**
  * Create a full API URL with query parameters
@@ -88,10 +117,11 @@ export function createApiUrl(endpoint: string, params?: Record<string, string | 
  */
 export function getApiConfig() {
   return {
-    baseUrl: API_BASE_URL,
-    endpoints: API_ENDPOINTS,
+    baseUrl: getApiBaseUrl(),
+    defaultUrl: DEFAULT_API_URL,
     environment: process.env.NODE_ENV || 'development',
     isProduction: process.env.NODE_ENV === 'production',
+    hasEnvVar: !!process.env.NEXT_PUBLIC_API_URL,
   };
 }
 
@@ -106,7 +136,7 @@ export async function apiRequest<T = any>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint}`;
+  const url = endpoint.startsWith('http') ? endpoint : `${getApiBaseUrl()}${endpoint}`;
   
   const defaultOptions: RequestInit = {
     headers: {
@@ -126,16 +156,17 @@ export async function apiRequest<T = any>(
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`❌ Response error:`, errorText);
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      throw new Error(`HTTP ${response.status}: ${response.statusText} - ${errorText}`);
     }
     
     const data = await response.json();
     console.log(`✅ API Response: ${url}`, data);
     
     return data;
-  } catch (error: any) {
-    console.error(`❌ API Error: ${url}`, error);
-    throw error;
+  } catch (error: unknown) {
+    const errorMessage = getErrorMessage(error);
+    console.error(`❌ API Error: ${url}`, errorMessage);
+    throw new Error(errorMessage);
   }
 }
 
@@ -225,14 +256,14 @@ export async function getMenuItem(id: string) {
 
 /**
  * Log current API configuration (for debugging)
+ * Only runs on client-side to avoid hydration issues
  */
 export function logApiConfig() {
-  const config = getApiConfig();
-  console.log('🔧 API Configuration:', config);
-  return config;
-}
-
-// Auto-log configuration in development
-if (process.env.NODE_ENV === 'development') {
-  logApiConfig();
+  if (typeof window !== 'undefined') {
+    const config = getApiConfig();
+    console.log('🔧 API Configuration:', config);
+    console.log('📍 Current hostname:', window.location.hostname);
+    return config;
+  }
+  return null;
 }

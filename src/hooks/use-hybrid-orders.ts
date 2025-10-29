@@ -31,8 +31,8 @@ export function useHybridOrders() {
     const now = Date.now();
     const timeSinceLastFetch = now - lastFetchTime;
     
-    // Cache for 30 seconds to prevent excessive API calls
-    if (!forceRefresh && timeSinceLastFetch < 30000 && orders.length > 0) {
+    // Cache for 3 seconds to prevent excessive API calls while allowing live updates
+    if (!forceRefresh && timeSinceLastFetch < 3000 && orders.length > 0) {
       console.log('Using cached orders, skipping API call');
       return;
     }
@@ -42,28 +42,30 @@ export function useHybridOrders() {
       setError(null);
       
       console.log('Fetching orders from API...');
-      const response = await apiRequest<HybridOrder[]>('/api/orders');
+      const response = await apiRequest<{ success: boolean; orders: HybridOrder[] }>('/api/orders');
       console.log('API orders response:', response);
-      setOrders(response);
+      
+      // Extract orders array from response
+      const ordersData = Array.isArray(response) ? response : (response.orders || []);
+      setOrders(ordersData);
       setLastFetchTime(now);
     } catch (err) {
       console.error('Error fetching orders from API:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch orders');
+      setOrders([]); // Set empty array on error to prevent filter issues
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Auto-refresh orders every 60 seconds
+  // Auto-refresh orders every 5 seconds for live updates
   useEffect(() => {
-    if (!isLoading) {
-      const interval = setInterval(() => {
-        fetchOrdersFromAPI();
-      }, 60000); // Refresh every 60 seconds
+    const interval = setInterval(() => {
+      fetchOrdersFromAPI();
+    }, 5000); // Refresh every 5 seconds for live updates
 
-      return () => clearInterval(interval);
-    }
-  }, [isLoading]);
+    return () => clearInterval(interval);
+  }, []);
 
   const updateOrderStatus = async (orderId: string, status: string, notes?: string) => {
     try {
@@ -106,6 +108,7 @@ export function useHybridOrders() {
     isLoading,
     error,
     refetch,
-    updateOrderStatus
+    updateOrderStatus,
+    source: 'api' // Indicate data source
   };
 }

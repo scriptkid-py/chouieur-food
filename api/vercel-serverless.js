@@ -3,6 +3,7 @@ const MenuItem = require('./models/MenuItem');
 const Order = require('./models/Order');
 const User = require('./models/User');
 const { getMenuItemsFromSheets } = require('./services/google-sheets-service');
+const { checkAndArchive } = require('./services/archive-service');
 
 // Import all the middleware and routes from the main server
 const express = require('express');
@@ -219,27 +220,54 @@ app.post('/api/orders', ensureDbConnection, async (req, res) => {
       const cartItem = item;
       const menuItem = cartItem.menuItem || cartItem;
       
+      // Extract menuItemId - check multiple possible locations
+      const menuItemId = cartItem.menuItemId || menuItem.id || menuItem._id;
+      
+      if (!menuItemId) {
+        console.error(`❌ Missing menuItemId at index ${index}:`, cartItem);
+        throw new Error(`Invalid menu item at index ${index}: missing menuItemId`);
+      }
+      
       // Validate menu item has required fields
       if (!menuItem.name || typeof menuItem.name !== 'string') {
         console.error(`❌ Invalid menu item at index ${index}:`, menuItem);
         throw new Error(`Invalid menu item at index ${index}: missing or invalid name`);
       }
       
-      const itemName = String(menuItem.name || 'Unknown Item');
+      const itemName = String(menuItem.name);
       const itemQuantity = typeof cartItem.quantity === 'number' ? cartItem.quantity : 1;
-      const itemSize = cartItem.size === 'Mega' ? 'mega' : 'regular';
+      
+      // Normalize size: only accept recognized values, default to 'regular' for all others
+      let itemSize = 'regular'; // Default fallback
+      if (cartItem.size === 'Mega' || cartItem.size === 'mega') {
+        itemSize = 'mega';
+      } else if (cartItem.size === 'Regular' || cartItem.size === 'regular') {
+        itemSize = 'regular';
+      } else if (cartItem.size == null || cartItem.size === '') {
+        // Explicitly handle null/undefined/empty string
+        itemSize = 'regular';
+      } else {
+        // Log unexpected values for debugging
+        console.warn(`⚠️ Unexpected size value: "${cartItem.size}" for item "${itemName}", defaulting to 'regular'`);
+        itemSize = 'regular';
+      }
       
       // Calculate prices safely
       const itemPrice = typeof menuItem.price === 'number' ? menuItem.price : 0;
       const itemMegaPrice = menuItem.megaPrice && typeof menuItem.megaPrice === 'number' ? menuItem.megaPrice : undefined;
       const finalPrice = itemSize === 'mega' && itemMegaPrice ? itemMegaPrice : itemPrice;
       
+      // Get special instructions
+      const specialInstructions = cartItem.specialInstructions || '';
+      
       return {
+        menuItemId: menuItemId,
         name: itemName,
         quantity: itemQuantity,
         price: finalPrice,
         totalPrice: typeof cartItem.totalPrice === 'number' ? cartItem.totalPrice : (itemQuantity * finalPrice),
-        size: itemSize
+        size: itemSize,
+        specialInstructions: specialInstructions
       };
     });
     
@@ -252,6 +280,7 @@ app.post('/api/orders', ensureDbConnection, async (req, res) => {
       customerName,
       customerPhone,
       customerAddress,
+      customerEmail: req.body.email || '',
       items: transformedItems,
       subtotal: subtotal,
       tax: 0,
@@ -260,7 +289,9 @@ app.post('/api/orders', ensureDbConnection, async (req, res) => {
       status: 'pending',
       orderType: req.body.orderType || 'delivery',
       paymentMethod: req.body.paymentMethod || 'cash',
-      paymentStatus: 'pending'
+      paymentStatus: 'pending',
+      notes: req.body.notes || '',
+      deliveryInstructions: req.body.deliveryInstructions || ''
     };
     
     console.log('📝 Transformed order data:', JSON.stringify(orderData, null, 2));
@@ -269,6 +300,15 @@ app.post('/api/orders', ensureDbConnection, async (req, res) => {
     await order.save();
     
     console.log('✅ Order saved successfully:', order.orderId);
+    
+    // Check if database needs archiving (async, don't wait for it)
+    checkAndArchive().then(result => {
+      if (result.archived > 0) {
+        console.log(`📦 Auto-archived ${result.archived} old orders to Google Sheets`);
+      }
+    }).catch(err => {
+      console.error('⚠️ Archive check failed (non-critical):', err.message);
+    });
     
     res.status(201).json({ success: true, order, orderId: order.orderId });
   } catch (error) {
@@ -339,6 +379,71 @@ app.use((err, req, res, next) => {
     success: false,
     error: err.message || 'Internal Server Error',
   });
+});
+
+// =============================================================================
+// ARCHIVE MANAGEMENT ENDPOINT
+// =============================================================================
+
+/**
+ * POST /api/archive - Manually trigger archiving of old orders
+ * Archives old completed orders from MongoDB to Google Sheets
+ */
+app.post('/api/archive', ensureDbConnection, async (req, res) => {
+  try {
+    console.log('📦 Manual archive triggered...');
+    
+    const result = await checkAndArchive();
+    
+    if (result.success) {
+      res.json({
+        success: true,
+        archived: result.archived || 0,
+        deleted: result.deleted || 0,
+        message: result.message
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        error: result.error || 'Archive failed',
+        message: result.message
+      });
+    }
+  } catch (error) {
+    console.error('❌ Archive endpoint error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      message: 'Failed to archive orders'
+    });
+  }
+});
+
+/**
+ * GET /api/archive/status - Check if archiving is needed
+ */
+app.get('/api/archive/status', ensureDbConnection, async (req, res) => {
+  try {
+    const { needsArchiving, ARCHIVE_THRESHOLD } = require('./services/archive-service');
+    const totalOrders = await Order.countDocuments();
+    const shouldArchive = await needsArchiving();
+    
+    res.json({
+      success: true,
+      totalOrders,
+      threshold: ARCHIVE_THRESHOLD,
+      needsArchiving: shouldArchive,
+      message: shouldArchive 
+        ? `Database has ${totalOrders} orders (threshold: ${ARCHIVE_THRESHOLD}). Archiving recommended.`
+        : `Database has ${totalOrders} orders. Archiving not needed.`
+    });
+  } catch (error) {
+    console.error('❌ Archive status error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
 });
 
 // Export the app for Vercel serverless functions
