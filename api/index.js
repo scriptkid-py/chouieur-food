@@ -39,6 +39,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
+const mongoose = require('mongoose');
 require('dotenv').config();
 
 // Import database configuration and models
@@ -524,7 +525,6 @@ app.post('/api/orders', async (req, res) => {
     const orderData = req.body;
     
     // Transform the order data to match our schema
-    const mongoose = require('mongoose');
     const orderItems = orderData.items.map(item => {
       // Handle menuItemId - can be string or ObjectId
       let menuItemId = null;
