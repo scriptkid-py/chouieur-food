@@ -42,11 +42,25 @@ export function useHybridOrders() {
       setError(null);
       
       console.log('Fetching orders from API...');
-      const response = await apiRequest<{ success: boolean; orders: HybridOrder[] }>('/api/orders');
+      const response = await apiRequest<any>('/api/orders');
       console.log('API orders response:', response);
       
-      // Extract orders array from response
-      const ordersData = Array.isArray(response) ? response : (response.orders || []);
+      // Extract orders array from response - handle multiple formats
+      // Render backend returns: { success: true, data: [...] }
+      // Other backends might return: { success: true, orders: [...] }
+      let ordersData: HybridOrder[] = [];
+      if (Array.isArray(response)) {
+        ordersData = response;
+      } else if (response?.data && Array.isArray(response.data)) {
+        ordersData = response.data;
+      } else if (response?.orders && Array.isArray(response.orders)) {
+        ordersData = response.orders;
+      } else {
+        console.error('❌ Invalid orders response format:', response);
+        ordersData = [];
+      }
+      
+      console.log(`✅ Extracted ${ordersData.length} orders from response`);
       setOrders(ordersData);
       setLastFetchTime(now);
     } catch (err) {

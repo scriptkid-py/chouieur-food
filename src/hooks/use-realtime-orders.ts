@@ -181,20 +181,68 @@ export function useRealtimeOrders() {
     }
   };
 
-  // Manual refetch function (though not needed with SSE)
+  // Manual refetch function
   const refetch = () => {
-    // With SSE, we don't need manual refetch
-    // But we can reconnect if needed
+    // Try both SSE reconnect and API fallback
     if (eventSourceRef.current) {
       eventSourceRef.current.close();
     }
     setIsLoading(true);
     connectToStream();
+    // Also fetch from API as backup
+    fetchOrdersFromAPI();
+  };
+
+  // Fallback: Fetch orders from regular API if SSE fails
+  const fetchOrdersFromAPI = async () => {
+    try {
+      console.log('🔄 Fallback: Fetching orders from API...');
+      const apiUrl = getApiUrl();
+      const response = await fetch(`${apiUrl}/api/orders`, {
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch orders: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      console.log('📋 API fallback response:', data);
+      
+      // Extract orders from response - handle multiple formats
+      let ordersData: any[] = [];
+      if (Array.isArray(data)) {
+        ordersData = data;
+      } else if (data?.data && Array.isArray(data.data)) {
+        ordersData = data.data;
+      } else if (data?.orders && Array.isArray(data.orders)) {
+        ordersData = data.orders;
+      }
+      
+      if (ordersData.length > 0) {
+        console.log(`✅ Fallback: Loaded ${ordersData.length} orders from API`);
+        setOrders(transformOrders(ordersData));
+        setIsLoading(false);
+        setError(null);
+      }
+    } catch (err) {
+      console.error('❌ Fallback API fetch failed:', err);
+      // Only set error if we don't have any orders from SSE
+      if (orders.length === 0) {
+        setError(err instanceof Error ? err.message : 'Failed to fetch orders');
+        setIsLoading(false);
+      }
+    }
   };
 
   // Connect on mount and cleanup on unmount
   useEffect(() => {
+    // Connect to SSE stream for real-time updates
     connectToStream();
+    
+    // Also fetch from API immediately as fallback/backup
+    // This ensures orders appear even if SSE is slow or fails
+    fetchOrdersFromAPI();
 
     return () => {
       console.log('🔌 Disconnecting from real-time stream');
@@ -205,6 +253,7 @@ export function useRealtimeOrders() {
         clearTimeout(reconnectTimeoutRef.current);
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return {
