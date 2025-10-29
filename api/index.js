@@ -524,15 +524,36 @@ app.post('/api/orders', async (req, res) => {
     const orderData = req.body;
     
     // Transform the order data to match our schema
-    const orderItems = orderData.items.map(item => ({
-      menuItemId: item.menuItem?.id || null,
-      name: item.menuItem?.name || item.name,
-      quantity: item.quantity,
-      price: item.price,
-      totalPrice: item.totalPrice,
-      size: item.size || 'regular',
-      specialInstructions: item.specialInstructions || ''
-    }));
+    const mongoose = require('mongoose');
+    const orderItems = orderData.items.map(item => {
+      // Handle menuItemId - can be string or ObjectId
+      let menuItemId = null;
+      if (item.menuItemId) {
+        // Convert string to ObjectId if it's a valid ObjectId string
+        if (mongoose.Types.ObjectId.isValid(item.menuItemId)) {
+          menuItemId = new mongoose.Types.ObjectId(item.menuItemId);
+        } else {
+          menuItemId = item.menuItemId; // Keep as is if not valid ObjectId format
+        }
+      } else if (item.menuItem?.id) {
+        // Fallback for old format
+        if (mongoose.Types.ObjectId.isValid(item.menuItem.id)) {
+          menuItemId = new mongoose.Types.ObjectId(item.menuItem.id);
+        } else {
+          menuItemId = item.menuItem.id;
+        }
+      }
+      
+      return {
+        menuItemId: menuItemId,
+        name: item.name || item.menuItem?.name || 'Unknown Item',
+        quantity: item.quantity,
+        price: item.price,
+        totalPrice: item.totalPrice,
+        size: item.size || 'regular',
+        specialInstructions: item.specialInstructions || ''
+      };
+    });
     
     const newOrder = new Order({
       customerName: orderData.customerName,
