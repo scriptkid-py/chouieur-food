@@ -11,7 +11,7 @@ export default function KitchenLayout({
   return (
     <div className="flex min-h-screen flex-col">
       <header className="sticky top-0 z-40 border-b bg-background">
-        <div className="container mx-auto flex h-16 items-center justify-between px-4 md:px-6">
+        <div>
           <Link href="/kitchen">
             <Logo className="text-foreground" />
           </Link>
