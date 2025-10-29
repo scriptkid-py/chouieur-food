@@ -50,20 +50,25 @@ export default function AdminMenuItemsPage() {
     }
 
     try {
-      await apiRequest(`/api/menu-items/${item.id}`, {
+      const response = await apiRequest<{ success: boolean; message?: string }>(`/api/menu-items/${item.id}`, {
         method: 'DELETE',
       });
 
-      await refetch();
-      toast({
-        title: "Success",
-        description: "Menu item deleted successfully!",
-      });
+      if (response && response.success !== false) {
+        await refetch();
+        toast({
+          title: "Success",
+          description: "Menu item deleted successfully!",
+        });
+      } else {
+        throw new Error(response?.message || 'Failed to delete menu item');
+      }
     } catch (error) {
       console.error('Error deleting menu item:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to delete menu item. Please try again.';
       toast({
         title: "Error",
-        description: "Failed to delete menu item. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     }
