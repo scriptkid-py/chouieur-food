@@ -159,10 +159,33 @@ export async function apiRequest<T = any>(
       throw new Error(`HTTP ${response.status}: ${response.statusText} - ${errorText}`);
     }
     
-    const data = await response.json();
-    console.log(`✅ API Response: ${url}`, data);
+    // Handle empty responses (e.g., 204 No Content)
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      // For successful DELETE requests without a body, return a success object
+      if (defaultOptions.method === 'DELETE' && response.status === 200) {
+        console.log(`✅ API Response: ${url} - Deleted successfully`);
+        return { success: true, message: 'Deleted successfully' } as T;
+      }
+      // For other empty responses, return empty object
+      return {} as T;
+    }
     
-    return data;
+    // Check if there's actually content to parse
+    const text = await response.text();
+    if (!text || text.trim() === '') {
+      console.log(`✅ API Response: ${url} - Empty response`);
+      return { success: true } as T;
+    }
+    
+    try {
+      const data = JSON.parse(text);
+      console.log(`✅ API Response: ${url}`, data);
+      return data;
+    } catch (parseError) {
+      console.warn(`⚠️ Failed to parse JSON response for ${url}, returning raw text`);
+      return { success: true, message: text } as T;
+    }
   } catch (error: unknown) {
     const errorMessage = getErrorMessage(error);
     console.error(`❌ API Error: ${url}`, errorMessage);
