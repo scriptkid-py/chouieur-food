@@ -41,12 +41,27 @@ export function CheckoutForm() {
     setIsSubmitting(true);
 
     try {
+      // Transform cart items to match Order schema
+      const orderItems = cartItems.map(item => ({
+        menuItemId: item.menuItem.id,
+        name: item.menuItem.name,
+        quantity: item.quantity,
+        price: item.size === 'Mega' && item.menuItem.megaPrice 
+          ? item.menuItem.megaPrice 
+          : item.menuItem.price,
+        totalPrice: item.totalPrice,
+        size: item.size === 'Mega' ? 'mega' : 'regular',
+        specialInstructions: item.supplements?.length > 0 
+          ? `Supplements: ${item.supplements.map(s => s.name).join(', ')}` 
+          : ''
+      }));
+
       // Prepare order data
       const newOrder = {
         customerName: data.name,
         customerPhone: data.phone,
         customerAddress: data.address,
-        items: cartItems,
+        items: orderItems,
         total: cartTotal,
         status: 'pending',
         email: '',
@@ -54,8 +69,16 @@ export function CheckoutForm() {
         paymentMethod: 'cash'
       };
 
-      // Log order data for debugging
-      console.log('📦 Sending order:', JSON.stringify(newOrder, null, 2));
+      // Log order data for debugging (development only, with PII redacted)
+      if (process.env.NODE_ENV === 'development') {
+        const redactedOrder = {
+          ...newOrder,
+          customerName: '[REDACTED]',
+          customerPhone: '[REDACTED]',
+          customerAddress: '[REDACTED]',
+        };
+        console.log('📦 Sending order:', JSON.stringify(redactedOrder, null, 2));
+      }
       
       // Send order to API
       const response = await apiRequest('/api/orders', {
@@ -63,17 +86,27 @@ export function CheckoutForm() {
         body: JSON.stringify(newOrder)
       });
 
-      console.log('📥 API Response:', response);
+      // Log API response (development only, with sensitive data redacted)
+      if (process.env.NODE_ENV === 'development' && response) {
+        const redactedResponse = {
+          ...response,
+          // Redact any potential customer data in response
+          orderId: response.orderId || '[HIDDEN]',
+          success: response.success
+        };
+        console.log('📥 API Response:', JSON.stringify(redactedResponse, null, 2));
+      }
 
       if (response && response.success) {
         // Trigger the automation flow
+        const orderItemsString = orderItems.map(item => `${item.quantity}x ${item.name}`).join(', ');
         await automateDeliveryNotifications({
-          orderId: response.orderId,
           customerName: newOrder.customerName,
-          customerPhoneNumber: newOrder.customerPhone,
+          customerPhone: newOrder.customerPhone,
           deliveryAddress: newOrder.customerAddress,
-          orderItems: newOrder.items.map(item => `${item.quantity}x ${item.menuItem?.name || 'Item'}`),
+          orderItems: orderItemsString,
           totalAmount: newOrder.total,
+          estimatedDeliveryTime: '30-45 minutes'
         });
 
         toast({
@@ -86,11 +119,24 @@ export function CheckoutForm() {
         const errorMessage = response?.error || response?.message || 'Failed to create order';
         throw new Error(errorMessage);
       }
-    } catch (error: any) {
-      console.error('❌ Error placing order:', error);
-      console.error('Error details:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
+    } catch (error: unknown) {
+      // Only log detailed errors in development
+      if (process.env.NODE_ENV === 'development') {
+        console.error('❌ Error placing order:', error);
+        console.error('Error details:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
+      }
       
-      const errorMessage = error?.message || error?.error || 'Failed to place order. Please try again.';
+      // Narrow the error type and derive error message
+      let errorMessage = 'Failed to place order. Please try again.';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (error && typeof error === 'object') {
+        if ('error' in error && typeof error.error === 'string') {
+          errorMessage = error.error;
+        } else if ('message' in error && typeof error.message === 'string') {
+          errorMessage = error.message;
+        }
+      }
       
       toast({
         title: 'Error',
