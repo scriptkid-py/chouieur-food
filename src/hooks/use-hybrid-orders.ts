@@ -72,14 +72,9 @@ export function useHybridOrders() {
     }
   };
 
-  // Auto-refresh orders every 5 seconds for live updates
-  useEffect(() => {
-    const interval = setInterval(() => {
-      fetchOrdersFromAPI();
-    }, 5000); // Refresh every 5 seconds for live updates
-
-    return () => clearInterval(interval);
-  }, []);
+  // NO AUTO-REFRESH - Use useRealtimeOrders hook for real-time updates instead
+  // This hook is kept only for backward compatibility but should not be used
+  // for new implementations. useRealtimeOrders provides true SSE-based updates.
 
   const updateOrderStatus = async (orderId: string, status: string, notes?: string) => {
     try {
