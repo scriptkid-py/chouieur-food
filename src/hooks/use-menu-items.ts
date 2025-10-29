@@ -14,11 +14,24 @@ export function useMenuItems() {
         setError(null);
         
         console.log('🍽️ Fetching menu items...');
-        const response = await apiRequest<{ success: boolean; menuItems: any[] }>('/api/menu-items');
+        const response = await apiRequest<any>('/api/menu-items');
         console.log('📋 Menu items response:', response);
         
-        // Extract menuItems array from response
-        const items = response.menuItems || response;
+        // Extract menuItems array from response - handle multiple formats
+        // Render backend returns: { success: true, data: [...] }
+        // Vercel serverless returns: { success: true, menuItems: [...] }
+        // Fallback: direct array or response itself
+        let items: any[] = [];
+        if (Array.isArray(response)) {
+          items = response;
+        } else if (response?.data && Array.isArray(response.data)) {
+          items = response.data;
+        } else if (response?.menuItems && Array.isArray(response.menuItems)) {
+          items = response.menuItems;
+        } else {
+          console.error('❌ Invalid menu items response format:', response);
+          throw new Error('Invalid menu items response format');
+        }
         
         // Transform the response to match MenuItem interface
         const transformedItems: MenuItem[] = items.map((item: any, index: number) => {
