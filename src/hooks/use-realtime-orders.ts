@@ -63,13 +63,15 @@ export function useRealtimeOrders() {
 
             case 'orderUpdated':
               // Order status updated - update in list
-              console.log('🔄 Order updated:', data.order.orderId);
+              console.log('🔄 Order updated:', data.order?.orderId || data.order?.orderid);
               setOrders(prev => 
-                prev.map(order => 
-                  order.orderid === data.order.orderId 
+                prev.map(order => {
+                  const orderId = data.order?.orderId || data.order?.orderid;
+                  const currentOrderId = order.orderid || order.id;
+                  return orderId === currentOrderId
                     ? transformOrder(data.order) 
-                    : order
-                )
+                    : order;
+                })
               );
               break;
 

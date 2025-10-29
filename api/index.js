@@ -455,6 +455,7 @@ app.get('/api/orders/stream', (req, res) => {
     .populate('items.menuItemId', 'name category')
     .sort({ createdAt: -1 })
     .limit(50)
+    .lean() // Convert Mongoose documents to plain JavaScript objects
     .then(orders => {
       res.write('data: ' + JSON.stringify({ 
         type: 'initial', 
@@ -475,7 +476,11 @@ app.get('/api/orders/stream', (req, res) => {
 // Function to broadcast order updates to all connected clients
 function broadcastOrderUpdate(type, order) {
   console.log(`📢 Broadcasting ${type} to ${sseClients.size} clients`);
-  const data = JSON.stringify({ type, order });
+  
+  // Convert Mongoose document to plain object for JSON serialization
+  const orderData = order.toObject ? order.toObject() : order;
+  
+  const data = JSON.stringify({ type, order: orderData });
   
   sseClients.forEach(client => {
     try {
