@@ -57,8 +57,24 @@ export function useRealtimeOrders() {
 
             case 'orderCreated':
               // New order created - add to top of list
-              console.log('🆕 New order created:', data.order.orderId);
-              setOrders(prev => [transformOrder(data.order), ...prev]);
+              const newOrderId = data.order?.orderId || data.order?.orderid;
+              console.log('🆕 New order created:', newOrderId, data.order);
+              if (data.order) {
+                const transformedOrder = transformOrder(data.order);
+                setOrders(prev => {
+                  // Prevent duplicates
+                  const exists = prev.some(o => (o.orderid || o.id) === (transformedOrder.orderid || transformedOrder.id));
+                  if (exists) {
+                    console.log('⚠️ Order already exists, updating instead');
+                    return prev.map(order => {
+                      const orderId = transformedOrder.orderid || transformedOrder.id;
+                      const currentOrderId = order.orderid || order.id;
+                      return orderId === currentOrderId ? transformedOrder : order;
+                    });
+                  }
+                  return [transformedOrder, ...prev];
+                });
+              }
               break;
 
             case 'orderUpdated':
