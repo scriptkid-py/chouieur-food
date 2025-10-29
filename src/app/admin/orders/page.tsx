@@ -5,12 +5,12 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { useHybridOrders } from "@/hooks/use-hybrid-orders";
-import { Loader2, RefreshCw, Eye, CheckCircle, XCircle, Clock } from "lucide-react";
+import { useSocketOrders } from "@/hooks/use-socket-orders";
+import { Loader2, RefreshCw, Eye, CheckCircle, XCircle, Clock, Wifi, WifiOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function AdminOrdersPage() {
-  const { orders, isLoading, error, refetch, updateOrderStatus, source } = useHybridOrders();
+  const { orders, isLoading, error, refetch, updateOrderStatus, isConnected } = useSocketOrders({ enableSound: true });
   const [updatingOrders, setUpdatingOrders] = useState<Set<string>>(new Set());
 
   const getStatusColor = (status: string) => {
@@ -61,7 +61,7 @@ export default function AdminOrdersPage() {
       // Orders will be automatically refreshed by the hook
     } catch (error) {
       console.error('Failed to update order status:', error);
-      alert(`Failed to update order: ${error.message || error}`);
+      alert(`Failed to update order: ${(error as any)?.message || error}`);
       // You could add a toast notification here for better UX
     } finally {
       setUpdatingOrders(prev => {
@@ -84,10 +84,24 @@ export default function AdminOrdersPage() {
             ADMIN ACCESS
           </Badge>
           <Badge variant="secondary" className="text-xs">
-            {source?.toUpperCase()} • {orders.length} orders
+            SOCKET.IO • {orders.length} orders
           </Badge>
-          <Badge variant="default" className="text-xs bg-green-600 animate-pulse">
-            🔴 LIVE
+          <Badge 
+            variant="default" 
+            className={cn(
+              "text-xs",
+              isConnected ? "bg-green-600 animate-pulse" : "bg-red-600"
+            )}
+          >
+            {isConnected ? (
+              <>
+                <Wifi className="h-3 w-3 mr-1" /> LIVE
+              </>
+            ) : (
+              <>
+                <WifiOff className="h-3 w-3 mr-1" /> DISCONNECTED
+              </>
+            )}
           </Badge>
           <Button
             variant="outline"
@@ -145,7 +159,7 @@ export default function AdminOrdersPage() {
         <CardContent>
           {error ? (
             <div className="text-center py-8">
-              <p className="text-red-500 mb-4">Error loading orders: {typeof error === 'string' ? error : error.message || 'Unknown error'}</p>
+              <p className="text-red-500 mb-4">Error loading orders: {typeof error === 'string' ? error : (error as any)?.message || 'Unknown error'}</p>
               <Button onClick={refetch} variant="outline">
                 Try Again
               </Button>
@@ -222,7 +236,7 @@ export default function AdminOrdersPage() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right font-medium">
-                          {parseFloat(order.total || '0').toLocaleString()} FCFA
+                          {parseFloat(String(order.total || 0)).toLocaleString()} FCFA
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-2">

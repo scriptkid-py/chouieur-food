@@ -32,6 +32,7 @@
  */
 
 const express = require('express');
+const http = require('http');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
@@ -40,6 +41,7 @@ const path = require('path');
 const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
 const mongoose = require('mongoose');
+const { Server } = require('socket.io');
 require('dotenv').config();
 
 // Import database configuration and models
@@ -49,7 +51,74 @@ const Order = require('./models/Order');
 const User = require('./models/User');
 
 const app = express();
+const server = http.createServer(app);
 const PORT = process.env.PORT || 3001;
+
+// =============================================================================
+// SOCKET.IO SETUP FOR REAL-TIME UPDATES
+// =============================================================================
+const io = new Server(server, {
+  cors: {
+    origin: function (origin, callback) {
+      // Allow all origins for Socket.io connections
+      callback(null, true);
+    },
+    credentials: true,
+    methods: ['GET', 'POST']
+  },
+  transports: ['websocket', 'polling'], // Support both transport methods
+  allowEIO3: true // Allow older Engine.IO clients
+});
+
+// Track connected clients
+let connectedClients = 0;
+
+io.on('connection', (socket) => {
+  connectedClients++;
+  console.log(`🔌 Socket.io client connected (ID: ${socket.id}). Total clients: ${connectedClients}`);
+
+  // Send initial connection confirmation
+  socket.emit('connected', {
+    message: 'Connected to real-time orders stream',
+    socketId: socket.id,
+    timestamp: new Date().toISOString()
+  });
+
+  // Send initial orders data when client connects
+  Order.find({})
+    .populate('items.menuItemId', 'name category')
+    .sort({ createdAt: -1 })
+    .limit(50)
+    .lean()
+    .then(orders => {
+      socket.emit('initialOrders', {
+        orders: orders,
+        count: orders.length,
+        timestamp: new Date().toISOString()
+      });
+      console.log(`📋 Sent ${orders.length} initial orders to client ${socket.id}`);
+    })
+    .catch(error => {
+      console.error('❌ Error fetching initial orders for Socket.io client:', error);
+      socket.emit('error', {
+        message: 'Failed to fetch initial orders',
+        error: error.message
+      });
+    });
+
+  // Handle client disconnection
+  socket.on('disconnect', (reason) => {
+    connectedClients--;
+    console.log(`🔌 Socket.io client disconnected (ID: ${socket.id}, reason: ${reason}). Remaining clients: ${connectedClients}`);
+  });
+
+  // Handle connection errors
+  socket.on('error', (error) => {
+    console.error(`❌ Socket.io error for client ${socket.id}:`, error);
+  });
+});
+
+console.log('🚀 Socket.io server initialized and ready for connections');
 
 // =============================================================================
 // MIDDLEWARE CONFIGURATION
@@ -428,68 +497,26 @@ app.get('/api/orders', async (req, res) => {
 // REAL-TIME SSE ENDPOINT FOR ORDERS
 // =============================================================================
 
-// Store connected SSE clients
-const sseClients = new Set();
+// =============================================================================
+// SOCKET.IO BROADCAST FUNCTIONS
+// =============================================================================
 
-// SSE endpoint for real-time order updates
-app.get('/api/orders/stream', (req, res) => {
-  console.log('📡 New SSE client connected for real-time orders');
-  
-  // Set headers for SSE
-  res.writeHead(200, {
-    'Content-Type': 'text/event-stream',
-    'Cache-Control': 'no-cache',
-    'Connection': 'keep-alive',
-    'Access-Control-Allow-Origin': req.headers.origin || '*',
-    'Access-Control-Allow-Credentials': 'true',
-  });
-
-  // Send initial connection message
-  res.write('data: ' + JSON.stringify({ type: 'connected', message: 'Connected to real-time orders stream' }) + '\n\n');
-
-  // Add client to set
-  sseClients.add(res);
-
-  // Send initial orders data
-  Order.find({})
-    .populate('items.menuItemId', 'name category')
-    .sort({ createdAt: -1 })
-    .limit(50)
-    .lean() // Convert Mongoose documents to plain JavaScript objects
-    .then(orders => {
-      res.write('data: ' + JSON.stringify({ 
-        type: 'initial', 
-        orders: orders 
-      }) + '\n\n');
-    })
-    .catch(error => {
-      console.error('Error fetching initial orders:', error);
-    });
-
-  // Remove client on connection close
-  req.on('close', () => {
-    console.log('📡 SSE client disconnected');
-    sseClients.delete(res);
-  });
-});
-
-// Function to broadcast order updates to all connected clients
-function broadcastOrderUpdate(type, order) {
-  console.log(`📢 Broadcasting ${type} to ${sseClients.size} clients`);
-  
+// Function to broadcast order updates to all connected Socket.io clients
+function broadcastOrderUpdate(eventName, order) {
   // Convert Mongoose document to plain object for JSON serialization
   const orderData = order.toObject ? order.toObject() : order;
   
-  const data = JSON.stringify({ type, order: orderData });
+  const connectedCount = io.sockets.sockets.size;
+  console.log(`📢 Broadcasting ${eventName} to ${connectedCount} Socket.io clients`);
   
-  sseClients.forEach(client => {
-    try {
-      client.write(`data: ${data}\n\n`);
-    } catch (error) {
-      console.error('Error broadcasting to client:', error);
-      sseClients.delete(client);
-    }
+  // Emit to all connected clients
+  io.emit(eventName, {
+    type: eventName,
+    order: orderData,
+    timestamp: new Date().toISOString()
   });
+  
+  console.log(`✅ Successfully broadcasted ${eventName} for order: ${orderData.orderId || orderData._id}`);
 }
 
 // Get single order
@@ -595,7 +622,7 @@ app.post('/api/orders', async (req, res) => {
     const savedOrder = await newOrder.save();
     
     // Broadcast new order to all connected SSE clients
-    broadcastOrderUpdate('orderCreated', savedOrder);
+    broadcastOrderUpdate('newOrder', savedOrder);
     
     res.status(201).json({
       success: true,
@@ -648,7 +675,7 @@ app.put('/api/orders/:id', async (req, res) => {
     await order.updateStatus(status, reason);
     
     // Broadcast order update to all connected SSE clients
-    broadcastOrderUpdate('orderUpdated', order);
+    broadcastOrderUpdate('updateOrderStatus', order);
     
     res.status(200).json({
       success: true,
@@ -878,13 +905,14 @@ async function startServer() {
       console.log('🚀 Starting server anyway to allow for retry...');
     }
     
-    // Start the server
-    app.listen(PORT, () => {
+    // Start the HTTP server with Socket.io
+    server.listen(PORT, () => {
       console.log(`🚀 Chouieur Express Backend is running on port ${PORT}`);
-    console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
+      console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
       console.log(`🗄️  Database: MongoDB`);
       console.log(`🌐 CORS enabled for frontend communication`);
+      console.log(`🔌 Socket.io server ready on ws://localhost:${PORT}`);
     });
   } catch (error) {
     console.error('❌ Failed to start server:', error);

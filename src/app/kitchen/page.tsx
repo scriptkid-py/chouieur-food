@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { useHybridOrders } from "@/hooks/use-hybrid-orders";
+import { useSocketOrders } from "@/hooks/use-socket-orders";
 import { 
   UtensilsCrossed, 
   Clock, 
@@ -12,12 +12,15 @@ import {
   AlertCircle,
   Timer,
   ChefHat,
-  RefreshCw
+  RefreshCw,
+  Wifi,
+  WifiOff
 } from "lucide-react";
 import { useState } from "react";
+import { cn } from "@/lib/utils";
 
 export default function KitchenViewPage() {
-  const { orders: allOrders, isLoading, updateOrderStatus, refetch, error } = useHybridOrders();
+  const { orders: allOrders, isLoading, updateOrderStatus, refetch, error, isConnected } = useSocketOrders({ enableSound: true });
   const [isUpdating, setIsUpdating] = useState<Set<string>>(new Set());
 
   // Filter orders for kitchen (confirmed, preparing, ready)
@@ -72,11 +75,25 @@ export default function KitchenViewPage() {
             <ChefHat className="h-8 w-8" />
             Kitchen Dashboard
           </h1>
-          <p className="text-muted-foreground">Live list of confirmed orders to be prepared.</p>
+          <p className="text-muted-foreground">Real-time list of confirmed orders to be prepared.</p>
         </div>
         <div className="flex items-center gap-2">
-          <Badge variant="default" className="text-xs bg-green-600 animate-pulse">
-            🔴 LIVE
+          <Badge 
+            variant="default" 
+            className={cn(
+              "text-xs",
+              isConnected ? "bg-green-600 animate-pulse" : "bg-red-600"
+            )}
+          >
+            {isConnected ? (
+              <>
+                <Wifi className="h-3 w-3 mr-1" /> LIVE
+              </>
+            ) : (
+              <>
+                <WifiOff className="h-3 w-3 mr-1" /> DISCONNECTED
+              </>
+            )}
           </Badge>
           <Button
             variant="outline"
@@ -171,7 +188,7 @@ export default function KitchenViewPage() {
         <CardContent>
           {error ? (
             <div className="text-center py-8">
-              <p className="text-red-500 mb-4">Error loading orders: {typeof error === 'string' ? error : error.message || 'Unknown error'}</p>
+              <p className="text-red-500 mb-4">Error loading orders: {typeof error === 'string' ? error : (error as any)?.message || 'Unknown error'}</p>
               <Button onClick={refetch} variant="outline">
                 Try Again
               </Button>
