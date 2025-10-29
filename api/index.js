@@ -423,6 +423,69 @@ app.get('/api/orders', async (req, res) => {
   }
 });
 
+// =============================================================================
+// REAL-TIME SSE ENDPOINT FOR ORDERS
+// =============================================================================
+
+// Store connected SSE clients
+const sseClients = new Set();
+
+// SSE endpoint for real-time order updates
+app.get('/api/orders/stream', (req, res) => {
+  console.log('📡 New SSE client connected for real-time orders');
+  
+  // Set headers for SSE
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive',
+    'Access-Control-Allow-Origin': req.headers.origin || '*',
+    'Access-Control-Allow-Credentials': 'true',
+  });
+
+  // Send initial connection message
+  res.write('data: ' + JSON.stringify({ type: 'connected', message: 'Connected to real-time orders stream' }) + '\n\n');
+
+  // Add client to set
+  sseClients.add(res);
+
+  // Send initial orders data
+  Order.find({})
+    .populate('items.menuItemId', 'name category')
+    .sort({ createdAt: -1 })
+    .limit(50)
+    .then(orders => {
+      res.write('data: ' + JSON.stringify({ 
+        type: 'initial', 
+        orders: orders 
+      }) + '\n\n');
+    })
+    .catch(error => {
+      console.error('Error fetching initial orders:', error);
+    });
+
+  // Remove client on connection close
+  req.on('close', () => {
+    console.log('📡 SSE client disconnected');
+    sseClients.delete(res);
+  });
+});
+
+// Function to broadcast order updates to all connected clients
+function broadcastOrderUpdate(type, order) {
+  console.log(`📢 Broadcasting ${type} to ${sseClients.size} clients`);
+  const data = JSON.stringify({ type, order });
+  
+  sseClients.forEach(client => {
+    try {
+      client.write(`data: ${data}\n\n`);
+    } catch (error) {
+      console.error('Error broadcasting to client:', error);
+      sseClients.delete(client);
+    }
+  });
+}
+
 // Get single order
 app.get('/api/orders/:id', async (req, res) => {
   try {
@@ -488,6 +551,9 @@ app.post('/api/orders', async (req, res) => {
     
     const savedOrder = await newOrder.save();
     
+    // Broadcast new order to all connected SSE clients
+    broadcastOrderUpdate('orderCreated', savedOrder);
+    
     res.status(201).json({
       success: true,
       message: 'Order created successfully',
@@ -523,6 +589,9 @@ app.put('/api/orders/:id', async (req, res) => {
     }
     
     await order.updateStatus(status, reason);
+    
+    // Broadcast order update to all connected SSE clients
+    broadcastOrderUpdate('orderUpdated', order);
     
     res.status(200).json({
       success: true,
