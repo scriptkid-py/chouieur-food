@@ -11,7 +11,7 @@ export function Logo({ large = false, className }: LogoProps) {
       <h1 className={cn(
         large ? "text-5xl md:text-7xl" : ""
       )}>
-        <span className="text-primary">Chouieur</span> Food & Helado
+        <span>Chouieur</span> Food & Helado
       </h1>
     </div>
   );
