@@ -496,8 +496,25 @@ function broadcastOrderUpdate(type, order) {
 app.get('/api/orders/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const order = await Order.findOne({ orderId: id })
-      .populate('items.menuItemId', 'name category price');
+    
+    // Try to find order by orderId first (if it looks like ORD-...)
+    // Otherwise try by MongoDB _id
+    let order = null;
+    if (id.startsWith('ORD-')) {
+      order = await Order.findOne({ orderId: id })
+        .populate('items.menuItemId', 'name category price');
+    } else {
+      // Try MongoDB ObjectId
+      if (mongoose.Types.ObjectId.isValid(id)) {
+        order = await Order.findById(id)
+          .populate('items.menuItemId', 'name category price');
+      }
+      // If not found, also try orderId field
+      if (!order) {
+        order = await Order.findOne({ orderId: id })
+          .populate('items.menuItemId', 'name category price');
+      }
+    }
     
     if (!order) {
       return res.status(404).json({
