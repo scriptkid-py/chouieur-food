@@ -1,0 +1,20 @@
+services:
+  # Backend API Service
+  - type: web
+    name: chouieur-express-backend
+    runtime: node
+    region: oregon
+    plan: free
+    buildCommand: cd api && npm install
+    startCommand: cd api && node index.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: FRONTEND_URL
+        value: https://chouieur-express-njzwa9nr2-scriptkid-pys-projects.vercel.app
+      - key: MONGO_URI
+        sync: false  # You'll add this in Render dashboard
+
