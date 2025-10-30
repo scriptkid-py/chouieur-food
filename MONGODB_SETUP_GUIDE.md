@@ -94,4 +94,5 @@ If you're having trouble with MongoDB Atlas network access:
 3. **Verify** cluster is running (not paused)
 4. **Check** user permissions are correct
 
+
 After configuring MongoDB Atlas network access, your entire application will be live and functional!

@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/api-config';
+import { getApiBaseUrl } from '@/lib/api-config';
 import type { MenuItem, MenuItemCategory } from '@/lib/types';
 import { Upload, X, Image as ImageIcon, Loader2 } from 'lucide-react';
 
@@ -96,6 +97,8 @@ export function MenuItemForm({ menuItem, onSuccess, onCancel }: MenuItemFormProp
   const uploadImage = async (): Promise<string | null> => {
     if (!selectedImage) return null;
 
+    console.log('🖼️ Starting image upload for file:', selectedImage.name, selectedImage.size, 'bytes');
+    
     const formData = new FormData();
     formData.append('image', selectedImage);
 
@@ -105,13 +108,24 @@ export function MenuItemForm({ menuItem, onSuccess, onCancel }: MenuItemFormProp
         body: formData,
       });
 
-      if (response.success) {
-        setUploadedImageUrl(response.imageUrl);
-        return response.imageUrl;
+      console.log('📡 Upload response:', response);
+
+      if (response.success && response.imageUrl) {
+        let finalUrl: string = response.imageUrl as string;
+        // Normalize relative URL to absolute
+        if (typeof finalUrl === 'string' && finalUrl.startsWith('/uploads/')) {
+          finalUrl = `${getApiBaseUrl()}${finalUrl}`;
+        }
+        console.log('✅ Image uploaded successfully, URL length:', finalUrl.length);
+        console.log('🔗 Image URL preview:', finalUrl.substring(0, 100) + '...');
+        setUploadedImageUrl(finalUrl);
+        return finalUrl;
+      } else {
+        console.error('❌ Upload failed - no success or no imageUrl:', response);
+        return null;
       }
-      return null;
     } catch (error) {
-      console.error('Error uploading image:', error);
+      console.error('❌ Error uploading image:', error);
       toast({
         title: 'Upload failed',
         description: 'Failed to upload image. Please try again.',
@@ -131,10 +145,21 @@ export function MenuItemForm({ menuItem, onSuccess, onCancel }: MenuItemFormProp
         const uploadedUrl = await uploadImage();
         if (uploadedUrl) {
           imageUrl = uploadedUrl;
+          // Ensure absolute URL if still relative
+          if (imageUrl.startsWith('/uploads/')) {
+            imageUrl = `${getApiBaseUrl()}${imageUrl}`;
+          }
         } else {
+          toast({ title: 'Error', description: 'Image upload failed. Please try again.', variant: 'destructive' });
           setIsSubmitting(false);
           return;
         }
+      }
+
+      if (!imageUrl) {
+        toast({ title: 'Image Required', description: 'Please choose and upload an image.', variant: 'destructive' });
+        setIsSubmitting(false);
+        return;
       }
 
       // Prepare menu item data

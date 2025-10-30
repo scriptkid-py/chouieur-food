@@ -2,7 +2,7 @@ const { connectToMongoDB, getConnectionStatus } = require('./config/database');
 const MenuItem = require('./models/MenuItem');
 const Order = require('./models/Order');
 const User = require('./models/User');
-const { getMenuItemsFromSheets } = require('./services/google-sheets-service');
+const { listMenuItems, createMenuItem, deleteMenuItem } = require('./services/google-sheets-service');
 const { checkAndArchive } = require('./services/archive-service');
 
 // Import all the middleware and routes from the main server
@@ -112,12 +112,12 @@ app.get('/api/debug', (req, res) => {
 // MENU ITEMS ENDPOINTS
 // =============================================================================
 
-app.get('/api/menu-items', ensureDbConnection, async (req, res) => {
+app.get('/api/menu-items', async (req, res) => {
   try {
     console.log('📦 Fetching menu items...');
     
     // Try Google Sheets first
-    let menuItems = await getMenuItemsFromSheets();
+    let menuItems = await listMenuItems();
     
     if (menuItems && menuItems.length > 0) {
       console.log(`✅ Found ${menuItems.length} menu items from Google Sheets`);
@@ -145,11 +145,53 @@ app.get('/api/menu-items', ensureDbConnection, async (req, res) => {
   }
 });
 
-app.post('/api/menu-items', ensureDbConnection, async (req, res) => {
+app.post('/api/menu-items', async (req, res) => {
   try {
-    const menuItem = new MenuItem(req.body);
-    await menuItem.save();
-    res.status(201).json({ success: true, menuItem });
+    const { name, price, description, category, imageUrl } = req.body || {};
+    if (!name || price == null) {
+      return res.status(400).json({ success: false, error: 'name and price are required' });
+    }
+    const priceNum = typeof price === 'number' ? price : parseFloat(String(price));
+    if (Number.isNaN(priceNum)) {
+      return res.status(400).json({ success: false, error: 'price must be a number' });
+    }
+    const newItem = {
+      id: uuidv4(),
+      name: String(name),
+      category: String(category || ''),
+      price: priceNum,
+      megaPrice: '',
+      description: String(description || ''),
+      imageId: '',
+      imageUrl: String(imageUrl || ''),
+      isActive: true,
+    };
+    const created = await createMenuItem(newItem);
+    if (!created) throw new Error('Failed to append row to Google Sheets');
+    res.status(201).json({ success: true, menuItem: created });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Delete by id or name (Sheets-first)
+app.delete('/api/menu-items', async (req, res) => {
+  try {
+    const { id, name } = req.query || {};
+    let targetId = id;
+    if (!targetId && name) {
+      const items = await listMenuItems();
+      const found = (items || []).find(i => String(i.name) === String(name));
+      targetId = found ? found.id : undefined;
+    }
+    if (!targetId) {
+      return res.status(400).json({ success: false, error: 'Provide id or a valid name' });
+    }
+    const ok = await deleteMenuItem(String(targetId));
+    if (!ok) {
+      return res.status(404).json({ success: false, error: 'Item not found' });
+    }
+    res.json({ success: true });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }

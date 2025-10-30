@@ -9,9 +9,10 @@ import { useRouter } from 'next/navigation';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
 import { useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Truck, Store } from 'lucide-react';
 import { apiRequest } from '@/lib/api-config';
 import { automateDeliveryNotifications } from '@/ai/flows/automate-delivery-notifications';
 
@@ -26,6 +27,7 @@ export function CheckoutForm() {
   const router = useRouter();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [orderType, setOrderType] = useState<'delivery' | 'pickup'>('delivery');
   const { register, handleSubmit, formState: { errors } } = useForm<FormValues>();
 
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
@@ -60,12 +62,12 @@ export function CheckoutForm() {
       const newOrder = {
         customerName: data.name,
         customerPhone: data.phone,
-        customerAddress: data.address,
+        customerAddress: orderType === 'delivery' ? data.address : 'Pickup at restaurant',
         items: orderItems,
         total: cartTotal,
         status: 'pending',
         email: '',
-        orderType: 'delivery',
+        orderType: orderType,
         paymentMethod: 'cash'
       };
 
@@ -172,6 +174,37 @@ export function CheckoutForm() {
       </Card>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        {/* Order Type Selection */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Order Type</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <RadioGroup value={orderType} onValueChange={(value) => setOrderType(value as 'delivery' | 'pickup')}>
+              <div className="flex items-center space-x-2 p-4 border rounded-lg hover:bg-accent cursor-pointer">
+                <RadioGroupItem value="delivery" id="delivery" />
+                <Label htmlFor="delivery" className="flex items-center gap-2 cursor-pointer flex-1">
+                  <Truck className="h-5 w-5 text-primary" />
+                  <div>
+                    <div className="font-semibold">Delivery</div>
+                    <div className="text-sm text-muted-foreground">Get it delivered to your address</div>
+                  </div>
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2 p-4 border rounded-lg hover:bg-accent cursor-pointer">
+                <RadioGroupItem value="pickup" id="pickup" />
+                <Label htmlFor="pickup" className="flex items-center gap-2 cursor-pointer flex-1">
+                  <Store className="h-5 w-5 text-primary" />
+                  <div>
+                    <div className="font-semibold">Pickup (Local)</div>
+                    <div className="text-sm text-muted-foreground">Pick up from our restaurant</div>
+                  </div>
+                </Label>
+              </div>
+            </RadioGroup>
+          </CardContent>
+        </Card>
+
         <div className="space-y-2">
           <Label htmlFor="name">Full Name</Label>
           <Input id="name" {...register('name', { required: 'Name is required' })} />
@@ -182,11 +215,15 @@ export function CheckoutForm() {
           <Input id="phone" type="tel" {...register('phone', { required: 'Phone number is required' })} />
            {errors.phone && <p className="text-sm text-destructive">{errors.phone.message}</p>}
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="address">Delivery Address</Label>
-          <Input id="address" {...register('address', { required: 'Address is required' })} />
-           {errors.address && <p className="text-sm text-destructive">{errors.address.message}</p>}
-        </div>
+        
+        {/* Only show address field for delivery orders */}
+        {orderType === 'delivery' && (
+          <div className="space-y-2">
+            <Label htmlFor="address">Delivery Address</Label>
+            <Input id="address" {...register('address', { required: orderType === 'delivery' ? 'Address is required for delivery' : false })} />
+            {errors.address && <p className="text-sm text-destructive">{errors.address.message}</p>}
+          </div>
+        )}
         <Button type="submit" size="lg" className="w-full" disabled={isSubmitting || cartItems.length === 0}>
           {isSubmitting ? (
             <>

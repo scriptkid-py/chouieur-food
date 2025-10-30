@@ -14,6 +14,7 @@ import { apiRequest } from '@/lib/api-config';
 import type { MenuItem } from '@/lib/types';
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { getApiBaseUrl } from '@/lib/api-config';
 
 export default function AdminMenuItemsPage() {
   const { menuItems, isLoading, refetch } = useMenuItems();
@@ -54,6 +55,9 @@ export default function AdminMenuItemsPage() {
         method: 'DELETE',
       });
 
+      // Diagnostic log to catch refetch problems
+      console.log('typeof refetch:', typeof refetch, refetch);
+
       if (response && response.success !== false) {
         await refetch();
         toast({
@@ -86,6 +90,9 @@ export default function AdminMenuItemsPage() {
 
   const getImageUrl = (item: MenuItem) => {
     if (item.imageUrl) {
+      if (item.imageUrl.startsWith('/uploads/')) {
+        return `${getApiBaseUrl()}${item.imageUrl}`;
+      }
       return item.imageUrl;
     }
     const placeholder = PlaceHolderImages.find(p => p.id === item.imageId);

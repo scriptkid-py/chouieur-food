@@ -42,6 +42,7 @@ const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
 const mongoose = require('mongoose');
 const { Server } = require('socket.io');
+const cloudinary = require('cloudinary').v2;
 require('dotenv').config();
 
 // Import database configuration and models
@@ -49,10 +50,28 @@ const { connectToMongoDB, getConnectionStatus } = require('./config/database');
 const MenuItem = require('./models/MenuItem');
 const Order = require('./models/Order');
 const User = require('./models/User');
+const { initGoogleSheets, listMenuItems: sheetsListMenuItems, getMenuItemById: sheetsGetMenuItemById, createMenuItem: sheetsCreateMenuItem, updateMenuItem: sheetsUpdateMenuItem, deleteMenuItem: sheetsDeleteMenuItem, sheetsClient } = require('./services/google-sheets-service');
 
 const app = express();
 const server = http.createServer(app);
 const PORT = process.env.PORT || 3001;
+
+// =============================================================================
+// CLOUDINARY CONFIGURATION
+// =============================================================================
+
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME || 'your-cloud-name',
+  api_key: process.env.CLOUDINARY_API_KEY || 'your-api-key',
+  api_secret: process.env.CLOUDINARY_API_SECRET || 'your-api-secret'
+});
+
+console.log('☁️ Cloudinary configured:', {
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME ? '✅ Set' : '❌ Missing',
+  api_key: process.env.CLOUDINARY_API_KEY ? '✅ Set' : '❌ Missing',
+  api_secret: process.env.CLOUDINARY_API_SECRET ? '✅ Set' : '❌ Missing'
+});
 
 // =============================================================================
 // SOCKET.IO SETUP FOR REAL-TIME UPDATES
@@ -290,36 +309,25 @@ app.get('/api/health', (req, res) => {
 // Get all menu items
 app.get('/api/menu-items', async (req, res) => {
   try {
-    console.log('📋 Fetching menu items from MongoDB...');
-    
+    console.log('📋 Fetching menu items...');
+
+    const useSheets = !!sheetsClient;
+
+    if (useSheets) {
+      const items = await sheetsListMenuItems();
+      if (!items) throw new Error('Failed to fetch from Google Sheets');
+      return res.status(200).json({ success: true, data: items, source: 'google-sheets', message: `Fetched ${items.length} menu items` });
+    }
+
     const { category, active } = req.query;
     let query = {};
-    
-    if (category) {
-      query.category = category;
-    }
-    
-    if (active !== undefined) {
-      query.isActive = active === 'true';
-    }
-    
+    if (category) query.category = category;
+    if (active !== undefined) query.isActive = active === 'true';
     const menuItems = await MenuItem.find(query).sort({ category: 1, name: 1 });
-    
-    res.status(200).json({
-        success: true,
-      data: menuItems,
-      source: 'mongodb',
-      message: `Successfully fetched ${menuItems.length} menu items`,
-      count: menuItems.length
-    });
+    return res.status(200).json({ success: true, data: menuItems, source: 'mongodb', message: `Successfully fetched ${menuItems.length} menu items`, count: menuItems.length });
   } catch (error) {
     console.error('❌ Error fetching menu items:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch menu items',
-      message: error.message,
-      timestamp: new Date().toISOString()
-    });
+    res.status(500).json({ success: false, error: 'Failed to fetch menu items', message: error.message, timestamp: new Date().toISOString() });
   }
 });
 
@@ -327,53 +335,41 @@ app.get('/api/menu-items', async (req, res) => {
 app.get('/api/menu-items/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const menuItem = await MenuItem.findById(id);
-    
-    if (!menuItem) {
-      return res.status(404).json({
-        success: false,
-        error: 'Menu item not found',
-        message: `Menu item with ID ${id} does not exist`
-      });
+    if (sheetsClient) {
+      const item = await sheetsGetMenuItemById(id);
+      if (!item) return res.status(404).json({ success: false, error: 'Menu item not found', message: `Menu item with ID ${id} does not exist` });
+      return res.status(200).json({ success: true, data: item, source: 'google-sheets' });
     }
-    
-    res.status(200).json({
-      success: true,
-      data: menuItem,
-      source: 'mongodb'
-    });
+    const menuItem = await MenuItem.findById(id);
+    if (!menuItem) return res.status(404).json({ success: false, error: 'Menu item not found', message: `Menu item with ID ${id} does not exist` });
+    return res.status(200).json({ success: true, data: menuItem, source: 'mongodb' });
   } catch (error) {
     console.error('❌ Error fetching menu item:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch menu item',
-      message: error.message
-    });
+    res.status(500).json({ success: false, error: 'Failed to fetch menu item', message: error.message });
   }
 });
 
 // Create new menu item
 app.post('/api/menu-items', async (req, res) => {
   try {
-    console.log('📝 Creating new menu item in MongoDB...');
-    
-    const menuItemData = req.body;
-    const menuItem = new MenuItem(menuItemData);
+    console.log('📝 Creating new menu item...');
+    const data = req.body;
+    if (!data.id) {
+      data.id = uuidv4();
+    }
+    data.isActive = data.isActive !== false;
+
+    if (sheetsClient) {
+      const created = await sheetsCreateMenuItem(data);
+      return res.status(201).json({ success: true, message: 'Menu item created successfully', data: created, source: 'google-sheets' });
+    }
+
+    const menuItem = new MenuItem(data);
     const savedMenuItem = await menuItem.save();
-    
-    res.status(201).json({
-      success: true,
-      message: 'Menu item created successfully',
-      data: savedMenuItem,
-      source: 'mongodb'
-    });
+    return res.status(201).json({ success: true, message: 'Menu item created successfully', data: savedMenuItem, source: 'mongodb' });
   } catch (error) {
     console.error('❌ Error creating menu item:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to create menu item',
-      message: error.message
-    });
+    res.status(500).json({ success: false, error: 'Failed to create menu item', message: error.message });
   }
 });
 
@@ -381,35 +377,18 @@ app.post('/api/menu-items', async (req, res) => {
 app.put('/api/menu-items/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const updateData = req.body;
-    
-    const menuItem = await MenuItem.findByIdAndUpdate(
-      id,
-      updateData,
-      { new: true, runValidators: true }
-    );
-    
-    if (!menuItem) {
-      return res.status(404).json({
-        success: false,
-        error: 'Menu item not found',
-        message: `Menu item with ID ${id} does not exist`
-      });
+    const updates = req.body;
+    if (sheetsClient) {
+      const updated = await sheetsUpdateMenuItem(id, updates);
+      if (!updated) return res.status(404).json({ success: false, error: 'Menu item not found', message: `Menu item with ID ${id} does not exist` });
+      return res.status(200).json({ success: true, message: 'Menu item updated successfully', data: updated, source: 'google-sheets' });
     }
-    
-    res.status(200).json({
-      success: true,
-      message: 'Menu item updated successfully',
-      data: menuItem,
-      source: 'mongodb'
-    });
+    const menuItem = await MenuItem.findByIdAndUpdate(id, updates, { new: true, runValidators: true });
+    if (!menuItem) return res.status(404).json({ success: false, error: 'Menu item not found', message: `Menu item with ID ${id} does not exist` });
+    return res.status(200).json({ success: true, message: 'Menu item updated successfully', data: menuItem, source: 'mongodb' });
   } catch (error) {
     console.error('❌ Error updating menu item:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to update menu item',
-      message: error.message
-    });
+    res.status(500).json({ success: false, error: 'Failed to update menu item', message: error.message });
   }
 });
 
@@ -417,29 +396,17 @@ app.put('/api/menu-items/:id', async (req, res) => {
 app.delete('/api/menu-items/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const menuItem = await MenuItem.findByIdAndDelete(id);
-    
-    if (!menuItem) {
-      return res.status(404).json({
-        success: false,
-        error: 'Menu item not found',
-        message: `Menu item with ID ${id} does not exist`
-      });
+    if (sheetsClient) {
+      const ok = await sheetsDeleteMenuItem(id);
+      if (!ok) return res.status(404).json({ success: false, error: 'Menu item not found', message: `Menu item with ID ${id} does not exist` });
+      return res.status(200).json({ success: true, message: 'Menu item deleted successfully', data: { id }, source: 'google-sheets' });
     }
-    
-    res.status(200).json({
-      success: true,
-      message: 'Menu item deleted successfully',
-      data: menuItem,
-      source: 'mongodb'
-    });
+    const menuItem = await MenuItem.findByIdAndDelete(id);
+    if (!menuItem) return res.status(404).json({ success: false, error: 'Menu item not found', message: `Menu item with ID ${id} does not exist` });
+    return res.status(200).json({ success: true, message: 'Menu item deleted successfully', data: menuItem, source: 'mongodb' });
   } catch (error) {
     console.error('❌ Error deleting menu item:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to delete menu item',
-      message: error.message
-    });
+    res.status(500).json({ success: false, error: 'Failed to delete menu item', message: error.message });
   }
 });
 
@@ -762,22 +729,89 @@ app.post('/api/users', async (req, res) => {
 // FILE UPLOAD ENDPOINTS
 // =============================================================================
 
-// Upload menu item image
+// Upload menu item image to Cloudinary
 app.post('/api/menu-items/upload-image', upload.single('image'), async (req, res) => {
   try {
+    console.log('🖼️ Image upload request received');
+    console.log('📁 File info:', req.file);
+    
     if (!req.file) {
+      console.log('❌ No file provided');
       return res.status(400).json({ success: false, message: 'No image file provided.' });
     }
 
-    const imageUrl = `/uploads/menu-images/${req.file.filename}`;
+    // Check if Cloudinary is properly configured
+    if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+      console.log('❌ Cloudinary not configured, falling back to data URL');
+      
+      // Fallback to data URL if Cloudinary not configured
+      const fileBuffer = fs.readFileSync(req.file.path);
+      const base64Image = fileBuffer.toString('base64');
+      const mimeType = req.file.mimetype;
+      const dataUrl = `data:${mimeType};base64,${base64Image}`;
+      
+      // Clean up temp file
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch (cleanupError) {
+        console.warn('⚠️ Could not clean up temp file:', cleanupError.message);
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: 'Image uploaded successfully (data URL fallback)',
+        imageUrl: dataUrl,
+        fileName: req.file.filename
+      });
+    }
+
+    // Upload to Cloudinary
+    console.log('☁️ Uploading to Cloudinary...');
+    const result = await cloudinary.uploader.upload(req.file.path, {
+      folder: 'chouieur-express/menu-items',
+      resource_type: 'auto',
+      transformation: [
+        { width: 800, height: 600, crop: 'limit' },
+        { quality: 'auto' }
+      ]
+    });
+
+    console.log('✅ Cloudinary upload successful:', {
+      public_id: result.public_id,
+      secure_url: result.secure_url,
+      width: result.width,
+      height: result.height
+    });
+
+    // Clean up the temporary file
+    try {
+      fs.unlinkSync(req.file.path);
+      console.log('🗑️ Temporary file cleaned up');
+    } catch (cleanupError) {
+      console.warn('⚠️ Could not clean up temp file:', cleanupError.message);
+    }
+
     res.status(200).json({
       success: true,
-      message: 'Image uploaded successfully',
-      imageUrl: imageUrl,
-      fileName: req.file.filename
+      message: 'Image uploaded successfully to Cloudinary',
+      imageUrl: result.secure_url,
+      publicId: result.public_id,
+      fileName: req.file.filename,
+      width: result.width,
+      height: result.height
     });
   } catch (error) {
-    console.error('Error uploading image:', error);
+    console.error('❌ Error uploading image:', error);
+    
+    // Clean up temp file on error
+    try {
+      if (req.file && req.file.path) {
+        fs.unlinkSync(req.file.path);
+      }
+    } catch (cleanupError) {
+      console.warn('⚠️ Could not clean up temp file on error:', cleanupError.message);
+    }
+
     res.status(500).json({
       success: false,
       error: 'Failed to upload image',
@@ -910,18 +944,14 @@ async function startServer() {
       console.log(`🚀 Chouieur Express Backend is running on port ${PORT}`);
       console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
       console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
-      console.log(`🗄️  Database: MongoDB`);
+      console.log(`🗄️  Database: MongoDB (Sheets ${sheetsClient ? 'ENABLED' : 'DISABLED'})`);
       console.log(`🌐 CORS enabled for frontend communication`);
       console.log(`🔌 Socket.io server ready on ws://localhost:${PORT}`);
     });
   } catch (error) {
-    console.error('❌ Failed to start server:', error);
+    console.error('❌ Server startup error:', error);
     process.exit(1);
   }
 }
 
-// Start the server
 startServer();
-
-// Export app for serverless functions
-module.exports = app;

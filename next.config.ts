@@ -37,6 +37,18 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'res.cloudinary.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'chouieur-express-backend-h74v.onrender.com',
+        port: '',
+        pathname: '/**',
+      },
     ],
   },
   // Production optimizations for Render deployment

@@ -137,13 +137,17 @@ export async function apiRequest<T = any>(
   options: RequestInit = {}
 ): Promise<T> {
   const url = endpoint.startsWith('http') ? endpoint : `${getApiBaseUrl()}${endpoint}`;
-  
+
+  // Detect if the body is FormData
+  const isFormData = options.body instanceof FormData;
+
   const defaultOptions: RequestInit = {
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
     ...options,
+    headers: {
+      // Only set Content-Type for non-FormData bodies
+      ...(isFormData ? {} : {'Content-Type': 'application/json'}),
+      ...(options.headers || {})
+    },
   };
 
   try {
