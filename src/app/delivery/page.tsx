@@ -253,7 +253,10 @@ export default function DeliveryPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <Truck className="h-6 w-6 text-primary" />
-              <h1 className="text-2xl font-bold text-gray-900">Delivery Dashboard</h1>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">Delivery Dashboard</h1>
+                <p className="text-xs text-gray-500">For delivery drivers</p>
+              </div>
             </div>
             <div className="flex items-center gap-4">
               <Button
@@ -332,7 +335,7 @@ export default function DeliveryPage() {
           <CardHeader>
             <CardTitle>Delivery Orders</CardTitle>
             <CardDescription>
-              Manage order delivery statuses. Orders auto-refresh every 10 seconds.
+              View and manage delivery orders. Update status when you pick up or deliver an order. Auto-refreshes every 10 seconds.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -454,17 +457,18 @@ export default function DeliveryPage() {
           </CardContent>
         </Card>
 
-        {/* Order Details Modal (can be expanded later) */}
+        {/* Quick Tips for Delivery Drivers */}
         {filteredOrders.length > 0 && (
           <Card className="mt-6">
             <CardHeader>
-              <CardTitle>Quick Tips</CardTitle>
+              <CardTitle>📱 Driver Instructions</CardTitle>
             </CardHeader>
             <CardContent className="text-sm text-gray-600 space-y-2">
-              <p>• Orders are automatically refreshed every 10 seconds</p>
-              <p>• Use the status dropdown to update delivery progress</p>
-              <p>• Search works with Order ID, customer name, phone, or address</p>
-              <p>• Only delivery orders are shown (pickup orders are hidden)</p>
+              <p>✅ <strong>Update Status:</strong> Use the dropdown to change order status (Ready → Out for Delivery → Delivered)</p>
+              <p>✅ <strong>Auto-Refresh:</strong> Orders update every 10 seconds automatically</p>
+              <p>✅ <strong>Search:</strong> Find orders by Order ID, customer name, phone number, or address</p>
+              <p>✅ <strong>Customer Info:</strong> Click on customer details to see phone number and delivery address</p>
+              <p>✅ <strong>Delivery Notes:</strong> Check delivery instructions below the address if provided</p>
             </CardContent>
           </Card>
         )}
