@@ -51,24 +51,31 @@ export default function AdminMenuItemsPage() {
     }
 
     try {
-      const response = await apiRequest<{ success: boolean; message?: string }>(`/api/menu-items/${item.id}`, {
+      console.log('🗑️ Attempting to delete menu item:', item.id, item.name);
+      
+      const response = await apiRequest<{ success: boolean; message?: string; error?: string }>(`/api/menu-items/${item.id}`, {
         method: 'DELETE',
       });
+
+      console.log('📡 Delete response:', response);
 
       // Diagnostic log to catch refetch problems
       console.log('typeof refetch:', typeof refetch, refetch);
 
-      if (response && response.success !== false) {
+      if (response && response.success !== false && !response.error) {
+        console.log('✅ Delete successful, refetching menu items...');
         await refetch();
         toast({
           title: "Success",
           description: "Menu item deleted successfully!",
         });
       } else {
-        throw new Error(response?.message || 'Failed to delete menu item');
+        const errorMsg = response?.message || response?.error || 'Failed to delete menu item';
+        console.error('❌ Delete failed:', errorMsg);
+        throw new Error(errorMsg);
       }
     } catch (error) {
-      console.error('Error deleting menu item:', error);
+      console.error('❌ Error deleting menu item:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to delete menu item. Please try again.';
       toast({
         title: "Error",

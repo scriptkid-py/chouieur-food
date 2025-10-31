@@ -141,6 +141,17 @@ export function MenuItemForm({ menuItem, onSuccess, onCancel }: MenuItemFormProp
     try {
       // If we have a selected image, use FormData approach (send image directly)
       if (selectedImage) {
+        console.log('📤 Uploading menu item with image:', {
+          name: data.name,
+          category: data.category,
+          price: data.price,
+          imageName: selectedImage.name,
+          imageSize: selectedImage.size,
+          imageType: selectedImage.type,
+          isUpdate: !!menuItem,
+          itemId: menuItem?.id
+        });
+        
         const formData = new FormData();
         formData.append('image', selectedImage);
         formData.append('name', data.name);
@@ -153,29 +164,38 @@ export function MenuItemForm({ menuItem, onSuccess, onCancel }: MenuItemFormProp
         formData.append('isActive', menuItem?.isActive !== false ? 'true' : 'false');
 
         let response;
-        if (menuItem) {
-          // Update existing menu item
-          response = await apiRequest(`/api/menu-items/${menuItem.id}`, {
-            method: 'PUT',
-            body: formData,
-          });
-        } else {
-          // Create new menu item
-          response = await apiRequest('/api/menu-items', {
-            method: 'POST',
-            body: formData,
-          });
-        }
+        try {
+          if (menuItem) {
+            // Update existing menu item
+            console.log(`🔄 Updating menu item ID: ${menuItem.id}`);
+            response = await apiRequest(`/api/menu-items/${menuItem.id}`, {
+              method: 'PUT',
+              body: formData,
+            });
+          } else {
+            // Create new menu item
+            console.log('➕ Creating new menu item');
+            response = await apiRequest('/api/menu-items', {
+              method: 'POST',
+              body: formData,
+            });
+          }
+          
+          console.log('📥 Menu item save response:', response);
 
-        if (response && response.success !== false) {
-          toast({
-            title: menuItem ? 'Menu item updated' : 'Menu item created',
-            description: `${data.name} has been ${menuItem ? 'updated' : 'added'} successfully.`,
-          });
-          onSuccess?.();
-          return;
-        } else {
-          throw new Error(response?.message || 'Failed to save menu item');
+          if (response && response.success !== false) {
+            toast({
+              title: menuItem ? 'Menu item updated' : 'Menu item created',
+              description: `${data.name} has been ${menuItem ? 'updated' : 'added'} successfully.`,
+            });
+            onSuccess?.();
+            return;
+          } else {
+            throw new Error(response?.message || response?.error || 'Failed to save menu item');
+          }
+        } catch (uploadError) {
+          console.error('❌ Error uploading menu item:', uploadError);
+          throw uploadError;
         }
       }
 
