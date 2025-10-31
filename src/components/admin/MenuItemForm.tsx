@@ -152,16 +152,43 @@ export function MenuItemForm({ menuItem, onSuccess, onCancel }: MenuItemFormProp
           itemId: menuItem?.id
         });
         
+        // Validate required fields before sending
+        if (!data.name || data.name.trim() === '') {
+          toast({ title: 'Validation Error', description: 'Menu item name is required', variant: 'destructive' });
+          setIsSubmitting(false);
+          return;
+        }
+        if (!data.price || isNaN(data.price) || data.price <= 0) {
+          toast({ title: 'Validation Error', description: 'Valid price is required', variant: 'destructive' });
+          setIsSubmitting(false);
+          return;
+        }
+        if (!data.description || data.description.trim() === '') {
+          toast({ title: 'Validation Error', description: 'Description is required', variant: 'destructive' });
+          setIsSubmitting(false);
+          return;
+        }
+        
         const formData = new FormData();
         formData.append('image', selectedImage);
-        formData.append('name', data.name);
-        formData.append('category', data.category);
+        formData.append('name', data.name.trim());
+        formData.append('category', data.category || 'Sandwiches');
         formData.append('price', String(data.price));
-        if (data.megaPrice) {
+        if (data.megaPrice && data.megaPrice > 0) {
           formData.append('megaPrice', String(data.megaPrice));
         }
-        formData.append('description', data.description || '');
+        formData.append('description', data.description.trim());
         formData.append('isActive', menuItem?.isActive !== false ? 'true' : 'false');
+        
+        // Log FormData contents for debugging
+        console.log('📤 FormData being sent:', {
+          hasImage: !!selectedImage,
+          name: data.name.trim(),
+          category: data.category || 'Sandwiches',
+          price: String(data.price),
+          description: data.description.trim(),
+          isActive: menuItem?.isActive !== false ? 'true' : 'false'
+        });
 
         let response;
         try {
