@@ -81,23 +81,11 @@ export default function MenuPage() {
         ))}
       </div>
 
-      {filteredItems.length === 0 ? (
-        <div className="text-center py-12">
-          <Utensils className="h-16 w-16 mx-auto text-muted-foreground mb-4 opacity-50" />
-          <p className="text-lg font-semibold text-muted-foreground">No menu items found</p>
-          <p className="text-sm text-muted-foreground mt-2">
-            {activeCategory !== 'All' 
-              ? `No items in the "${activeCategory}" category`
-              : 'The menu is currently empty. Please check back later.'}
-          </p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {filteredItems.map(item => (
-            <MenuItemCard key={item.id} item={item} />
-          ))}
-        </div>
-      )}
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {filteredItems.map(item => (
+          <MenuItemCard key={item.id} item={item} />
+        ))}
+      </div>
     </div>
   );
 }
