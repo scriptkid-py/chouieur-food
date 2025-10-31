@@ -75,27 +75,47 @@ export default function DeliveryPage() {
   const fetchOrders = useCallback(async () => {
     try {
       setIsLoading(true);
-      const response = await apiRequest<{ success: boolean; data: Order[]; orders?: Order[] }>('/api/orders');
+      
+      // Use a try-catch around the API call to handle any errors
+      let response;
+      try {
+        response = await apiRequest<{ success: boolean; data: Order[]; orders?: Order[] }>('/api/orders');
+      } catch (apiError) {
+        console.error('❌ API request failed:', apiError);
+        // Set empty orders instead of crashing
+        setOrders([]);
+        setFilteredOrders([]);
+        if (toast) {
+          toast({
+            title: 'Connection Error',
+            description: 'Could not connect to backend. Please check if the server is running.',
+            variant: 'destructive',
+          });
+        }
+        return;
+      }
       
       console.log('📦 Raw API Response:', response);
       
-      const ordersData = response.data || response.orders || [];
+      // Safely extract orders data
+      const ordersData = (response && (response.data || response.orders)) || [];
       console.log(`📋 Total orders from API: ${ordersData.length}`);
       
       // Filter out cancelled orders by default, show only delivery-relevant statuses
       // Also handle cases where orderType might be missing (show all non-cancelled orders if no orderType filter)
-      const activeOrders = ordersData.filter(order => {
+      const activeOrders = Array.isArray(ordersData) ? ordersData.filter(order => {
+        if (!order || typeof order !== 'object') return false;
         const notCancelled = order.status !== 'cancelled';
         const isDelivery = order.orderType === 'delivery' || !order.orderType; // Show orders without orderType too
         return notCancelled && isDelivery;
-      });
+      }) : [];
       
       console.log(`🚚 Delivery orders after filter: ${activeOrders.length}`);
       
       setOrders(activeOrders);
       setFilteredOrders(activeOrders);
       
-      if (activeOrders.length === 0 && ordersData.length > 0) {
+      if (activeOrders.length === 0 && ordersData.length > 0 && toast) {
         toast({
           title: 'No Delivery Orders',
           description: `Found ${ordersData.length} total orders, but none are delivery orders. Check orderType field.`,
@@ -104,11 +124,16 @@ export default function DeliveryPage() {
       }
     } catch (error) {
       console.error('❌ Error fetching orders:', error);
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to fetch orders. Please check your connection and try again.',
-        variant: 'destructive',
-      });
+      // Set empty arrays on error to prevent crash
+      setOrders([]);
+      setFilteredOrders([]);
+      if (toast) {
+        toast({
+          title: 'Error',
+          description: error instanceof Error ? error.message : 'Failed to fetch orders. Please check your connection and try again.',
+          variant: 'destructive',
+        });
+      }
     } finally {
       setIsLoading(false);
     }
