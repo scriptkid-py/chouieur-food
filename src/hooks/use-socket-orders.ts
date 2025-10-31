@@ -15,7 +15,7 @@ const getSocketUrl = () => {
   if (envUrl) return envUrl;
   // Default fallback
   return process.env.NODE_ENV === 'production' 
-    ? 'https://chouieur-express-backend.onrender.com'
+    ? 'https://chouieur-express-backend-h74v.onrender.com'
     : 'http://localhost:3001';
 };
 
@@ -93,7 +93,7 @@ export function useSocketOrders(options: UseSocketOrdersOptions = {}) {
     }
     return process.env.NEXT_PUBLIC_API_URL || 
       (process.env.NODE_ENV === 'production' 
-        ? 'https://chouieur-express-backend.onrender.com'
+        ? 'https://chouieur-express-backend-h74v.onrender.com'
         : 'http://localhost:3001');
   };
 

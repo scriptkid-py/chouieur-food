@@ -30,7 +30,7 @@
  */
 const DEFAULT_API_URL = process.env.NEXT_PUBLIC_API_URL || 
   (process.env.NODE_ENV === 'production' 
-    ? 'https://chouieur-express-backend.onrender.com'
+    ? 'https://chouieur-express-backend-h74v.onrender.com'
     : 'http://localhost:3001');
 
 /**
@@ -49,7 +49,7 @@ export function getApiBaseUrl(): string {
     
     // If not localhost, use Render backend by default
     if (!hostname.includes('localhost')) {
-      return 'https://chouieur-express-backend.onrender.com';
+      return 'https://chouieur-express-backend-h74v.onrender.com';
     }
   }
   

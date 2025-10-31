@@ -32,3 +32,4 @@ api/uploads/
 
 # Misc
 *.local
+.vercel
