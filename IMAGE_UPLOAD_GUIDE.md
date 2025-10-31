@@ -1,283 +1,269 @@
-# 🖼️ Image Upload System - Chouieur Express
+# 🖼️ Image Upload Guide for Menu Items
 
-## 📋 Overview
+## ✅ Features Added
 
-This guide explains how to use the new image upload system for menu items in your restaurant application. The system allows you to upload actual photos of your menu items instead of using placeholder images.
+Your menu API now supports image uploads for menu items! You can add photos to menu items in three ways:
 
-## 🚀 Features
+1. **Upload image separately** - Upload image first, get URL, then create menu item
+2. **Create with image** - Upload image and create menu item in one request
+3. **Update with image** - Update existing menu item with new image
 
-- **Image Upload**: Upload JPEG, PNG, and WebP images up to 5MB
-- **Image Preview**: See image previews before saving
-- **Fallback System**: Falls back to placeholder images if no custom image is uploaded
-- **Admin Interface**: Easy-to-use admin panel for managing menu items
-- **Local Storage**: Images stored locally in `/uploads/menu-images/` directory
+## 📋 API Endpoints
 
-## 🛠️ Setup Instructions
+### 1. Upload Image Only
 
-### 1. Install Dependencies
+**Endpoint:** `POST /api/menu-items/upload-image`
 
-The required dependencies have been added to `package.json`:
+**Request:**
+- Content-Type: `multipart/form-data`
+- Form field: `image` (file)
 
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Image uploaded successfully to Cloudinary",
+  "imageUrl": "https://res.cloudinary.com/.../image.jpg",
+  "publicId": "chouieur-express/menu-items/xyz",
+  "fileName": "image-1234567890.jpg",
+  "width": 800,
+  "height": 600
+}
+```
+
+**Example (curl):**
 ```bash
-npm install multer uuid
+curl -X POST https://your-backend.onrender.com/api/menu-items/upload-image \
+  -F "image=@/path/to/image.jpg"
 ```
 
-### 2. Update Google Sheets Schema
+### 2. Create Menu Item with Image
 
-Run the schema update script to add the ImageUrl column:
+**Endpoint:** `POST /api/menu` or `POST /api/menu-items`
 
+**Request Options:**
+
+**Option A: JSON with imageUrl (if you uploaded separately)**
+- Content-Type: `application/json`
+- Body:
+```json
+{
+  "name": "Delicious Burger",
+  "category": "Food",
+  "price": 12.99,
+  "description": "A tasty burger",
+  "imageUrl": "https://res.cloudinary.com/.../image.jpg",
+  "isActive": true
+}
+```
+
+**Option B: Multipart form data (upload image directly)**
+- Content-Type: `multipart/form-data`
+- Form fields:
+  - `image`: (file)
+  - `name`: "Delicious Burger"
+  - `category`: "Food"
+  - `price`: "12.99"
+  - `description`: "A tasty burger"
+  - `isActive`: "true"
+
+**Example (curl with file):**
 ```bash
-node scripts/update-menu-schema.js
+curl -X POST https://your-backend.onrender.com/api/menu \
+  -H "Authorization: Bearer your-admin-token" \
+  -F "image=@/path/to/image.jpg" \
+  -F "name=Delicious Burger" \
+  -F "category=Food" \
+  -F "price=12.99" \
+  -F "description=A tasty burger" \
+  -F "isActive=true"
 ```
 
-This will:
-- Add an `ImageUrl` column to your MenuItems sheet
-- Preserve all existing data
-- Add empty ImageUrl values for existing menu items
+### 3. Update Menu Item with Image
 
-### 3. Start the Backend Server
+**Endpoint:** `PUT /api/menu/:id` or `PUT /api/menu-items/:id`
 
+**Request Options:**
+
+**Option A: JSON (update without changing image)**
+- Content-Type: `application/json`
+- Body:
+```json
+{
+  "name": "Updated Burger Name",
+  "price": 14.99,
+  "imageUrl": "https://existing-image-url.jpg"
+}
+```
+
+**Option B: Multipart form data (update with new image)**
+- Content-Type: `multipart/form-data`
+- Form fields:
+  - `image`: (file) - new image file
+  - `name`: "Updated Burger Name"
+  - `price`: "14.99"
+  - Other fields...
+
+**Example (curl with new image):**
 ```bash
-npm run backend
+curl -X PUT https://your-backend.onrender.com/api/menu/ITEM_ID \
+  -H "Authorization: Bearer your-admin-token" \
+  -F "image=@/path/to/new-image.jpg" \
+  -F "name=Updated Burger" \
+  -F "price=14.99"
 ```
 
-The server will automatically:
-- Create the `/uploads/menu-images/` directory
-- Serve uploaded images at `/uploads/menu-images/`
-- Handle image uploads via the API
+## 🖼️ Image Storage Options
 
-## 📱 How to Use
+### Option 1: Cloudinary (Recommended)
 
-### Admin Panel
+**Setup:**
+1. Sign up at [cloudinary.com](https://cloudinary.com)
+2. Get your credentials:
+   - Cloud name
+   - API Key
+   - API Secret
+3. Set environment variables in Render:
+   ```
+   CLOUDINARY_CLOUD_NAME=your-cloud-name
+   CLOUDINARY_API_KEY=your-api-key
+   CLOUDINARY_API_SECRET=your-api-secret
+   ```
 
-1. **Access Admin Panel**: Go to `/admin/menu`
-2. **Add New Menu Item**: Click "Add Menu Item" button
-3. **Upload Image**: 
-   - Click the upload area or "Change Image" button
-   - Select an image file (JPEG, PNG, WebP)
-   - See the preview
-   - Fill in other menu item details
-   - Click "Create Menu Item"
+**Benefits:**
+- Images stored in cloud
+- Automatic optimization
+- CDN delivery
+- Free tier available
 
-### API Endpoints
+### Option 2: Data URL (Fallback)
 
-#### Upload Image Only
-```bash
-POST /api/menu-items/upload-image
-Content-Type: multipart/form-data
+If Cloudinary is not configured, images will be converted to base64 data URLs and stored directly in Google Sheets.
 
-# Form data:
-# image: [file]
-```
+**Benefits:**
+- No external service needed
+- Works immediately
 
-#### Create Menu Item with Image
-```bash
-POST /api/menu-items
-Content-Type: multipart/form-data
+**Limitations:**
+- Larger data size in Google Sheets
+- Slower loading for large images
+- Not recommended for production
 
-# Form data:
-# image: [file] (optional)
-# name: "Sandwich Pilon"
-# category: "Sandwiches"
-# price: 350
-# megaPrice: 500 (optional)
-# description: "A delicious sandwich"
-# imageId: "sandwich-pilon" (fallback)
-```
+## 📝 Frontend Integration
 
-#### Update Menu Item with Image
-```bash
-PUT /api/menu-items/:id
-Content-Type: multipart/form-data
+### Using Fetch API
 
-# Form data:
-# image: [file] (optional)
-# name: "Updated Name"
-# category: "Pizza"
-# price: 400
-# description: "Updated description"
-```
+**Upload image separately:**
+```javascript
+const formData = new FormData();
+formData.append('image', imageFile);
 
-## 🗂️ File Structure
+const uploadResponse = await fetch('/api/menu-items/upload-image', {
+  method: 'POST',
+  body: formData
+});
 
-```
-project/
-├── uploads/
-│   └── menu-images/
-│       ├── uuid-timestamp.jpg
-│       ├── uuid-timestamp.png
-│       └── ...
-├── src/
-│   ├── components/
-│   │   ├── admin/
-│   │   │   ├── MenuItemForm.tsx
-│   │   │   └── AdminSidebar.tsx
-│   │   └── menu/
-│   │       └── MenuItemCard.tsx
-│   ├── app/
-│   │   └── admin/
-│   │       └── menu/
-│   │           └── page.tsx
-│   └── lib/
-│       └── types.ts
-└── scripts/
-    └── update-menu-schema.js
-```
+const { imageUrl } = await uploadResponse.json();
 
-## 🔧 Configuration
-
-### Image Settings
-
-- **Max File Size**: 5MB
-- **Allowed Types**: JPEG, PNG, WebP
-- **Storage Location**: `/uploads/menu-images/`
-- **URL Pattern**: `/uploads/menu-images/{filename}`
-
-### Google Sheets Schema
-
-The MenuItems sheet now has this structure:
-
-| Column | Description |
-|--------|-------------|
-| A | ID (UUID) |
-| B | Name |
-| C | Category |
-| D | Price |
-| E | MegaPrice |
-| F | Description |
-| G | ImageId (fallback) |
-| H | ImageUrl (actual uploaded image) |
-| I | IsActive |
-
-## 🎨 Frontend Integration
-
-### MenuItemCard Component
-
-The `MenuItemCard` component automatically:
-- Uses `imageUrl` if available
-- Falls back to placeholder images using `imageId`
-- Shows "No Image" if neither is available
-
-### TypeScript Types
-
-```typescript
-export type MenuItem = {
-  id: string;
-  name: string;
-  category: MenuItemCategory;
-  price: number;
-  megaPrice?: number;
-  description: string;
-  imageId: string;        // Fallback image ID
-  imageUrl?: string;      // Actual uploaded image URL
-  isActive?: boolean;
+// Then create menu item with imageUrl
+const menuItem = {
+  name: "Burger",
+  category: "Food",
+  price: 12.99,
+  imageUrl: imageUrl
 };
+
+await fetch('/api/menu', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${adminToken}`
+  },
+  body: JSON.stringify(menuItem)
+});
 ```
 
-## 🚨 Troubleshooting
+**Create menu item with image directly:**
+```javascript
+const formData = new FormData();
+formData.append('image', imageFile);
+formData.append('name', 'Burger');
+formData.append('category', 'Food');
+formData.append('price', '12.99');
+formData.append('description', 'A delicious burger');
+formData.append('isActive', 'true');
 
-### Common Issues
+await fetch('/api/menu', {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${adminToken}`
+    // Don't set Content-Type - browser will set it with boundary
+  },
+  body: formData
+});
+```
 
-1. **"No image file provided"**
-   - Make sure you're sending the file in the `image` field
-   - Check that the file is actually selected
+## 🎨 Image Requirements
 
-2. **"Invalid file type"**
-   - Only JPEG, PNG, and WebP files are allowed
-   - Check the file extension and MIME type
+- **Formats:** JPEG, JPG, PNG, WebP
+- **Max Size:** 5MB
+- **Recommended Size:** 800x600px (auto-optimized if using Cloudinary)
+- **Aspect Ratio:** Any (will be auto-cropped to limit if using Cloudinary)
 
-3. **"File too large"**
-   - Maximum file size is 5MB
-   - Compress the image or use a smaller file
+## 🔍 Google Sheets Storage
 
-4. **Images not displaying**
-   - Check that the backend is serving static files from `/uploads`
-   - Verify the image URL is correct
-   - Check browser console for 404 errors
+Images are stored in the `imageUrl` column in your Google Sheets MenuItems tab:
 
-### Debug Steps
+| id | name | category | price | ... | imageUrl |
+|----|------|----------|-------|-----|----------|
+| abc | Burger | Food | 12.99 | ... | https://res.cloudinary.com/.../image.jpg |
 
-1. **Check Backend Logs**:
-   ```bash
-   # Look for upload-related logs
-   tail -f logs/app.log
-   ```
+The `imageUrl` can be:
+- Cloudinary URL: `https://res.cloudinary.com/...`
+- Data URL: `data:image/jpeg;base64,/9j/4AAQ...`
+- Any other image URL
 
-2. **Verify File Upload**:
-   ```bash
-   # Check if files are being saved
-   ls -la uploads/menu-images/
-   ```
+## ✅ Testing
 
-3. **Test API Endpoints**:
-   ```bash
-   # Test image upload
-   curl -X POST -F "image=@test.jpg" http://localhost:3001/api/menu-items/upload-image
-   ```
+### Test Image Upload
 
-## 🔄 Migration from Placeholder Images
+```bash
+# Upload image
+curl -X POST https://your-backend.onrender.com/api/menu-items/upload-image \
+  -F "image=@test-image.jpg"
 
-### Existing Menu Items
+# Create menu item with image
+curl -X POST https://your-backend.onrender.com/api/menu \
+  -F "image=@test-image.jpg" \
+  -F "name=Test Item" \
+  -F "category=Test" \
+  -F "price=9.99" \
+  -F "description=Test description"
+```
 
-1. **Run Schema Update**: `node scripts/update-menu-schema.js`
-2. **Upload Images**: Use the admin panel to add images to existing items
-3. **Verify Display**: Check that images show correctly on the menu page
+## 🚀 Deployment Notes
 
-### Gradual Migration
+1. **Cloudinary Setup (Optional but Recommended):**
+   - Add Cloudinary credentials to Render environment variables
+   - Images will be optimized and served via CDN
 
-- Existing items will continue to show placeholder images
-- New items can have custom images uploaded
-- You can update existing items one by one through the admin panel
+2. **Without Cloudinary:**
+   - Images will use data URLs
+   - Works but less efficient for large images
+   - Fine for small menus or testing
 
-## 🚀 Production Deployment
+3. **Render File System:**
+   - Uploaded files are temporarily stored during processing
+   - Files are deleted after upload to Cloudinary or conversion to data URL
+   - No permanent file storage on Render (ephemeral filesystem)
 
-### Render.com Deployment
+## 📋 Summary
 
-1. **Environment Variables**: No additional variables needed
-2. **File Storage**: Images are stored in the container's file system
-3. **Static Serving**: Backend serves images via Express static middleware
+✅ **Image upload endpoint:** `POST /api/menu-items/upload-image`  
+✅ **Create with image:** `POST /api/menu` (multipart/form-data)  
+✅ **Update with image:** `PUT /api/menu/:id` (multipart/form-data)  
+✅ **Cloudinary support:** Automatic if configured  
+✅ **Data URL fallback:** Works without Cloudinary  
+✅ **Google Sheets storage:** Images saved in `imageUrl` column  
 
-### Important Notes
-
-- **File Persistence**: Files are stored in the container and may be lost on redeployment
-- **For Production**: Consider using cloud storage (AWS S3, Google Cloud Storage, etc.)
-- **Backup**: Regularly backup the `/uploads` directory
-
-## 🔮 Future Enhancements
-
-### Planned Features
-
-1. **Cloud Storage Integration**:
-   - Firebase Storage
-   - AWS S3
-   - Google Cloud Storage
-
-2. **Image Processing**:
-   - Automatic resizing
-   - Format conversion
-   - Thumbnail generation
-
-3. **Bulk Upload**:
-   - Multiple image upload
-   - CSV import with images
-
-4. **Image Management**:
-   - Delete unused images
-   - Image optimization
-   - CDN integration
-
-## 📞 Support
-
-If you encounter any issues:
-
-1. Check the troubleshooting section above
-2. Verify your Google Sheets permissions
-3. Check backend logs for errors
-4. Test API endpoints manually
-5. Ensure file permissions are correct
-
----
-
-**Last Updated**: January 2025  
-**Version**: 1.0.0  
-**Compatibility**: Node.js 18+, Express.js 4.19+
+Your menu items can now have beautiful photos! 📸

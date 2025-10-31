@@ -461,10 +461,64 @@ app.get('/api/menu/:id', handleGetMenuItem);
 app.get('/api/menu-items/:id', handleGetMenuItem);
 
 // Create new menu item (admin only - supports both /api/menu and /api/menu-items)
+// Also supports multipart form data with image upload
 const handleCreateMenuItem = async (req, res) => {
   try {
     console.log('📝 Creating new menu item...');
+    
+    // Extract data from body (JSON) or form data
     const data = req.body;
+    
+    // If image was uploaded, handle it
+    if (req.file) {
+      console.log('🖼️ Image file uploaded with menu item');
+      
+      // Check if Cloudinary is configured
+      if (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET) {
+        // Upload to Cloudinary
+        const result = await cloudinary.uploader.upload(req.file.path, {
+          folder: 'chouieur-express/menu-items',
+          resource_type: 'auto',
+          transformation: [
+            { width: 800, height: 600, crop: 'limit' },
+            { quality: 'auto' }
+          ]
+        });
+        data.imageUrl = result.secure_url;
+        
+        // Clean up temp file
+        try {
+          fs.unlinkSync(req.file.path);
+        } catch (cleanupError) {
+          console.warn('⚠️ Could not clean up temp file:', cleanupError.message);
+        }
+      } else {
+        // Fallback: create data URL
+        const fileBuffer = fs.readFileSync(req.file.path);
+        const base64Image = fileBuffer.toString('base64');
+        const mimeType = req.file.mimetype;
+        data.imageUrl = `data:${mimeType};base64,${base64Image}`;
+        
+        // Clean up temp file
+        try {
+          fs.unlinkSync(req.file.path);
+        } catch (cleanupError) {
+          console.warn('⚠️ Could not clean up temp file:', cleanupError.message);
+        }
+      }
+    }
+    
+    // Parse JSON fields if they're strings (from form data)
+    if (typeof data.price === 'string') {
+      data.price = parseFloat(data.price);
+    }
+    if (data.megaPrice && typeof data.megaPrice === 'string') {
+      data.megaPrice = parseFloat(data.megaPrice);
+    }
+    if (typeof data.isActive === 'string') {
+      data.isActive = data.isActive === 'true' || data.isActive === 'TRUE';
+    }
+    
     if (!data.id) {
       data.id = uuidv4();
     }
@@ -484,14 +538,66 @@ const handleCreateMenuItem = async (req, res) => {
   }
 };
 
-app.post('/api/menu', authenticateAdmin, handleCreateMenuItem);
-app.post('/api/menu-items', authenticateAdmin, handleCreateMenuItem);
+app.post('/api/menu', authenticateAdmin, upload.single('image'), handleCreateMenuItem);
+app.post('/api/menu-items', authenticateAdmin, upload.single('image'), handleCreateMenuItem);
 
 // Update menu item (admin only - supports both /api/menu/:id and /api/menu-items/:id)
+// Also supports multipart form data with image upload
 const handleUpdateMenuItem = async (req, res) => {
   try {
     const { id } = req.params;
     const updates = req.body;
+    
+    // If image was uploaded, handle it
+    if (req.file) {
+      console.log('🖼️ Image file uploaded with menu item update');
+      
+      // Check if Cloudinary is configured
+      if (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET) {
+        // Upload to Cloudinary
+        const result = await cloudinary.uploader.upload(req.file.path, {
+          folder: 'chouieur-express/menu-items',
+          resource_type: 'auto',
+          transformation: [
+            { width: 800, height: 600, crop: 'limit' },
+            { quality: 'auto' }
+          ]
+        });
+        updates.imageUrl = result.secure_url;
+        
+        // Clean up temp file
+        try {
+          fs.unlinkSync(req.file.path);
+        } catch (cleanupError) {
+          console.warn('⚠️ Could not clean up temp file:', cleanupError.message);
+        }
+      } else {
+        // Fallback: create data URL
+        const fileBuffer = fs.readFileSync(req.file.path);
+        const base64Image = fileBuffer.toString('base64');
+        const mimeType = req.file.mimetype;
+        updates.imageUrl = `data:${mimeType};base64,${base64Image}`;
+        
+        // Clean up temp file
+        try {
+          fs.unlinkSync(req.file.path);
+        } catch (cleanupError) {
+          console.warn('⚠️ Could not clean up temp file:', cleanupError.message);
+        }
+      }
+    }
+    
+    // Parse JSON fields if they're strings (from form data)
+    if (updates.price && typeof updates.price === 'string') {
+      updates.price = parseFloat(updates.price);
+    }
+    if (updates.megaPrice && typeof updates.megaPrice === 'string') {
+      updates.megaPrice = parseFloat(updates.megaPrice);
+    }
+    if (updates.isActive && typeof updates.isActive === 'string') {
+      updates.isActive = updates.isActive === 'true' || updates.isActive === 'TRUE';
+    }
+    
     if (sheetsClient) {
       const updated = await sheetsUpdateMenuItem(id, updates);
       if (!updated) return res.status(404).json({ success: false, error: 'Menu item not found', message: `Menu item with ID ${id} does not exist` });
@@ -506,8 +612,8 @@ const handleUpdateMenuItem = async (req, res) => {
   }
 };
 
-app.put('/api/menu/:id', authenticateAdmin, handleUpdateMenuItem);
-app.put('/api/menu-items/:id', authenticateAdmin, handleUpdateMenuItem);
+app.put('/api/menu/:id', authenticateAdmin, upload.single('image'), handleUpdateMenuItem);
+app.put('/api/menu-items/:id', authenticateAdmin, upload.single('image'), handleUpdateMenuItem);
 
 // Delete menu item (admin only - supports both /api/menu/:id and /api/menu-items/:id)
 const handleDeleteMenuItem = async (req, res) => {
@@ -849,7 +955,7 @@ app.post('/api/users', async (req, res) => {
 // FILE UPLOAD ENDPOINTS
 // =============================================================================
 
-// Upload menu item image to Cloudinary
+// Upload menu item image to Cloudinary (public endpoint - no auth required)
 app.post('/api/menu-items/upload-image', upload.single('image'), async (req, res) => {
   try {
     console.log('🖼️ Image upload request received');
