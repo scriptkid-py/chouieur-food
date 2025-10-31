@@ -208,12 +208,8 @@ app.use(helmet());
 // Logging middleware
 app.use(morgan('dev'));
 
-// Body parser middleware
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
 // =============================================================================
-// FILE UPLOAD CONFIGURATION
+// FILE UPLOAD CONFIGURATION (must come before body parsers)
 // =============================================================================
 
 const UPLOADS_DIR = path.join(__dirname, 'uploads', 'menu-images');
