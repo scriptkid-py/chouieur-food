@@ -139,24 +139,51 @@ export function MenuItemForm({ menuItem, onSuccess, onCancel }: MenuItemFormProp
     setIsSubmitting(true);
 
     try {
-      // Upload image first if selected
-      let imageUrl = menuItem?.imageUrl || '';
+      // If we have a selected image, use FormData approach (send image directly)
       if (selectedImage) {
-        const uploadedUrl = await uploadImage();
-        if (uploadedUrl) {
-          imageUrl = uploadedUrl;
-          // Ensure absolute URL if still relative
-          if (imageUrl.startsWith('/uploads/')) {
-            imageUrl = `${getApiBaseUrl()}${imageUrl}`;
-          }
+        const formData = new FormData();
+        formData.append('image', selectedImage);
+        formData.append('name', data.name);
+        formData.append('category', data.category);
+        formData.append('price', String(data.price));
+        if (data.megaPrice) {
+          formData.append('megaPrice', String(data.megaPrice));
+        }
+        formData.append('description', data.description || '');
+        formData.append('isActive', menuItem?.isActive !== false ? 'true' : 'false');
+
+        let response;
+        if (menuItem) {
+          // Update existing menu item
+          response = await apiRequest(`/api/menu-items/${menuItem.id}`, {
+            method: 'PUT',
+            body: formData,
+          });
         } else {
-          toast({ title: 'Error', description: 'Image upload failed. Please try again.', variant: 'destructive' });
-          setIsSubmitting(false);
+          // Create new menu item
+          response = await apiRequest('/api/menu-items', {
+            method: 'POST',
+            body: formData,
+          });
+        }
+
+        if (response && response.success !== false) {
+          toast({
+            title: menuItem ? 'Menu item updated' : 'Menu item created',
+            description: `${data.name} has been ${menuItem ? 'updated' : 'added'} successfully.`,
+          });
+          onSuccess?.();
           return;
+        } else {
+          throw new Error(response?.message || 'Failed to save menu item');
         }
       }
 
-      if (!imageUrl) {
+      // Fallback: If no image selected but we have existing imageUrl, use JSON
+      let imageUrl = menuItem?.imageUrl || '';
+      
+      // If no image at all, require one
+      if (!imageUrl && !selectedImage) {
         toast({ title: 'Image Required', description: 'Please choose and upload an image.', variant: 'destructive' });
         setIsSubmitting(false);
         return;
