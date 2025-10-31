@@ -77,20 +77,36 @@ export default function DeliveryPage() {
       setIsLoading(true);
       const response = await apiRequest<{ success: boolean; data: Order[]; orders?: Order[] }>('/api/orders');
       
+      console.log('📦 Raw API Response:', response);
+      
       const ordersData = response.data || response.orders || [];
+      console.log(`📋 Total orders from API: ${ordersData.length}`);
       
       // Filter out cancelled orders by default, show only delivery-relevant statuses
-      const activeOrders = ordersData.filter(
-        order => order.status !== 'cancelled' && order.orderType === 'delivery'
-      );
+      // Also handle cases where orderType might be missing (show all non-cancelled orders if no orderType filter)
+      const activeOrders = ordersData.filter(order => {
+        const notCancelled = order.status !== 'cancelled';
+        const isDelivery = order.orderType === 'delivery' || !order.orderType; // Show orders without orderType too
+        return notCancelled && isDelivery;
+      });
+      
+      console.log(`🚚 Delivery orders after filter: ${activeOrders.length}`);
       
       setOrders(activeOrders);
       setFilteredOrders(activeOrders);
+      
+      if (activeOrders.length === 0 && ordersData.length > 0) {
+        toast({
+          title: 'No Delivery Orders',
+          description: `Found ${ordersData.length} total orders, but none are delivery orders. Check orderType field.`,
+          variant: 'default',
+        });
+      }
     } catch (error) {
-      console.error('Error fetching orders:', error);
+      console.error('❌ Error fetching orders:', error);
       toast({
         title: 'Error',
-        description: 'Failed to fetch orders. Please try again.',
+        description: error instanceof Error ? error.message : 'Failed to fetch orders. Please check your connection and try again.',
         variant: 'destructive',
       });
     } finally {
