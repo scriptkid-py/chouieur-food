@@ -17,7 +17,7 @@ export default function TestApiPage() {
     const tests = [
       {
         name: 'Backend Health Check',
-        url: 'https://chouieur-express-backend.onrender.com/api/health',
+        url: 'https://chouieur-express-backend-h74v.onrender.com/api/health',
         description: 'Test if backend is running'
       },
       {
