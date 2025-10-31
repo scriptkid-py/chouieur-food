@@ -466,11 +466,42 @@ const handleCreateMenuItem = async (req, res) => {
   try {
     console.log('📝 Creating new menu item...');
     console.log('📦 Request body:', req.body);
+    console.log('📋 Request body keys:', Object.keys(req.body || {}));
+    console.log('📋 Request body values:', {
+      name: req.body?.name,
+      category: req.body?.category,
+      price: req.body?.price,
+      description: req.body?.description,
+      isActive: req.body?.isActive
+    });
     console.log('📁 Uploaded file:', req.file ? { name: req.file.originalname, size: req.file.size, mimetype: req.file.mimetype } : 'No file');
     console.log('📋 Content-Type:', req.headers['content-type']);
     
     // Extract data from body (JSON) or form data
-    const data = req.body;
+    const data = { ...req.body };
+    
+    // Ensure required fields are present and not empty
+    if (!data.name || data.name.trim() === '') {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Validation failed', 
+        message: 'Menu item name is required' 
+      });
+    }
+    if (!data.price || isNaN(parseFloat(data.price))) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Validation failed', 
+        message: 'Valid price is required' 
+      });
+    }
+    if (!data.description || data.description.trim() === '') {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Validation failed', 
+        message: 'Description is required' 
+      });
+    }
     
     // If image was uploaded, handle it
     if (req.file) {
@@ -522,10 +553,28 @@ const handleCreateMenuItem = async (req, res) => {
       data.isActive = data.isActive === 'true' || data.isActive === 'TRUE';
     }
     
+    // Ensure category is set
+    if (!data.category) {
+      data.category = 'Sandwiches'; // default
+    }
+    
+    // Trim string fields
+    if (data.name) data.name = data.name.trim();
+    if (data.description) data.description = data.description.trim();
+    
     if (!data.id) {
       data.id = uuidv4();
     }
     data.isActive = data.isActive !== false;
+    
+    console.log('✅ Processed data before save:', {
+      name: data.name,
+      category: data.category,
+      price: data.price,
+      description: data.description ? data.description.substring(0, 50) + '...' : 'MISSING',
+      hasImageUrl: !!data.imageUrl,
+      isActive: data.isActive
+    });
 
     if (sheetsClient) {
       const created = await sheetsCreateMenuItem(data);
