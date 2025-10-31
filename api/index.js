@@ -465,13 +465,16 @@ app.get('/api/menu-items/:id', handleGetMenuItem);
 const handleCreateMenuItem = async (req, res) => {
   try {
     console.log('📝 Creating new menu item...');
+    console.log('📦 Request body:', req.body);
+    console.log('📁 Uploaded file:', req.file ? { name: req.file.originalname, size: req.file.size, mimetype: req.file.mimetype } : 'No file');
+    console.log('📋 Content-Type:', req.headers['content-type']);
     
     // Extract data from body (JSON) or form data
     const data = req.body;
     
     // If image was uploaded, handle it
     if (req.file) {
-      console.log('🖼️ Image file uploaded with menu item');
+      console.log('🖼️ Image file uploaded with menu item:', req.file.originalname, req.file.size, 'bytes');
       
       // Check if Cloudinary is configured
       if (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET) {
@@ -548,9 +551,14 @@ const handleUpdateMenuItem = async (req, res) => {
     const { id } = req.params;
     const updates = req.body;
     
+    console.log(`📝 Updating menu item ID: ${id}`);
+    console.log('📦 Request body:', updates);
+    console.log('📁 Uploaded file:', req.file ? { name: req.file.originalname, size: req.file.size, mimetype: req.file.mimetype } : 'No file');
+    console.log('📋 Content-Type:', req.headers['content-type']);
+    
     // If image was uploaded, handle it
     if (req.file) {
-      console.log('🖼️ Image file uploaded with menu item update');
+      console.log('🖼️ Image file uploaded with menu item update:', req.file.originalname, req.file.size, 'bytes');
       
       // Check if Cloudinary is configured
       if (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET) {
@@ -619,17 +627,52 @@ app.put('/api/menu-items/:id', authenticateAdmin, upload.single('image'), handle
 const handleDeleteMenuItem = async (req, res) => {
   try {
     const { id } = req.params;
+    console.log(`🗑️  Delete request for menu item ID: ${id}`);
+    
     if (sheetsClient) {
+      console.log('📊 Using Google Sheets for deletion');
       const ok = await sheetsDeleteMenuItem(id);
-      if (!ok) return res.status(404).json({ success: false, error: 'Menu item not found', message: `Menu item with ID ${id} does not exist` });
-      return res.status(200).json({ success: true, message: 'Menu item deleted successfully', data: { id }, source: 'google-sheets' });
+      if (!ok) {
+        console.error(`❌ Failed to delete menu item "${id}" from Google Sheets`);
+        return res.status(404).json({ 
+          success: false, 
+          error: 'Menu item not found', 
+          message: `Menu item with ID ${id} does not exist in Google Sheets` 
+        });
+      }
+      console.log(`✅ Successfully deleted menu item "${id}" from Google Sheets`);
+      return res.status(200).json({ 
+        success: true, 
+        message: 'Menu item deleted successfully from Google Sheets', 
+        data: { id }, 
+        source: 'google-sheets' 
+      });
     }
+    
+    console.log('💾 Using MongoDB for deletion');
     const menuItem = await MenuItem.findByIdAndDelete(id);
-    if (!menuItem) return res.status(404).json({ success: false, error: 'Menu item not found', message: `Menu item with ID ${id} does not exist` });
-    return res.status(200).json({ success: true, message: 'Menu item deleted successfully', data: menuItem, source: 'mongodb' });
+    if (!menuItem) {
+      console.error(`❌ Menu item "${id}" not found in MongoDB`);
+      return res.status(404).json({ 
+        success: false, 
+        error: 'Menu item not found', 
+        message: `Menu item with ID ${id} does not exist` 
+      });
+    }
+    console.log(`✅ Successfully deleted menu item "${id}" from MongoDB`);
+    return res.status(200).json({ 
+      success: true, 
+      message: 'Menu item deleted successfully from MongoDB', 
+      data: menuItem, 
+      source: 'mongodb' 
+    });
   } catch (error) {
     console.error('❌ Error deleting menu item:', error);
-    res.status(500).json({ success: false, error: 'Failed to delete menu item', message: error.message });
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to delete menu item', 
+      message: error.message 
+    });
   }
 };
 

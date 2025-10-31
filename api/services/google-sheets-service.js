@@ -164,18 +164,52 @@ async function updateMenuItem(id, updates) {
 
 async function deleteMenuItem(id) {
   const client = await ensureInitialized();
-  if (!client) return false;
+  if (!client) {
+    console.error('❌ Google Sheets client not initialized');
+    return false;
+  }
+  
   const rowIndex = await findRowIndexById(id);
-  if (rowIndex === -1) return false;
-  await client.spreadsheets.batchUpdate({
-    spreadsheetId: GOOGLE_SHEETS_ID,
-    requestBody: {
-      requests: [
-        { deleteDimension: { range: { sheetId: 0, dimension: 'ROWS', startIndex: rowIndex - 1, endIndex: rowIndex } } }
-      ]
-    }
-  });
-  return true;
+  if (rowIndex === -1) {
+    console.error(`❌ Menu item with ID "${id}" not found in Google Sheets`);
+    return false;
+  }
+  
+  console.log(`🗑️  Deleting menu item "${id}" from row ${rowIndex} (0-based index: ${rowIndex - 1})`);
+  
+  try {
+    // Get sheet ID first (not always 0)
+    const sheetMetadata = await client.spreadsheets.get({
+      spreadsheetId: GOOGLE_SHEETS_ID,
+    });
+    const sheetId = sheetMetadata.data.sheets.find(s => s.properties.title === SHEET_NAME)?.properties.sheetId || 0;
+    
+    // Delete the row (Google Sheets uses 0-based indexing)
+    // rowIndex is 1-based (row 2, 3, etc.), so convert to 0-based: rowIndex - 1
+    await client.spreadsheets.batchUpdate({
+      spreadsheetId: GOOGLE_SHEETS_ID,
+      requestBody: {
+        requests: [
+          { 
+            deleteDimension: { 
+              range: { 
+                sheetId: sheetId, 
+                dimension: 'ROWS', 
+                startIndex: rowIndex - 1, // Convert to 0-based
+                endIndex: rowIndex // Exclusive end (0-based)
+              } 
+            } 
+          }
+        ]
+      }
+    });
+    
+    console.log(`✅ Successfully deleted menu item "${id}" from Google Sheets row ${rowIndex}`);
+    return true;
+  } catch (error) {
+    console.error(`❌ Error deleting menu item "${id}" from Google Sheets:`, error.message);
+    return false;
+  }
 }
 
 // Initialize on module load
