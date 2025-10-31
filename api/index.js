@@ -259,9 +259,19 @@ const logMulterData = (req, res, next) => {
 // Serve uploaded images statically
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Body parser middleware (for non-multipart routes)
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+// Body parser middleware (skips multipart/form-data for multer to handle)
+app.use((req, res, next) => {
+  const contentType = req.get('content-type') || '';
+  if (contentType.includes('multipart/form-data')) {
+    // Skip body parsing for multipart requests, let multer handle it
+    return next();
+  }
+  // Parse JSON and URL-encoded for other requests
+  express.json({ limit: '10mb' })(req, res, (err) => {
+    if (err) return next(err);
+    express.urlencoded({ extended: true, limit: '10mb' })(req, res, next);
+  });
+});
 
 // =============================================================================
 // HEALTH CHECK ENDPOINTS
