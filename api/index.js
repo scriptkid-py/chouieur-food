@@ -262,9 +262,12 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // Body parser middleware - ONLY for non-multipart requests
 app.use((req, res, next) => {
   const contentType = req.get('content-type') || '';
+  console.log(`🔍 Body parser middleware - Content-Type: "${contentType}"`);
   if (contentType.includes('multipart/form-data')) {
+    console.log('⏭️  SKIPPING body parser for multipart/form-data - multer will handle it');
     return next(); // Skip for multipart - multer will handle it
   }
+  console.log('✅ Applying express.json() parser');
   // For non-multipart, parse JSON and URL-encoded
   express.json({ limit: '10mb' })(req, res, next);
 });
@@ -274,6 +277,7 @@ app.use((req, res, next) => {
   if (contentType.includes('multipart/form-data')) {
     return next(); // Skip for multipart
   }
+  console.log('✅ Applying express.urlencoded() parser');
   // For non-multipart, parse URL-encoded
   express.urlencoded({ extended: true, limit: '10mb' })(req, res, next);
 });
