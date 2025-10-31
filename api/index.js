@@ -248,6 +248,18 @@ const upload = multer({
   }
 });
 
+// Middleware to log multer-parsed data
+const logMulterData = (req, res, next) => {
+  console.log('🔍 Multer middleware - After parsing:');
+  console.log('  📦 req.body:', req.body);
+  console.log('  📁 req.file:', req.file ? {
+    fieldname: req.file.fieldname,
+    originalname: req.file.originalname,
+    size: req.file.size
+  } : 'No file');
+  next();
+};
+
 // Serve uploaded images statically
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
@@ -465,8 +477,10 @@ app.get('/api/menu-items/:id', handleGetMenuItem);
 const handleCreateMenuItem = async (req, res) => {
   try {
     console.log('📝 Creating new menu item...');
+    console.log('📋 Content-Type:', req.headers['content-type']);
     console.log('📦 Request body:', req.body);
     console.log('📋 Request body keys:', Object.keys(req.body || {}));
+    console.log('📋 Request body type:', typeof req.body);
     console.log('📋 Request body values:', {
       name: req.body?.name,
       category: req.body?.category,
@@ -474,32 +488,72 @@ const handleCreateMenuItem = async (req, res) => {
       description: req.body?.description,
       isActive: req.body?.isActive
     });
-    console.log('📁 Uploaded file:', req.file ? { name: req.file.originalname, size: req.file.size, mimetype: req.file.mimetype } : 'No file');
-    console.log('📋 Content-Type:', req.headers['content-type']);
+    console.log('📁 Uploaded file:', req.file ? { 
+      name: req.file.originalname, 
+      size: req.file.size, 
+      mimetype: req.file.mimetype,
+      fieldname: req.file.fieldname
+    } : 'No file');
     
     // Extract data from body (JSON) or form data
-    const data = { ...req.body };
+    // Multer should populate req.body with form fields, but let's be extra careful
+    const data = {};
+    
+    // Copy all body fields
+    if (req.body && typeof req.body === 'object') {
+      Object.assign(data, req.body);
+    }
+    
+    // Also check if fields are in a nested structure (some parsers do this)
+    if (!data.name && req.body?.name) {
+      data.name = req.body.name;
+    }
+    if (!data.price && req.body?.price !== undefined) {
+      data.price = req.body.price;
+    }
+    if (!data.description && req.body?.description) {
+      data.description = req.body.description;
+    }
+    if (!data.category && req.body?.category) {
+      data.category = req.body.category;
+    }
+    
+    console.log('🔄 Extracted data:', {
+      name: data.name,
+      category: data.category,
+      price: data.price,
+      description: data.description ? data.description.substring(0, 50) + '...' : 'MISSING',
+      hasPrice: data.price !== undefined,
+      hasName: !!data.name,
+      hasDescription: !!data.description
+    });
     
     // Ensure required fields are present and not empty
-    if (!data.name || data.name.trim() === '') {
+    if (!data.name || (typeof data.name === 'string' && data.name.trim() === '')) {
+      console.error('❌ Validation failed: name is missing or empty');
       return res.status(400).json({ 
         success: false, 
         error: 'Validation failed', 
-        message: 'Menu item name is required' 
+        message: 'Menu item name is required',
+        received: { body: req.body, data: data }
       });
     }
-    if (!data.price || isNaN(parseFloat(data.price))) {
+    if (data.price === undefined || data.price === null || data.price === '' || isNaN(parseFloat(String(data.price)))) {
+      console.error('❌ Validation failed: price is missing or invalid', { price: data.price, type: typeof data.price });
       return res.status(400).json({ 
         success: false, 
         error: 'Validation failed', 
-        message: 'Valid price is required' 
+        message: 'Valid price is required',
+        received: { price: data.price, type: typeof data.price }
       });
     }
-    if (!data.description || data.description.trim() === '') {
+    if (!data.description || (typeof data.description === 'string' && data.description.trim() === '')) {
+      console.error('❌ Validation failed: description is missing or empty');
       return res.status(400).json({ 
         success: false, 
         error: 'Validation failed', 
-        message: 'Description is required' 
+        message: 'Description is required',
+        received: { description: data.description }
       });
     }
     
@@ -544,45 +598,60 @@ const handleCreateMenuItem = async (req, res) => {
     
     // Parse JSON fields if they're strings (from form data)
     if (typeof data.price === 'string') {
-      data.price = parseFloat(data.price);
+      const parsedPrice = parseFloat(data.price);
+      if (!isNaN(parsedPrice)) {
+        data.price = parsedPrice;
+      }
     }
     if (data.megaPrice && typeof data.megaPrice === 'string') {
-      data.megaPrice = parseFloat(data.megaPrice);
+      const parsedMegaPrice = parseFloat(data.megaPrice);
+      if (!isNaN(parsedMegaPrice)) {
+        data.megaPrice = parsedMegaPrice;
+      }
     }
     if (typeof data.isActive === 'string') {
       data.isActive = data.isActive === 'true' || data.isActive === 'TRUE';
     }
     
     // Ensure category is set
-    if (!data.category) {
+    if (!data.category || data.category.trim() === '') {
       data.category = 'Sandwiches'; // default
     }
     
     // Trim string fields
     if (data.name) data.name = data.name.trim();
     if (data.description) data.description = data.description.trim();
+    if (data.category) data.category = data.category.trim();
     
+    // Generate ID if not present
     if (!data.id) {
       data.id = uuidv4();
     }
     data.isActive = data.isActive !== false;
     
     console.log('✅ Processed data before save:', {
+      id: data.id,
       name: data.name,
       category: data.category,
       price: data.price,
+      priceType: typeof data.price,
       description: data.description ? data.description.substring(0, 50) + '...' : 'MISSING',
       hasImageUrl: !!data.imageUrl,
-      isActive: data.isActive
+      isActive: data.isActive,
+      hasSheetsClient: !!sheetsClient
     });
 
     if (sheetsClient) {
+      console.log('📊 Saving to Google Sheets...');
       const created = await sheetsCreateMenuItem(data);
+      console.log('✅ Saved to Google Sheets:', created);
       return res.status(201).json({ success: true, message: 'Menu item created successfully', data: created, source: 'google-sheets' });
     }
 
+    console.log('💾 Saving to MongoDB...');
     const menuItem = new MenuItem(data);
     const savedMenuItem = await menuItem.save();
+    console.log('✅ Saved to MongoDB:', savedMenuItem);
     return res.status(201).json({ success: true, message: 'Menu item created successfully', data: savedMenuItem, source: 'mongodb' });
   } catch (error) {
     console.error('❌ Error creating menu item:', error);
@@ -590,8 +659,8 @@ const handleCreateMenuItem = async (req, res) => {
   }
 };
 
-app.post('/api/menu', authenticateAdmin, upload.single('image'), handleCreateMenuItem);
-app.post('/api/menu-items', authenticateAdmin, upload.single('image'), handleCreateMenuItem);
+app.post('/api/menu', authenticateAdmin, upload.single('image'), logMulterData, handleCreateMenuItem);
+app.post('/api/menu-items', authenticateAdmin, upload.single('image'), logMulterData, handleCreateMenuItem);
 
 // Update menu item (admin only - supports both /api/menu/:id and /api/menu-items/:id)
 // Also supports multipart form data with image upload
