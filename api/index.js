@@ -259,23 +259,24 @@ const logMulterData = (req, res, next) => {
 // Serve uploaded images statically
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Body parser middleware - only for non-multipart requests
-const bodyParserMiddleware = (req, res, next) => {
+// Body parser middleware - ONLY for non-multipart requests
+app.use((req, res, next) => {
   const contentType = req.get('content-type') || '';
-  console.log(`📋 Body parser middleware - Content-Type: ${contentType}`);
   if (contentType.includes('multipart/form-data')) {
-    console.log('⏭️  Skipping body parsing for multipart request - multer will handle it');
-    return next();
+    return next(); // Skip for multipart - multer will handle it
   }
-  // Apply JSON parser
-  express.json({ limit: '10mb' })(req, res, (err) => {
-    if (err) return next(err);
-    // Then apply urlencoded parser
-    express.urlencoded({ extended: true, limit: '10mb' })(req, res, next);
-  });
-};
+  // For non-multipart, parse JSON and URL-encoded
+  express.json({ limit: '10mb' })(req, res, next);
+});
 
-app.use(bodyParserMiddleware);
+app.use((req, res, next) => {
+  const contentType = req.get('content-type') || '';
+  if (contentType.includes('multipart/form-data')) {
+    return next(); // Skip for multipart
+  }
+  // For non-multipart, parse URL-encoded
+  express.urlencoded({ extended: true, limit: '10mb' })(req, res, next);
+});
 
 // =============================================================================
 // HEALTH CHECK ENDPOINTS
