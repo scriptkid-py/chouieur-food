@@ -1,32 +1,16 @@
 {
   "version": 2,
-  "name": "chouieur-express-api",
-  "builds": [
-    {
-      "src": "api/vercel.js",
-      "use": "@vercel/node"
-    }
-  ],
   "routes": [
     {
-      "src": "/api/(.*)",
-      "dest": "/api/vercel.js"
+      "src": "/api/(menu|menu-items|admin).*",
+      "dest": "/vercel-menu-sheets.js"
     },
     {
-      "src": "/ping",
-      "dest": "/api/vercel.js"
-    },
-    {
-      "src": "/",
-      "dest": "/api/vercel.js"
+      "src": "/(.*)",
+      "dest": "/vercel.js"
     }
   ],
   "env": {
     "NODE_ENV": "production"
-  },
-  "functions": {
-    "api/vercel.js": {
-      "maxDuration": 30
-    }
   }
 }

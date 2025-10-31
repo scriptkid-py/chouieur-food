@@ -11,7 +11,7 @@ const getApiUrl = () => {
   // Server-side: use environment variable or default
   return process.env.NEXT_PUBLIC_API_URL || 
     (process.env.NODE_ENV === 'production' 
-      ? 'https://chouieur-express-backend-h74v.onrender.com'
+      ? 'https://chouieur-express-backend.onrender.com'
       : 'http://localhost:3001');
 };
 

@@ -60,17 +60,20 @@ export function useHybridAdminStats() {
   const orders = useMemo(() => {
     if (useHybrid && hybridOrders && hybridOrders.length > 0) {
       return hybridOrders;
-    } else if (!useHybrid && apiOrders.length > 0) {
+    }
+    if (!useHybrid && apiOrders.length > 0) {
       return apiOrders;
-    } else if (useHybrid && hybridOrders && hybridOrders.length === 0) {
-      // Hybrid is connected but has no orders, try API
-      if (!apiLoading && apiOrders.length === 0) {
-        fetchOrdersFromAPI();
-      }
-      return [];
     }
     return [];
-  }, [hybridOrders, apiOrders, useHybrid, apiLoading]);
+  }, [hybridOrders, apiOrders, useHybrid]);
+
+  // Client-only: if hybrid has no orders, trigger API fetch after mount
+  useEffect(() => {
+    if (typeof window === 'undefined') return; // avoid build-time fetch
+    if (useHybrid && (hybridOrders?.length || 0) === 0 && !apiLoading && apiOrders.length === 0) {
+      fetchOrdersFromAPI();
+    }
+  }, [useHybrid, hybridOrders, apiLoading, apiOrders.length]);
 
   // Auto-refresh API orders every 30 seconds when using API mode
   useEffect(() => {

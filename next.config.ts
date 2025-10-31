@@ -8,10 +8,8 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  // Enable SWC minification in production only
-  swcMinify: process.env.NODE_ENV === 'production',
   images: {
-    unoptimized: true, // Disable Image Optimization for Vercel compatibility
+    unoptimized: true, // Disable Image Optimization for Render/Vercel compatibility
     remotePatterns: [
       {
         protocol: 'https',
@@ -39,6 +37,12 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
+        hostname: '**.onrender.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
         hostname: 'res.cloudinary.com',
         port: '',
         pathname: '/**',
@@ -51,10 +55,7 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  // Production optimizations for Render deployment
-  // Remove standalone output for Render compatibility
-  // output: 'standalone',
-  
+  // Production optimizations for Render/Vercel
   // Ensure proper build output
   distDir: '.next',
   

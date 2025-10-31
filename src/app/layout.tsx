@@ -8,6 +8,11 @@ import { CartProvider } from '@/context/CartContext';
 export const metadata: Metadata = {
   title: 'Chouieur Express',
   description: 'Order delicious fast food from Chouieur Food & Helado',
+  icons: {
+    icon: '/favicon.ico',
+    shortcut: '/favicon.ico',
+    apple: '/favicon.ico',
+  },
 };
 
 export default function RootLayout({
