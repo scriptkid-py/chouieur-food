@@ -14,7 +14,30 @@ services:
       - key: PORT
         value: 10000
       - key: FRONTEND_URL
-        value: https://chouieur-express-njzwa9nr2-scriptkid-pys-projects.vercel.app
+        sync: false  # Will be set to Render frontend URL after deployment
       - key: MONGO_URI
-        sync: false  # You'll add this in Render dashboard
+        sync: false  # You'll add this in Render dashboard (optional if using Google Sheets only)
+      - key: GOOGLE_SHEETS_ID
+        sync: false  # Set this to: 1af4gEzHbpQfqt8HLHDdfXVGwZBsiy4lvN-JeWLtj4mI
+      - key: GOOGLE_SERVICE_ACCOUNT_EMAIL
+        sync: false  # Set this to: chouieur-menu@iconic-medley-476514-j3.iam.gserviceaccount.com
+      - key: GOOGLE_PRIVATE_KEY
+        sync: false  # Set this in Render dashboard (see instructions below)
+      # ADMIN_PASSWORD is optional - if not set, admin endpoints are open (not recommended for production)
+
+  # Frontend Next.js Service
+  - type: web
+    name: chouieur-express-frontend
+    runtime: node
+    region: oregon
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        sync: false  # Render automatically sets PORT
+      - key: NEXT_PUBLIC_API_URL
+        sync: false  # Set this to your backend URL: https://chouieur-express-backend.onrender.com
 

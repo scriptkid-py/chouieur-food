@@ -303,11 +303,99 @@ app.get('/api/health', (req, res) => {
 });
 
 // =============================================================================
-// MENU ITEMS ENDPOINTS
+// ADMIN AUTHENTICATION (Simple Password-Based)
 // =============================================================================
 
-// Get all menu items
-app.get('/api/menu-items', async (req, res) => {
+// Simple admin authentication middleware (optional - allows requests if no password set)
+const authenticateAdmin = (req, res, next) => {
+  const adminPassword = process.env.ADMIN_PASSWORD;
+  
+  // If no password is configured, allow all requests (open mode for development)
+  if (!adminPassword || adminPassword.trim() === '') {
+    console.log('⚠️  Admin password not set - allowing all requests (open mode)');
+    req.admin = true;
+    return next();
+  }
+
+  // If password is configured, require authentication
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+
+  if (!token) {
+    return res.status(401).json({
+      success: false,
+      error: 'Unauthorized',
+      message: 'Admin authentication required. Please login first.'
+    });
+  }
+
+  if (token !== adminPassword) {
+    return res.status(403).json({
+      success: false,
+      error: 'Forbidden',
+      message: 'Invalid admin credentials'
+    });
+  }
+
+  req.admin = true;
+  next();
+};
+
+// Admin login endpoint (optional - works only if password is configured)
+app.post('/api/admin/login', async (req, res) => {
+  try {
+    const adminPassword = process.env.ADMIN_PASSWORD;
+    
+    if (!adminPassword || adminPassword.trim() === '') {
+      return res.status(200).json({
+        success: true,
+        message: 'Admin password not configured - authentication disabled',
+        token: 'no-auth-required',
+        authRequired: false
+      });
+    }
+
+    const { password } = req.body;
+
+    if (!password) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing password',
+        message: 'Password is required'
+      });
+    }
+
+    if (password !== adminPassword) {
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid password',
+        message: 'Incorrect password'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Login successful',
+      token: adminPassword, // Simple token (use JWT in production)
+      expiresIn: '24h',
+      authRequired: true
+    });
+  } catch (error) {
+    console.error('❌ Login error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Login failed',
+      message: error.message
+    });
+  }
+});
+
+// =============================================================================
+// MENU ITEMS ENDPOINTS (with /api/menu aliases)
+// =============================================================================
+
+// Get all menu items (public - supports both /api/menu and /api/menu-items)
+const handleGetMenuItems = async (req, res) => {
   try {
     console.log('📋 Fetching menu items...');
 
@@ -316,7 +404,24 @@ app.get('/api/menu-items', async (req, res) => {
     if (useSheets) {
       const items = await sheetsListMenuItems();
       if (!items) throw new Error('Failed to fetch from Google Sheets');
-      return res.status(200).json({ success: true, data: items, source: 'google-sheets', message: `Fetched ${items.length} menu items` });
+      
+      // Filter by category if provided
+      const { category } = req.query;
+      let filteredItems = items;
+      if (category) {
+        filteredItems = items.filter(item => item.category === category);
+      }
+      
+      // Filter active items only
+      filteredItems = filteredItems.filter(item => item.isActive !== false);
+      
+      return res.status(200).json({ 
+        success: true, 
+        data: filteredItems, 
+        source: 'google-sheets', 
+        message: `Fetched ${filteredItems.length} menu items`,
+        count: filteredItems.length
+      });
     }
 
     const { category, active } = req.query;
@@ -329,10 +434,13 @@ app.get('/api/menu-items', async (req, res) => {
     console.error('❌ Error fetching menu items:', error);
     res.status(500).json({ success: false, error: 'Failed to fetch menu items', message: error.message, timestamp: new Date().toISOString() });
   }
-});
+};
 
-// Get single menu item
-app.get('/api/menu-items/:id', async (req, res) => {
+app.get('/api/menu', handleGetMenuItems);
+app.get('/api/menu-items', handleGetMenuItems);
+
+// Get single menu item (supports both /api/menu/:id and /api/menu-items/:id)
+const handleGetMenuItem = async (req, res) => {
   try {
     const { id } = req.params;
     if (sheetsClient) {
@@ -347,10 +455,13 @@ app.get('/api/menu-items/:id', async (req, res) => {
     console.error('❌ Error fetching menu item:', error);
     res.status(500).json({ success: false, error: 'Failed to fetch menu item', message: error.message });
   }
-});
+};
 
-// Create new menu item
-app.post('/api/menu-items', async (req, res) => {
+app.get('/api/menu/:id', handleGetMenuItem);
+app.get('/api/menu-items/:id', handleGetMenuItem);
+
+// Create new menu item (admin only - supports both /api/menu and /api/menu-items)
+const handleCreateMenuItem = async (req, res) => {
   try {
     console.log('📝 Creating new menu item...');
     const data = req.body;
@@ -371,10 +482,13 @@ app.post('/api/menu-items', async (req, res) => {
     console.error('❌ Error creating menu item:', error);
     res.status(500).json({ success: false, error: 'Failed to create menu item', message: error.message });
   }
-});
+};
 
-// Update menu item
-app.put('/api/menu-items/:id', async (req, res) => {
+app.post('/api/menu', authenticateAdmin, handleCreateMenuItem);
+app.post('/api/menu-items', authenticateAdmin, handleCreateMenuItem);
+
+// Update menu item (admin only - supports both /api/menu/:id and /api/menu-items/:id)
+const handleUpdateMenuItem = async (req, res) => {
   try {
     const { id } = req.params;
     const updates = req.body;
@@ -390,10 +504,13 @@ app.put('/api/menu-items/:id', async (req, res) => {
     console.error('❌ Error updating menu item:', error);
     res.status(500).json({ success: false, error: 'Failed to update menu item', message: error.message });
   }
-});
+};
 
-// Delete menu item
-app.delete('/api/menu-items/:id', async (req, res) => {
+app.put('/api/menu/:id', authenticateAdmin, handleUpdateMenuItem);
+app.put('/api/menu-items/:id', authenticateAdmin, handleUpdateMenuItem);
+
+// Delete menu item (admin only - supports both /api/menu/:id and /api/menu-items/:id)
+const handleDeleteMenuItem = async (req, res) => {
   try {
     const { id } = req.params;
     if (sheetsClient) {
@@ -408,7 +525,10 @@ app.delete('/api/menu-items/:id', async (req, res) => {
     console.error('❌ Error deleting menu item:', error);
     res.status(500).json({ success: false, error: 'Failed to delete menu item', message: error.message });
   }
-});
+};
+
+app.delete('/api/menu/:id', authenticateAdmin, handleDeleteMenuItem);
+app.delete('/api/menu-items/:id', authenticateAdmin, handleDeleteMenuItem);
 
 // =============================================================================
 // ORDERS ENDPOINTS
