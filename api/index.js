@@ -774,7 +774,7 @@ const handleCreateMenuItem = async (req, res) => {
         }
         const created = await sheetsCreateMenuItem(menuItemData);
         console.log('✅ Saved to Google Sheets:', created);
-        return res.status(201).json({ success: true, message: 'Menu item created successfully', data: created, source: 'google-sheets' });
+      return res.status(201).json({ success: true, message: 'Menu item created successfully', data: created, source: 'google-sheets' });
       } catch (sheetsError) {
         console.error('❌ Google Sheets save failed:', sheetsError);
         console.error('❌ Falling back to MongoDB...');
@@ -792,9 +792,9 @@ const handleCreateMenuItem = async (req, res) => {
       }
       
       const menuItem = new MenuItem(menuItemData);
-      const savedMenuItem = await menuItem.save();
+    const savedMenuItem = await menuItem.save();
       console.log('✅ Saved to MongoDB:', savedMenuItem);
-      return res.status(201).json({ success: true, message: 'Menu item created successfully', data: savedMenuItem, source: 'mongodb' });
+    return res.status(201).json({ success: true, message: 'Menu item created successfully', data: savedMenuItem, source: 'mongodb' });
     } catch (mongoError) {
       console.error('❌ MongoDB save failed:', mongoError);
       console.error('❌ MongoDB error stack:', mongoError.stack);
@@ -808,7 +808,7 @@ const handleCreateMenuItem = async (req, res) => {
     
     // Check if it's a Mongoose validation error
     if (error.name === 'ValidationError') {
-      const validationErrors = Object.values(error.errors || {}).map((e: any) => e.message);
+      const validationErrors = Object.values(error.errors || {}).map((e) => e.message);
       console.error('❌ Mongoose validation errors:', validationErrors);
       return res.status(400).json({ 
         success: false, 
