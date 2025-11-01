@@ -743,20 +743,39 @@ const handleCreateMenuItem = async (req, res) => {
 
     if (sheetsClient) {
       console.log('📊 Saving to Google Sheets...');
-      // Generate ID for Google Sheets if not present
-      if (!menuItemData.id) {
-        menuItemData.id = uuidv4();
+      try {
+        // Generate ID for Google Sheets if not present
+        if (!menuItemData.id) {
+          menuItemData.id = uuidv4();
+        }
+        const created = await sheetsCreateMenuItem(menuItemData);
+        console.log('✅ Saved to Google Sheets:', created);
+        return res.status(201).json({ success: true, message: 'Menu item created successfully', data: created, source: 'google-sheets' });
+      } catch (sheetsError) {
+        console.error('❌ Google Sheets save failed:', sheetsError);
+        console.error('❌ Falling back to MongoDB...');
+        // Fall through to MongoDB
       }
-      const created = await sheetsCreateMenuItem(menuItemData);
-      console.log('✅ Saved to Google Sheets:', created);
-      return res.status(201).json({ success: true, message: 'Menu item created successfully', data: created, source: 'google-sheets' });
     }
 
     console.log('💾 Saving to MongoDB...');
-    const menuItem = new MenuItem(menuItemData);
-    const savedMenuItem = await menuItem.save();
-    console.log('✅ Saved to MongoDB:', savedMenuItem);
-    return res.status(201).json({ success: true, message: 'Menu item created successfully', data: savedMenuItem, source: 'mongodb' });
+    try {
+      // Validate category against enum before saving
+      const validCategories = ['Pizza', 'Burgers', 'Hamburgers', 'Sandwiches', 'Tacos', 'Poulet', 'Panini / Fajitas', 'Plats', 'Salads', 'Appetizers', 'Beverages', 'Sides', 'Desserts'];
+      if (!validCategories.includes(menuItemData.category)) {
+        console.warn(`⚠️ Category "${menuItemData.category}" not in enum, defaulting to "Sandwiches"`);
+        menuItemData.category = 'Sandwiches';
+      }
+      
+      const menuItem = new MenuItem(menuItemData);
+      const savedMenuItem = await menuItem.save();
+      console.log('✅ Saved to MongoDB:', savedMenuItem);
+      return res.status(201).json({ success: true, message: 'Menu item created successfully', data: savedMenuItem, source: 'mongodb' });
+    } catch (mongoError) {
+      console.error('❌ MongoDB save failed:', mongoError);
+      console.error('❌ MongoDB error stack:', mongoError.stack);
+      throw mongoError; // Re-throw to be caught by outer catch
+    }
   } catch (error) {
     console.error('❌ Error creating menu item:', error);
     console.error('❌ Error stack:', error.stack);
