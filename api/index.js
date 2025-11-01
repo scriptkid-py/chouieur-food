@@ -1019,8 +1019,9 @@ app.get('/api/orders', async (req, res) => {
     
     const skip = (parseInt(page) - 1) * parseInt(limit);
     
+    // Note: Can't use populate() on Mixed type (menuItemId can be ObjectId or UUID string)
+    // Populate only works with ObjectId references
     const orders = await Order.find(query)
-      .populate('items.menuItemId', 'name category')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit));
