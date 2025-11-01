@@ -334,29 +334,30 @@ const logMulterData = (req, res, next) => {
 // Serve uploaded images statically
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Body parser middleware - conditionally skip for multipart/form-data
-// Multer will handle multipart requests on its routes
-const bodyParserJson = express.json({ limit: '10mb' });
-const bodyParserUrlencoded = express.urlencoded({ extended: true, limit: '10mb' });
-
+// Body parser middleware - apply conditionally to avoid interfering with multer
+// For multipart/form-data requests, multer will handle parsing
 app.use((req, res, next) => {
-  const contentType = req.get('content-type') || '';
-  // Skip body parsing for multipart/form-data - Multer will handle it
+  const contentType = req.headers['content-type'] || '';
+  console.log(`🔍 Body parser middleware - Content-Type: "${contentType}"`);
+  // Skip body parsing for multipart/form-data - multer will handle it
   if (contentType.includes('multipart/form-data')) {
+    console.log('⏭️  SKIPPING body parser for multipart/form-data - multer will handle it');
     return next();
   }
+  console.log('✅ Applying express.json() parser');
   // Apply JSON parser for non-multipart requests
-  bodyParserJson(req, res, next);
+  express.json({ limit: '10mb' })(req, res, next);
 });
 
 app.use((req, res, next) => {
-  const contentType = req.get('content-type') || '';
+  const contentType = req.headers['content-type'] || '';
   // Skip body parsing for multipart/form-data
   if (contentType.includes('multipart/form-data')) {
     return next();
   }
+  console.log('✅ Applying express.urlencoded() parser');
   // Apply URL-encoded parser for non-multipart requests
-  bodyParserUrlencoded(req, res, next);
+  express.urlencoded({ extended: true, limit: '10mb' })(req, res, next);
 });
 
 // =============================================================================
@@ -591,37 +592,27 @@ const handleCreateMenuItem = async (req, res) => {
       fieldname: req.file.fieldname
     } : 'No file');
     
-    // Extract data from body (JSON) or form data
-    // Multer should populate req.body with form fields, but let's be extra careful
-    const data = {};
+    // Extract data from req.body (Multer populates req.body with form fields)
+    // Direct extraction - multer should have populated req.body already
+    const data = {
+      name: req.body?.name,
+      description: req.body?.description,
+      price: req.body?.price,
+      category: req.body?.category || 'Sandwiches',
+      isActive: req.body?.isActive !== undefined ? req.body.isActive : true,
+      megaPrice: req.body?.megaPrice || undefined
+    };
     
-    // Copy all body fields
-    if (req.body && typeof req.body === 'object') {
-      Object.assign(data, req.body);
-    }
-    
-    // Also check if fields are in a nested structure (some parsers do this)
-    if (!data.name && req.body?.name) {
-      data.name = req.body.name;
-    }
-    if (!data.price && req.body?.price !== undefined) {
-      data.price = req.body.price;
-    }
-    if (!data.description && req.body?.description) {
-      data.description = req.body.description;
-    }
-    if (!data.category && req.body?.category) {
-      data.category = req.body.category;
-    }
-    
-    console.log('🔄 Extracted data:', {
+    console.log('🔄 Extracted data from req.body:', {
       name: data.name,
       category: data.category,
       price: data.price,
+      priceType: typeof data.price,
       description: data.description ? data.description.substring(0, 50) + '...' : 'MISSING',
       hasPrice: data.price !== undefined,
       hasName: !!data.name,
-      hasDescription: !!data.description
+      hasDescription: !!data.description,
+      bodyKeys: Object.keys(req.body || {})
     });
     
     // Ensure required fields are present and not empty
