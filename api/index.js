@@ -319,6 +319,22 @@ const upload = multer({
   }
 });
 
+// Middleware to handle multer errors
+const handleMulterError = (err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    console.error('❌ Multer error:', err);
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({ success: false, error: 'File too large', message: 'File size exceeds 5MB limit' });
+    }
+    return res.status(400).json({ success: false, error: 'File upload error', message: err.message });
+  }
+  if (err) {
+    console.error('❌ Upload error:', err);
+    return res.status(400).json({ success: false, error: 'Upload failed', message: err.message });
+  }
+  next();
+};
+
 // Middleware to log multer-parsed data
 const logMulterData = (req, res, next) => {
   console.log('🔍 Multer middleware - After parsing:');
@@ -568,7 +584,9 @@ const handleCreateMenuItem = async (req, res) => {
   try {
     console.log('📝 Creating new menu item...');
     console.log('📋 Content-Type:', req.headers['content-type']);
-    console.log('📦 BODY:', req.body);
+    console.log('📦 BODY (type):', typeof req.body, 'isArray:', Array.isArray(req.body));
+    console.log('📦 BODY (raw):', req.body);
+    console.log('📦 BODY keys:', Object.keys(req.body || {}));
     console.log('📁 FILE:', req.file ? {
       fieldname: req.file.fieldname,
       originalname: req.file.originalname,
@@ -576,6 +594,13 @@ const handleCreateMenuItem = async (req, res) => {
       size: req.file.size,
       mimetype: req.file.mimetype
     } : 'No file');
+    
+    // Check if body is empty or not properly parsed
+    if (!req.body || Object.keys(req.body).length === 0) {
+      console.error('❌ CRITICAL: req.body is empty! Multer may not have parsed the FormData correctly.');
+      console.error('❌ Content-Type header:', req.headers['content-type']);
+      console.error('❌ Request headers:', JSON.stringify(req.headers, null, 2));
+    }
     
     // Extract data directly from req.body (Multer populates this for FormData)
     const { name, description, price } = req.body;
@@ -697,8 +722,8 @@ const logMenuRequest = (req, res, next) => {
   next();
 };
 
-app.post('/api/menu', logMenuRequest, authenticateAdmin, upload.single('image'), logMulterData, handleCreateMenuItem);
-app.post('/api/menu-items', logMenuRequest, authenticateAdmin, upload.single('image'), logMulterData, handleCreateMenuItem);
+app.post('/api/menu', logMenuRequest, authenticateAdmin, upload.single('image'), handleMulterError, logMulterData, handleCreateMenuItem);
+app.post('/api/menu-items', logMenuRequest, authenticateAdmin, upload.single('image'), handleMulterError, logMulterData, handleCreateMenuItem);
 
 // Update menu item (admin only - supports both /api/menu/:id and /api/menu-items/:id)
 // Also supports multipart form data with image upload
@@ -767,8 +792,8 @@ const handleUpdateMenuItem = async (req, res) => {
   }
 };
 
-app.put('/api/menu/:id', authenticateAdmin, upload.single('image'), handleUpdateMenuItem);
-app.put('/api/menu-items/:id', authenticateAdmin, upload.single('image'), handleUpdateMenuItem);
+app.put('/api/menu/:id', authenticateAdmin, upload.single('image'), handleMulterError, handleUpdateMenuItem);
+app.put('/api/menu-items/:id', authenticateAdmin, upload.single('image'), handleMulterError, handleUpdateMenuItem);
 
 // Delete menu item (admin only - supports both /api/menu/:id and /api/menu-items/:id)
 const handleDeleteMenuItem = async (req, res) => {
