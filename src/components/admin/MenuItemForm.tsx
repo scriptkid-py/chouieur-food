@@ -193,6 +193,16 @@ export function MenuItemForm({ menuItem, onSuccess, onCancel }: MenuItemFormProp
           formData.append('megaPrice', String(baseData.megaPrice));
         }
 
+        // Log FormData contents before sending
+        console.log('📤 FormData contents:');
+        for (let [key, value] of formData.entries()) {
+          if (value instanceof File) {
+            console.log(`  ${key}: [File] ${value.name} (${value.size} bytes, ${value.type})`);
+          } else {
+            console.log(`  ${key}: ${value}`);
+          }
+        }
+
         try {
           const endpoint = menuItem 
             ? `/api/menu-items/${menuItem.id}` 

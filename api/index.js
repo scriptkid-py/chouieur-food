@@ -323,10 +323,21 @@ const upload = multer({
 const logMulterData = (req, res, next) => {
   console.log('🔍 Multer middleware - After parsing:');
   console.log('  📦 req.body:', req.body);
+  console.log('  📦 req.body keys:', Object.keys(req.body || {}));
+  console.log('  📦 req.body values:', {
+    name: req.body?.name,
+    description: req.body?.description,
+    price: req.body?.price,
+    category: req.body?.category,
+    isActive: req.body?.isActive,
+    megaPrice: req.body?.megaPrice
+  });
   console.log('  📁 req.file:', req.file ? {
     fieldname: req.file.fieldname,
     originalname: req.file.originalname,
-    size: req.file.size
+    filename: req.file.filename,
+    size: req.file.size,
+    mimetype: req.file.mimetype
   } : 'No file');
   next();
 };
@@ -340,11 +351,11 @@ const jsonParser = express.json({ limit: '10mb' });
 const urlencodedParser = express.urlencoded({ extended: true, limit: '10mb' });
 
 app.use((req, res, next) => {
-  const contentType = req.headers['content-type'] || '';
+  const contentType = (req.headers['content-type'] || '').toLowerCase();
   // CRITICAL: Skip ALL body parsing for multipart/form-data
   // Multer needs the raw stream to parse FormData correctly
   if (contentType.includes('multipart/form-data')) {
-    console.log('⏭️  SKIPPING all body parsers for multipart/form-data');
+    console.log(`⏭️  SKIPPING all body parsers for multipart/form-data (Content-Type: ${req.headers['content-type']})`);
     return next();
   }
   // Apply JSON parser first, then URL-encoded for non-multipart requests
@@ -590,12 +601,36 @@ const handleCreateMenuItem = async (req, res) => {
       bodyKeys: Object.keys(req.body || {})
     });
     
-    // Validate required fields
-    if (!name || !description || !price) {
+    // Validate required fields with detailed error messages
+    const missingFields = [];
+    if (!name || (typeof name === 'string' && name.trim() === '')) {
+      missingFields.push('name');
+    }
+    if (!description || (typeof description === 'string' && description.trim() === '')) {
+      missingFields.push('description');
+    }
+    if (!price || price === '' || isNaN(parseFloat(String(price)))) {
+      missingFields.push('price');
+    }
+    
+    if (missingFields.length > 0) {
+      console.error('❌ Validation failed - missing fields:', missingFields);
+      console.error('❌ req.body contents:', req.body);
+      console.error('❌ req.body type:', typeof req.body);
+      console.error('❌ req.body keys:', Object.keys(req.body || {}));
       return res.status(400).json({ 
         success: false, 
-        message: 'All fields are required',
-        received: { name, description, price, body: req.body }
+        error: 'Validation failed',
+        message: `Missing required fields: ${missingFields.join(', ')}`,
+        missingFields: missingFields,
+        received: {
+          name: name,
+          description: description,
+          price: price,
+          body: req.body,
+          bodyKeys: Object.keys(req.body || {}),
+          hasFile: !!req.file
+        }
       });
     }
     
