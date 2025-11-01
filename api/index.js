@@ -345,25 +345,13 @@ const logMulterData = (req, res, next) => {
 // Serve uploaded images statically
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Body parser middleware - must skip multipart/form-data completely
-// Apply body parsers only for non-multipart requests
+// CRITICAL: DO NOT use global body parsers - they interfere with multer!
+// Apply JSON parser ONLY to non-file routes that need JSON parsing
 const jsonParser = express.json({ limit: '10mb' });
 const urlencodedParser = express.urlencoded({ extended: true, limit: '10mb' });
 
-app.use((req, res, next) => {
-  const contentType = (req.headers['content-type'] || '').toLowerCase();
-  // CRITICAL: Skip ALL body parsing for multipart/form-data
-  // Multer needs the raw stream to parse FormData correctly
-  if (contentType.includes('multipart/form-data')) {
-    console.log(`⏭️  SKIPPING all body parsers for multipart/form-data (Content-Type: ${req.headers['content-type']})`);
-    return next();
-  }
-  // Apply JSON parser first, then URL-encoded for non-multipart requests
-  jsonParser(req, res, (err) => {
-    if (err) return next(err);
-    urlencodedParser(req, res, next);
-  });
-});
+// Apply JSON parsing to specific routes that need it (NOT menu-item routes)
+// This ensures multer routes get the raw stream for multipart/form-data
 
 // =============================================================================
 // HEALTH CHECK ENDPOINTS
@@ -456,7 +444,7 @@ const authenticateAdmin = (req, res, next) => {
 };
 
 // Admin login endpoint (optional - works only if password is configured)
-app.post('/api/admin/login', async (req, res) => {
+app.post('/api/admin/login', jsonParser, urlencodedParser, async (req, res) => {
   try {
     const adminPassword = process.env.ADMIN_PASSWORD;
     
@@ -698,8 +686,19 @@ const handleCreateMenuItem = async (req, res) => {
   }
 };
 
-app.post('/api/menu', authenticateAdmin, upload.single('image'), logMulterData, handleCreateMenuItem);
-app.post('/api/menu-items', authenticateAdmin, upload.single('image'), logMulterData, handleCreateMenuItem);
+// Request logging middleware for menu-item routes (before multer)
+const logMenuRequest = (req, res, next) => {
+  console.log('📥 Incoming menu-item request:');
+  console.log('  Method:', req.method);
+  console.log('  URL:', req.url);
+  console.log('  Content-Type:', req.headers['content-type']);
+  console.log('  Content-Length:', req.headers['content-length']);
+  console.log('  Has body stream:', !!req.body);
+  next();
+};
+
+app.post('/api/menu', logMenuRequest, authenticateAdmin, upload.single('image'), logMulterData, handleCreateMenuItem);
+app.post('/api/menu-items', logMenuRequest, authenticateAdmin, upload.single('image'), logMulterData, handleCreateMenuItem);
 
 // Update menu item (admin only - supports both /api/menu/:id and /api/menu-items/:id)
 // Also supports multipart form data with image upload
@@ -951,7 +950,7 @@ app.get('/api/orders/:id', async (req, res) => {
 });
 
 // Create new order
-app.post('/api/orders', async (req, res) => {
+app.post('/api/orders', jsonParser, urlencodedParser, async (req, res) => {
   try {
     console.log('📝 Creating new order in MongoDB...');
     
