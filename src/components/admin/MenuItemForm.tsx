@@ -139,143 +139,146 @@ export function MenuItemForm({ menuItem, onSuccess, onCancel }: MenuItemFormProp
     setIsSubmitting(true);
 
     try {
-      // If we have a selected image, use FormData approach (send image directly)
-      if (selectedImage) {
-        console.log('📤 Uploading menu item with image:', {
-          name: data.name,
-          category: data.category,
-          price: data.price,
-          imageName: selectedImage.name,
-          imageSize: selectedImage.size,
-          imageType: selectedImage.type,
-          isUpdate: !!menuItem,
-          itemId: menuItem?.id
-        });
-        
-        // Validate required fields before sending
-        if (!data.name || data.name.trim() === '') {
-          toast({ title: 'Validation Error', description: 'Menu item name is required', variant: 'destructive' });
-          setIsSubmitting(false);
-          return;
-        }
-        if (!data.price || isNaN(data.price) || data.price <= 0) {
-          toast({ title: 'Validation Error', description: 'Valid price is required', variant: 'destructive' });
-          setIsSubmitting(false);
-          return;
-        }
-        if (!data.description || data.description.trim() === '') {
-          toast({ title: 'Validation Error', description: 'Description is required', variant: 'destructive' });
-          setIsSubmitting(false);
-          return;
-        }
-        
-        const formData = new FormData();
-        formData.append('image', selectedImage);
-        formData.append('name', data.name.trim());
-        formData.append('category', data.category || 'Sandwiches');
-        formData.append('price', String(data.price));
-        if (data.megaPrice && data.megaPrice > 0) {
-          formData.append('megaPrice', String(data.megaPrice));
-        }
-        formData.append('description', data.description.trim());
-        formData.append('isActive', menuItem?.isActive !== false ? 'true' : 'false');
-        
-        // Log FormData contents for debugging
-        console.log('📤 FormData being sent:', {
-          hasImage: !!selectedImage,
-          name: data.name.trim(),
-          category: data.category || 'Sandwiches',
-          price: String(data.price),
-          description: data.description.trim(),
-          isActive: menuItem?.isActive !== false ? 'true' : 'false'
-        });
-
-        let response;
-        try {
-          if (menuItem) {
-            // Update existing menu item
-            console.log(`🔄 Updating menu item ID: ${menuItem.id}`);
-            response = await apiRequest(`/api/menu-items/${menuItem.id}`, {
-              method: 'PUT',
-              body: formData,
-            });
-          } else {
-            // Create new menu item
-            console.log('➕ Creating new menu item');
-            response = await apiRequest('/api/menu-items', {
-              method: 'POST',
-              body: formData,
-            });
-          }
-          
-          console.log('📥 Menu item save response:', response);
-
-          if (response && response.success !== false) {
-            toast({
-              title: menuItem ? 'Menu item updated' : 'Menu item created',
-              description: `${data.name} has been ${menuItem ? 'updated' : 'added'} successfully.`,
-            });
-            onSuccess?.();
-            return;
-          } else {
-            throw new Error(response?.message || response?.error || 'Failed to save menu item');
-          }
-        } catch (uploadError) {
-          console.error('❌ Error uploading menu item:', uploadError);
-          throw uploadError;
-        }
+      // Validate all required fields BEFORE sending request
+      const errors: string[] = [];
+      
+      if (!data.name || data.name.trim() === '') {
+        errors.push('Menu item name is required');
+      }
+      
+      if (data.price === undefined || data.price === null || isNaN(data.price) || data.price <= 0) {
+        errors.push('Valid price is required and must be greater than 0');
+      }
+      
+      if (!data.description || data.description.trim() === '') {
+        errors.push('Description is required');
       }
 
-      // Fallback: If no image selected but we have existing imageUrl, use JSON
-      let imageUrl = menuItem?.imageUrl || '';
-      
-      // If no image at all, require one
-      if (!imageUrl && !selectedImage) {
-        toast({ title: 'Image Required', description: 'Please choose and upload an image.', variant: 'destructive' });
+      if (errors.length > 0) {
+        toast({
+          title: 'Validation Error',
+          description: errors.join('. '),
+          variant: 'destructive',
+        });
         setIsSubmitting(false);
         return;
       }
 
-      // Prepare menu item data
-      const menuItemData = {
-        name: data.name,
-        category: data.category,
-        price: data.price,
-        megaPrice: data.megaPrice || undefined,
-        description: data.description,
-        imageId: menuItem?.imageId || data.name.toLowerCase().replace(/\s+/g, '-'),
-        imageUrl: imageUrl,
+      // Prepare base menu item data
+      const baseData = {
+        name: data.name.trim(),
+        description: data.description.trim(),
+        price: Number(data.price),
+        category: data.category || 'Sandwiches',
+        isActive: menuItem?.isActive !== false,
       };
 
-      let response;
-      if (menuItem) {
-        // Update existing menu item
-        response = await apiRequest(`/api/menu-items/${menuItem.id}`, {
-          method: 'PUT',
-          body: JSON.stringify(menuItemData),
-        });
-      } else {
-        // Create new menu item
-        response = await apiRequest('/api/menu-items', {
-          method: 'POST',
-          body: JSON.stringify(menuItemData),
-        });
+      // Add optional fields
+      if (data.megaPrice && data.megaPrice > 0) {
+        baseData.megaPrice = Number(data.megaPrice);
       }
 
-      if (response.success) {
-        toast({
-          title: menuItem ? 'Menu item updated' : 'Menu item created',
-          description: `${data.name} has been ${menuItem ? 'updated' : 'added'} successfully.`,
-        });
-        onSuccess?.();
-      } else {
-        throw new Error(response.message || 'Failed to save menu item');
+      // If we have a selected image, use FormData approach (send image directly)
+      if (selectedImage) {
+        console.log('📤 Uploading menu item with image via FormData');
+        
+        const formData = new FormData();
+        formData.append('image', selectedImage);
+        formData.append('name', baseData.name);
+        formData.append('description', baseData.description);
+        formData.append('price', String(baseData.price));
+        formData.append('category', baseData.category);
+        formData.append('isActive', String(baseData.isActive));
+        if (baseData.megaPrice) {
+          formData.append('megaPrice', String(baseData.megaPrice));
+        }
+
+        try {
+          const endpoint = menuItem 
+            ? `/api/menu-items/${menuItem.id}` 
+            : '/api/menu-items';
+          const method = menuItem ? 'PUT' : 'POST';
+
+          console.log(`📡 Sending ${method} request to ${endpoint}`);
+          const response = await apiRequest(endpoint, {
+            method: method,
+            body: formData,
+          });
+
+          console.log('📥 Response received:', response);
+
+          if (response && response.success !== false && !response.error) {
+            toast({
+              title: menuItem ? 'Menu item updated' : 'Menu item created',
+              description: `${baseData.name} has been ${menuItem ? 'updated' : 'added'} successfully.`,
+            });
+            onSuccess?.();
+            return;
+          } else {
+            const errorMsg = response?.message || response?.error || 'Failed to save menu item';
+            throw new Error(errorMsg);
+          }
+        } catch (uploadError: any) {
+          console.error('❌ Error uploading menu item:', uploadError);
+          const errorMessage = uploadError?.message || 'Failed to save menu item. Please check all fields are filled correctly.';
+          toast({
+            title: 'Error',
+            description: errorMessage,
+            variant: 'destructive',
+          });
+          return;
+        }
       }
-    } catch (error) {
-      console.error('Error saving menu item:', error);
+
+      // If no image selected, send as JSON
+      // Use existing imageUrl if available (for updates)
+      const menuItemData = {
+        ...baseData,
+        imageUrl: menuItem?.imageUrl || '',
+      };
+
+      try {
+        const endpoint = menuItem 
+          ? `/api/menu-items/${menuItem.id}` 
+          : '/api/menu-items';
+        const method = menuItem ? 'PUT' : 'POST';
+
+        console.log(`📡 Sending ${method} request to ${endpoint} with JSON data:`, menuItemData);
+        
+        const response = await apiRequest(endpoint, {
+          method: method,
+          body: JSON.stringify(menuItemData),
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        console.log('📥 Response received:', response);
+
+        if (response && (response.success !== false) && !response.error) {
+          toast({
+            title: menuItem ? 'Menu item updated' : 'Menu item created',
+            description: `${baseData.name} has been ${menuItem ? 'updated' : 'added'} successfully.`,
+          });
+          onSuccess?.();
+        } else {
+          const errorMsg = response?.message || response?.error || 'Failed to save menu item';
+          throw new Error(errorMsg);
+        }
+      } catch (jsonError: any) {
+        console.error('❌ Error saving menu item:', jsonError);
+        const errorMessage = jsonError?.message || 'Failed to save menu item. Please check all fields are filled correctly.';
+        toast({
+          title: 'Error',
+          description: errorMessage,
+          variant: 'destructive',
+        });
+      }
+    } catch (error: any) {
+      console.error('❌ Unexpected error:', error);
       toast({
         title: 'Error',
-        description: 'Failed to save menu item. Please try again.',
+        description: error?.message || 'An unexpected error occurred. Please try again.',
         variant: 'destructive',
       });
     } finally {
@@ -294,7 +297,7 @@ export function MenuItemForm({ menuItem, onSuccess, onCancel }: MenuItemFormProp
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           {/* Image Upload Section */}
           <div className="space-y-4">
-            <Label className="text-base font-medium">Menu Item Image</Label>
+            <Label className="text-base font-medium">Menu Item Image <span className="text-gray-500 text-sm font-normal">(optional)</span></Label>
             
             {/* Current Image Display */}
             {(imagePreview || menuItem?.imageUrl) && (

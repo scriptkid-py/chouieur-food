@@ -160,7 +160,16 @@ export async function apiRequest<T = any>(
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`❌ Response error:`, errorText);
-      throw new Error(`HTTP ${response.status}: ${response.statusText} - ${errorText}`);
+      
+      // Try to parse JSON error response to extract message
+      try {
+        const errorJson = JSON.parse(errorText);
+        const errorMessage = errorJson.message || errorJson.error || errorText;
+        throw new Error(errorMessage);
+      } catch (parseError) {
+        // If not JSON, use the text directly
+        throw new Error(errorText || `HTTP ${response.status}: ${response.statusText}`);
+      }
     }
     
     // Handle empty responses (e.g., 204 No Content)
