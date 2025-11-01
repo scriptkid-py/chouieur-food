@@ -610,6 +610,7 @@ app.get('/api/menu-items/:id', handleGetMenuItem);
 const handleCreateMenuItem = async (req, res) => {
   try {
     console.log('📝 Creating new menu item...');
+    console.log('🔍 DEBUG: Handler reached - checking req.body and req.file');
     console.log('📋 Content-Type:', req.headers['content-type']);
     console.log('📦 BODY (type):', typeof req.body, 'isArray:', Array.isArray(req.body));
     console.log('📦 BODY (raw):', JSON.stringify(req.body, null, 2));
@@ -854,6 +855,22 @@ const logMenuRequest = (req, res, next) => {
 // CRITICAL: Multer must process FormData BEFORE any other middleware touches req.body
 // Order: Log -> Auth -> Multer -> Log Data -> Handler
 // Multer errors are handled by Express error middleware at the end
+// Test endpoint to verify multer is working (no auth required for testing)
+app.post('/api/test-upload', upload.single('image'), (req, res) => {
+  console.log('🧪 TEST UPLOAD - Multer parsing test');
+  console.log('📋 Content-Type:', req.headers['content-type']);
+  console.log('📦 req.body:', JSON.stringify(req.body, null, 2));
+  console.log('📦 req.body keys:', Object.keys(req.body || {}));
+  console.log('📁 req.file:', req.file ? { name: req.file.originalname, size: req.file.size } : 'No file');
+  res.json({ 
+    success: true, 
+    body: req.body, 
+    bodyKeys: Object.keys(req.body || {}),
+    hasFile: !!req.file,
+    contentType: req.headers['content-type']
+  });
+});
+
 app.post('/api/menu', logMenuRequest, authenticateAdmin, upload.single('image'), logMulterData, handleCreateMenuItem);
 
 app.post('/api/menu-items', logMenuRequest, authenticateAdmin, upload.single('image'), logMulterData, handleCreateMenuItem);
