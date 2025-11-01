@@ -104,8 +104,8 @@ io.on('connection', (socket) => {
   });
 
   // Send initial orders data when client connects
+  // Note: Can't populate Mixed type (menuItemId can be ObjectId or UUID string)
   Order.find({})
-    .populate('items.menuItemId', 'name category')
     .sort({ createdAt: -1 })
     .limit(50)
     .lean()
