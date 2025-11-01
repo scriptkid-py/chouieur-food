@@ -141,17 +141,55 @@ export async function apiRequest<T = any>(
   // Detect if the body is FormData
   const isFormData = options.body instanceof FormData;
 
+  // CRITICAL: For FormData, DO NOT set Content-Type header - let browser set it with boundary
+  // For non-FormData, set JSON Content-Type
   const defaultOptions: RequestInit = {
     ...options,
-    headers: {
-      // Only set Content-Type for non-FormData bodies
-      ...(isFormData ? {} : {'Content-Type': 'application/json'}),
-      ...(options.headers || {})
-    },
   };
+  
+  // Handle headers separately to avoid conflicts
+  if (isFormData) {
+    // For FormData: DO NOT set Content-Type - browser will set it with boundary
+    // The browser automatically sets: Content-Type: multipart/form-data; boundary=xxxxx
+    // Only preserve Authorization header if it was provided
+    if (options.headers && typeof options.headers === 'object' && 'Authorization' in options.headers) {
+      const authHeader = (options.headers as Record<string, string>).Authorization;
+      if (authHeader) {
+        defaultOptions.headers = {
+          Authorization: authHeader
+        };
+      } else {
+        // No headers at all for FormData - let browser set everything
+        delete defaultOptions.headers;
+      }
+    } else {
+      // No headers at all for FormData - let browser set everything
+      delete defaultOptions.headers;
+    }
+  } else {
+    // For non-FormData: set Content-Type and merge with existing headers
+    defaultOptions.headers = {
+      'Content-Type': 'application/json',
+      ...(options.headers || {})
+    };
+  }
 
   try {
     console.log(`🌐 API Request: ${defaultOptions.method || 'GET'} ${url}`);
+    if (isFormData) {
+      console.log('📤 FormData detected - letting browser set Content-Type header automatically');
+      // Log FormData contents for debugging
+      if (options.body instanceof FormData) {
+        console.log('📦 FormData entries:');
+        for (let [key, value] of options.body.entries()) {
+          if (value instanceof File) {
+            console.log(`  ${key}: [File] ${value.name} (${value.size} bytes, ${value.type})`);
+          } else {
+            console.log(`  ${key}: ${value}`);
+          }
+        }
+      }
+    }
     
     const response = await fetch(url, defaultOptions);
     

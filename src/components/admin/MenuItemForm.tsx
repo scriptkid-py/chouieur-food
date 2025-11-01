@@ -182,26 +182,57 @@ export function MenuItemForm({ menuItem, onSuccess, onCancel }: MenuItemFormProp
       if (selectedImage) {
         console.log('📤 Uploading menu item with image via FormData');
         
+        // Create FormData and append ALL fields
         const formData = new FormData();
+        
+        // CRITICAL: Append image file first
         formData.append('image', selectedImage);
-        formData.append('name', baseData.name);
-        formData.append('description', baseData.description);
-        formData.append('price', String(baseData.price));
-        formData.append('category', baseData.category);
-        formData.append('isActive', String(baseData.isActive));
-        if (baseData.megaPrice) {
+        
+        // Append ALL text fields - ensure they're strings
+        formData.append('name', String(baseData.name || '').trim());
+        formData.append('description', String(baseData.description || '').trim());
+        formData.append('price', String(baseData.price || 0));
+        formData.append('category', String(baseData.category || 'Sandwiches'));
+        formData.append('isActive', String(baseData.isActive !== false));
+        
+        // Optional fields
+        if (baseData.megaPrice && baseData.megaPrice > 0) {
           formData.append('megaPrice', String(baseData.megaPrice));
         }
 
-        // Log FormData contents before sending
-        console.log('📤 FormData contents:');
+        // Log FormData contents before sending - VERIFY all fields are present
+        console.log('📤 FormData contents (BEFORE SENDING):');
+        const formDataEntries: Array<[string, string | File]> = [];
         for (let [key, value] of formData.entries()) {
+          formDataEntries.push([key, value]);
           if (value instanceof File) {
-            console.log(`  ${key}: [File] ${value.name} (${value.size} bytes, ${value.type})`);
+            console.log(`  ✅ ${key}: [File] ${value.name} (${value.size} bytes, ${value.type})`);
           } else {
-            console.log(`  ${key}: ${value}`);
+            console.log(`  ✅ ${key}: "${value}" (type: ${typeof value})`);
           }
         }
+        
+        // Verify all required fields are present
+        const requiredFields = ['name', 'description', 'price', 'category', 'image'];
+        const missingFields = requiredFields.filter(field => {
+          if (field === 'image') {
+            return !formDataEntries.some(([k]) => k === 'image' && formDataEntries.find(([k, v]) => k === 'image' && v instanceof File));
+          }
+          return !formDataEntries.some(([k]) => k === field);
+        });
+        
+        if (missingFields.length > 0) {
+          console.error('❌ MISSING REQUIRED FIELDS IN FORMDATA:', missingFields);
+          toast({
+            title: 'Validation Error',
+            description: `Missing required fields: ${missingFields.join(', ')}`,
+            variant: 'destructive',
+          });
+          setIsSubmitting(false);
+          return;
+        }
+        
+        console.log('✅ All required fields present in FormData');
 
         try {
           const endpoint = menuItem 
@@ -210,9 +241,13 @@ export function MenuItemForm({ menuItem, onSuccess, onCancel }: MenuItemFormProp
           const method = menuItem ? 'PUT' : 'POST';
 
           console.log(`📡 Sending ${method} request to ${endpoint}`);
+          console.log(`📡 FormData will be sent WITHOUT Content-Type header (browser will add it automatically)`);
+          
+          // IMPORTANT: Do NOT set any headers - apiRequest will handle this for FormData
           const response = await apiRequest(endpoint, {
             method: method,
             body: formData,
+            // DO NOT set headers here - apiRequest handles FormData headers automatically
           });
 
           console.log('📥 Response received:', response);
