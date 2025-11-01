@@ -50,7 +50,6 @@ const { connectToMongoDB, getConnectionStatus } = require('./config/database');
 const MenuItem = require('./models/MenuItem');
 const Order = require('./models/Order');
 const User = require('./models/User');
-const NavigationItem = require('./models/NavigationItem');
 const { initGoogleSheets, listMenuItems: sheetsListMenuItems, getMenuItemById: sheetsGetMenuItemById, createMenuItem: sheetsCreateMenuItem, updateMenuItem: sheetsUpdateMenuItem, deleteMenuItem: sheetsDeleteMenuItem, sheetsClient } = require('./services/google-sheets-service');
 
 const app = express();
@@ -712,7 +711,6 @@ const handleCreateMenuItem = async (req, res) => {
   }
 };
 
-
 // Request logging middleware for menu-item routes (before multer)
 const logMenuRequest = (req, res, next) => {
   console.log('📥 Incoming menu-item request:');
@@ -1292,147 +1290,6 @@ app.delete('/api/menu-items/delete-image/:filename', async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to delete image',
-      message: error.message
-    });
-  }
-});
-
-// =============================================================================
-// NAVIGATION MENU ENDPOINTS
-// =============================================================================
-
-// Get all navigation items (public - filtered by menuType and visible)
-app.get('/api/navigation', async (req, res) => {
-  try {
-    const { menuType = 'public', visible } = req.query;
-    
-    let query = { menuType };
-    if (visible !== undefined) {
-      query.visible = visible === 'true';
-    }
-    
-    const navigationItems = await NavigationItem.find(query)
-      .sort({ order: 1, createdAt: 1 })
-      .lean();
-    
-    res.status(200).json({
-      success: true,
-      data: navigationItems,
-      count: navigationItems.length
-    });
-  } catch (error) {
-    console.error('❌ Error fetching navigation items:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch navigation items',
-      message: error.message
-    });
-  }
-});
-
-// Get single navigation item by ID
-app.get('/api/navigation/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const item = await NavigationItem.findOne({ id });
-    
-    if (!item) {
-      return res.status(404).json({
-        success: false,
-        error: 'Navigation item not found',
-        message: `Navigation item with ID ${id} does not exist`
-      });
-    }
-    
-    res.status(200).json({ success: true, data: item });
-  } catch (error) {
-    console.error('❌ Error fetching navigation item:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch navigation item',
-      message: error.message
-    });
-  }
-});
-
-// Create new navigation item (admin only)
-app.post('/api/navigation', authenticateAdmin, async (req, res) => {
-  try {
-    const navigationItem = new NavigationItem(req.body);
-    const savedItem = await navigationItem.save();
-    
-    res.status(201).json({
-      success: true,
-      message: 'Navigation item created successfully',
-      data: savedItem
-    });
-  } catch (error) {
-    console.error('❌ Error creating navigation item:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to create navigation item',
-      message: error.message
-    });
-  }
-});
-
-// Update navigation item (admin only)
-app.put('/api/navigation/:id', authenticateAdmin, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const updatedItem = await NavigationItem.findOneAndUpdate(
-      { id },
-      req.body,
-      { new: true, runValidators: true }
-    );
-    
-    if (!updatedItem) {
-      return res.status(404).json({
-        success: false,
-        error: 'Navigation item not found',
-        message: `Navigation item with ID ${id} does not exist`
-      });
-    }
-    
-    res.status(200).json({
-      success: true,
-      message: 'Navigation item updated successfully',
-      data: updatedItem
-    });
-  } catch (error) {
-    console.error('❌ Error updating navigation item:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to update navigation item',
-      message: error.message
-    });
-  }
-});
-
-// Delete navigation item (admin only)
-app.delete('/api/navigation/:id', authenticateAdmin, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const deletedItem = await NavigationItem.findOneAndDelete({ id });
-    
-    if (!deletedItem) {
-      return res.status(404).json({
-        success: false,
-        error: 'Navigation item not found',
-        message: `Navigation item with ID ${id} does not exist`
-      });
-    }
-    
-    res.status(200).json({
-      success: true,
-      message: 'Navigation item deleted successfully',
-      data: deletedItem
-    });
-  } catch (error) {
-    console.error('❌ Error deleting navigation item:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to delete navigation item',
       message: error.message
     });
   }

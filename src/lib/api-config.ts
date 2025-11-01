@@ -75,10 +75,6 @@ export const API_ENDPOINTS = {
   // Menu items
   get MENU_ITEMS() { return `${getApiBaseUrl()}/api/menu-items`; },
   MENU_ITEM: (id: string) => `${getApiBaseUrl()}/api/menu-items/${id}`,
-  
-  // Navigation
-  get NAVIGATION() { return `${getApiBaseUrl()}/api/navigation`; },
-  NAVIGATION_ITEM: (id: string) => `${getApiBaseUrl()}/api/navigation/${id}`,
 } as const;
 
 // =============================================================================
