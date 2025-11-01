@@ -334,30 +334,24 @@ const logMulterData = (req, res, next) => {
 // Serve uploaded images statically
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Body parser middleware - apply conditionally to avoid interfering with multer
-// For multipart/form-data requests, multer will handle parsing
-app.use((req, res, next) => {
-  const contentType = req.headers['content-type'] || '';
-  console.log(`🔍 Body parser middleware - Content-Type: "${contentType}"`);
-  // Skip body parsing for multipart/form-data - multer will handle it
-  if (contentType.includes('multipart/form-data')) {
-    console.log('⏭️  SKIPPING body parser for multipart/form-data - multer will handle it');
-    return next();
-  }
-  console.log('✅ Applying express.json() parser');
-  // Apply JSON parser for non-multipart requests
-  express.json({ limit: '10mb' })(req, res, next);
-});
+// Body parser middleware - must skip multipart/form-data completely
+// Apply body parsers only for non-multipart requests
+const jsonParser = express.json({ limit: '10mb' });
+const urlencodedParser = express.urlencoded({ extended: true, limit: '10mb' });
 
 app.use((req, res, next) => {
   const contentType = req.headers['content-type'] || '';
-  // Skip body parsing for multipart/form-data
+  // CRITICAL: Skip ALL body parsing for multipart/form-data
+  // Multer needs the raw stream to parse FormData correctly
   if (contentType.includes('multipart/form-data')) {
+    console.log('⏭️  SKIPPING all body parsers for multipart/form-data');
     return next();
   }
-  console.log('✅ Applying express.urlencoded() parser');
-  // Apply URL-encoded parser for non-multipart requests
-  express.urlencoded({ extended: true, limit: '10mb' })(req, res, next);
+  // Apply JSON parser first, then URL-encoded for non-multipart requests
+  jsonParser(req, res, (err) => {
+    if (err) return next(err);
+    urlencodedParser(req, res, next);
+  });
 });
 
 // =============================================================================
@@ -575,169 +569,62 @@ const handleCreateMenuItem = async (req, res) => {
   try {
     console.log('📝 Creating new menu item...');
     console.log('📋 Content-Type:', req.headers['content-type']);
-    console.log('📦 Request body:', req.body);
-    console.log('📋 Request body keys:', Object.keys(req.body || {}));
-    console.log('📋 Request body type:', typeof req.body);
-    console.log('📋 Request body values:', {
-      name: req.body?.name,
-      category: req.body?.category,
-      price: req.body?.price,
-      description: req.body?.description,
-      isActive: req.body?.isActive
-    });
-    console.log('📁 Uploaded file:', req.file ? { 
-      name: req.file.originalname, 
-      size: req.file.size, 
-      mimetype: req.file.mimetype,
-      fieldname: req.file.fieldname
+    console.log('📦 BODY:', req.body);
+    console.log('📁 FILE:', req.file ? {
+      fieldname: req.file.fieldname,
+      originalname: req.file.originalname,
+      filename: req.file.filename,
+      size: req.file.size,
+      mimetype: req.file.mimetype
     } : 'No file');
     
-    // Extract data from req.body (Multer populates req.body with form fields)
-    // Direct extraction - multer should have populated req.body already
-    const data = {
-      name: req.body?.name,
-      description: req.body?.description,
-      price: req.body?.price,
-      category: req.body?.category || 'Sandwiches',
-      isActive: req.body?.isActive !== undefined ? req.body.isActive : true,
-      megaPrice: req.body?.megaPrice || undefined
-    };
+    // Extract data directly from req.body (Multer populates this for FormData)
+    const { name, description, price } = req.body;
+    const imageUrl = req.file ? `/uploads/${req.file.filename}` : '';
     
-    console.log('🔄 Extracted data from req.body:', {
-      name: data.name,
-      category: data.category,
-      price: data.price,
-      priceType: typeof data.price,
-      description: data.description ? data.description.substring(0, 50) + '...' : 'MISSING',
-      hasPrice: data.price !== undefined,
-      hasName: !!data.name,
-      hasDescription: !!data.description,
+    console.log('🔄 Extracted values:', {
+      name: name,
+      description: description,
+      price: price,
+      imageUrl: imageUrl,
       bodyKeys: Object.keys(req.body || {})
     });
     
-    // Ensure required fields are present and not empty
-    if (!data.name || (typeof data.name === 'string' && data.name.trim() === '')) {
-      console.error('❌ Validation failed: name is missing or empty');
+    // Validate required fields
+    if (!name || !description || !price) {
       return res.status(400).json({ 
         success: false, 
-        error: 'Validation failed', 
-        message: 'Menu item name is required',
-        received: { body: req.body, data: data }
-      });
-    }
-    if (data.price === undefined || data.price === null || data.price === '' || isNaN(parseFloat(String(data.price)))) {
-      console.error('❌ Validation failed: price is missing or invalid', { price: data.price, type: typeof data.price });
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Validation failed', 
-        message: 'Valid price is required',
-        received: { price: data.price, type: typeof data.price }
-      });
-    }
-    if (!data.description || (typeof data.description === 'string' && data.description.trim() === '')) {
-      console.error('❌ Validation failed: description is missing or empty');
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Validation failed', 
-        message: 'Description is required',
-        received: { description: data.description }
+        message: 'All fields are required',
+        received: { name, description, price, body: req.body }
       });
     }
     
-    // If image was uploaded, set the imageUrl
-    if (req.file) {
-      console.log('🖼️ Image file uploaded with menu item:', req.file.originalname, req.file.size, 'bytes');
-      
-      // Try Cloudinary first (if configured)
-      if (process.env.CLOUDINARY_CLOUD_NAME && 
-          process.env.CLOUDINARY_API_KEY && 
-          process.env.CLOUDINARY_API_SECRET) {
-        try {
-          const imageUrl = await convertImageToUrl(req.file);
-          if (imageUrl) {
-            data.imageUrl = imageUrl;
-            console.log(`✅ Image uploaded to Cloudinary: ${imageUrl.substring(0, 50)}...`);
-          } else {
-            // Fallback to file storage
-            data.imageUrl = `/uploads/${req.file.filename}`;
-            console.log(`✅ Image saved to file system: ${data.imageUrl}`);
-          }
-        } catch (cloudinaryError) {
-          console.error('❌ Cloudinary upload failed, using file storage:', cloudinaryError.message);
-          data.imageUrl = `/uploads/${req.file.filename}`;
-          console.log(`✅ Image saved to file system: ${data.imageUrl}`);
-        }
-      } else {
-        // Simple file storage - use the uploaded filename
-        data.imageUrl = `/uploads/${req.file.filename}`;
-        console.log(`✅ Image saved to file system: ${data.imageUrl}`);
-      }
-    } else {
-      // No image uploaded
-      data.imageUrl = '';
-    }
+    // Prepare menu item data
+    const menuItemData = {
+      name: typeof name === 'string' ? name.trim() : name,
+      description: typeof description === 'string' ? description.trim() : description,
+      price: typeof price === 'string' ? parseFloat(price) : Number(price),
+      category: req.body.category || 'Sandwiches',
+      imageUrl: imageUrl,
+      isActive: req.body.isActive !== undefined ? (req.body.isActive === 'true' || req.body.isActive === true) : true,
+      megaPrice: req.body.megaPrice ? (typeof req.body.megaPrice === 'string' ? parseFloat(req.body.megaPrice) : Number(req.body.megaPrice)) : undefined
+    };
     
-    // Parse JSON fields if they're strings (from form data)
-    if (typeof data.price === 'string') {
-      const parsedPrice = parseFloat(data.price);
-      if (!isNaN(parsedPrice)) {
-        data.price = parsedPrice;
-      }
-    }
-    if (data.megaPrice && typeof data.megaPrice === 'string') {
-      const parsedMegaPrice = parseFloat(data.megaPrice);
-      if (!isNaN(parsedMegaPrice)) {
-        data.megaPrice = parsedMegaPrice;
-      }
-    }
-    if (typeof data.isActive === 'string') {
-      data.isActive = data.isActive === 'true' || data.isActive === 'TRUE';
-    }
-    
-    // Ensure category is set
-    if (!data.category || data.category.trim() === '') {
-      data.category = 'Sandwiches'; // default
-    }
-    
-    // Trim string fields
-    if (data.name) data.name = data.name.trim();
-    if (data.description) data.description = data.description.trim();
-    if (data.category) data.category = data.category.trim();
-    
-    // Generate ID if not present
-    if (!data.id) {
-      data.id = uuidv4();
-    }
-    data.isActive = data.isActive !== false;
-    
-    // Ensure imageUrl is set (even if empty)
-    if (!data.imageUrl) {
-      data.imageUrl = '';
-    }
-    
-    console.log('✅ Processed data before save:', {
-      id: data.id,
-      name: data.name,
-      category: data.category,
-      price: data.price,
-      priceType: typeof data.price,
-      description: data.description ? data.description.substring(0, 50) + '...' : 'MISSING',
-      hasImageUrl: !!data.imageUrl,
-      imageUrlPreview: data.imageUrl ? (data.imageUrl.length > 100 ? data.imageUrl.substring(0, 100) + '...' : data.imageUrl) : 'EMPTY',
-      imageUrlLength: data.imageUrl ? data.imageUrl.length : 0,
-      isActive: data.isActive,
-      hasSheetsClient: !!sheetsClient
-    });
+    console.log('✅ Processed menu item data:', menuItemData);
 
     if (sheetsClient) {
       console.log('📊 Saving to Google Sheets...');
-      const created = await sheetsCreateMenuItem(data);
+      // Generate ID for Google Sheets if not present
+      if (!menuItemData.id) {
+        menuItemData.id = uuidv4();
+      }
+      const created = await sheetsCreateMenuItem(menuItemData);
       console.log('✅ Saved to Google Sheets:', created);
       return res.status(201).json({ success: true, message: 'Menu item created successfully', data: created, source: 'google-sheets' });
     }
 
     console.log('💾 Saving to MongoDB...');
-    const menuItem = new MenuItem(data);
+    const menuItem = new MenuItem(menuItemData);
     const savedMenuItem = await menuItem.save();
     console.log('✅ Saved to MongoDB:', savedMenuItem);
     return res.status(201).json({ success: true, message: 'Menu item created successfully', data: savedMenuItem, source: 'mongodb' });
