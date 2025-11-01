@@ -591,7 +591,36 @@ const handleCreateMenuItem = async (req, res) => {
     
     // Extract data directly from req.body (Multer populates this for FormData)
     const { name, description, price } = req.body;
-    const imageUrl = req.file ? `/uploads/${req.file.filename}` : '';
+    
+    // Handle image upload - try Cloudinary first, fallback to file storage or Base64
+    let imageUrl = '';
+    if (req.file) {
+      console.log('🖼️ Image file uploaded with menu item:', req.file.originalname, req.file.size, 'bytes');
+      
+      // Try Cloudinary first (if configured)
+      if (process.env.CLOUDINARY_CLOUD_NAME && 
+          process.env.CLOUDINARY_API_KEY && 
+          process.env.CLOUDINARY_API_SECRET) {
+        try {
+          imageUrl = await convertImageToUrl(req.file);
+          if (imageUrl) {
+            console.log(`✅ Image uploaded to Cloudinary: ${imageUrl.substring(0, 50)}...`);
+          } else {
+            // Fallback to file storage
+            imageUrl = `/uploads/${req.file.filename}`;
+            console.log(`✅ Image saved to file system: ${imageUrl}`);
+          }
+        } catch (cloudinaryError) {
+          console.error('❌ Cloudinary upload failed, using file storage:', cloudinaryError.message);
+          imageUrl = `/uploads/${req.file.filename}`;
+          console.log(`✅ Image saved to file system: ${imageUrl}`);
+        }
+      } else {
+        // Simple file storage - use the uploaded filename
+        imageUrl = `/uploads/${req.file.filename}`;
+        console.log(`✅ Image saved to file system: ${imageUrl}`);
+      }
+    }
     
     console.log('🔄 Extracted values:', {
       name: name,
