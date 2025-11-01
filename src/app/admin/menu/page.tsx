@@ -202,7 +202,7 @@ export default function AdminMenuItemsPage() {
               <DialogTitle>Add New Menu Item</DialogTitle>
             </DialogHeader>
             <MenuItemForm
-              onSave={handleSave}
+              onSuccess={handleSave}
               onCancel={handleCancel}
             />
           </DialogContent>
@@ -316,8 +316,8 @@ export default function AdminMenuItemsPage() {
           </DialogHeader>
           {editingItem && (
             <MenuItemForm
-              initialData={editingItem}
-              onSave={handleSave}
+              menuItem={editingItem}
+              onSuccess={handleSave}
               onCancel={handleCancel}
             />
           )}
