@@ -45,3 +45,19 @@ export type UserProfile = {
   name: string;
   role: 'admin' | 'kitchen' | 'customer';
 };
+
+export type NavigationItem = {
+  id: string;
+  label: string;
+  path: string;
+  requiresAuth: boolean;
+  icon?: string;
+  order: number;
+  visible: boolean;
+  target?: '_blank' | '_self';
+  onClick?: string;
+  menuType: 'public' | 'admin';
+  isActive?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+};
