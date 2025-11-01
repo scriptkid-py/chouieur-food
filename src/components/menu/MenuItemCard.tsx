@@ -10,6 +10,7 @@ import { formatPrice } from '@/lib/utils';
 import { PlusCircle } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useState } from 'react';
+import { getApiBaseUrl } from '@/lib/api-config';
 
 type MenuItemCardProps = {
   item: MenuItem;
@@ -20,7 +21,17 @@ export function MenuItemCard({ item }: MenuItemCardProps) {
   const [size, setSize] = useState<'Normal' | 'Mega'>('Normal');
   
   // Use actual image URL if available, otherwise fall back to placeholder
-  const imageUrl = item.imageUrl || (() => {
+  // Construct full URL for /uploads/ paths
+  const imageUrl = (() => {
+    if (item.imageUrl) {
+      // If it's a relative path (/uploads/...), construct full URL
+      if (item.imageUrl.startsWith('/uploads/')) {
+        return `${getApiBaseUrl()}${item.imageUrl}`;
+      }
+      // If it's already a full URL (Cloudinary, data URL, etc.), use as-is
+      return item.imageUrl;
+    }
+    // Fallback to placeholder
     const placeholder = PlaceHolderImages.find(p => p.id === item.imageId);
     return placeholder?.imageUrl;
   })();

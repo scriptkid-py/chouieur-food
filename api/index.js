@@ -286,7 +286,7 @@ async function convertImageToUrl(file) {
 // FILE UPLOAD CONFIGURATION
 // =============================================================================
 
-const UPLOADS_DIR = path.join(__dirname, 'uploads', 'menu-images');
+const UPLOADS_DIR = path.join(__dirname, 'uploads');
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
 
@@ -301,8 +301,9 @@ const storage = multer.diskStorage({
     cb(null, UPLOADS_DIR);
   },
   filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+    // Format: Date.now() + "-" + file.originalname
+    const timestamp = Date.now();
+    cb(null, `${timestamp}-${file.originalname}`);
   }
 });
 
@@ -652,16 +653,37 @@ const handleCreateMenuItem = async (req, res) => {
       });
     }
     
-    // If image was uploaded, convert it to URL
+    // If image was uploaded, set the imageUrl
     if (req.file) {
       console.log('🖼️ Image file uploaded with menu item:', req.file.originalname, req.file.size, 'bytes');
-      const imageUrl = await convertImageToUrl(req.file);
-      if (imageUrl) {
-        data.imageUrl = imageUrl;
-        console.log(`✅ Image converted to URL and saved to data.imageUrl (${imageUrl.substring(0, 50)}...)`);
+      
+      // Try Cloudinary first (if configured)
+      if (process.env.CLOUDINARY_CLOUD_NAME && 
+          process.env.CLOUDINARY_API_KEY && 
+          process.env.CLOUDINARY_API_SECRET) {
+        try {
+          const imageUrl = await convertImageToUrl(req.file);
+          if (imageUrl) {
+            data.imageUrl = imageUrl;
+            console.log(`✅ Image uploaded to Cloudinary: ${imageUrl.substring(0, 50)}...`);
+          } else {
+            // Fallback to file storage
+            data.imageUrl = `/uploads/${req.file.filename}`;
+            console.log(`✅ Image saved to file system: ${data.imageUrl}`);
+          }
+        } catch (cloudinaryError) {
+          console.error('❌ Cloudinary upload failed, using file storage:', cloudinaryError.message);
+          data.imageUrl = `/uploads/${req.file.filename}`;
+          console.log(`✅ Image saved to file system: ${data.imageUrl}`);
+        }
       } else {
-        console.error('❌ Failed to convert image to URL');
+        // Simple file storage - use the uploaded filename
+        data.imageUrl = `/uploads/${req.file.filename}`;
+        console.log(`✅ Image saved to file system: ${data.imageUrl}`);
       }
+    } else {
+      // No image uploaded
+      data.imageUrl = '';
     }
     
     // Parse JSON fields if they're strings (from form data)
@@ -749,15 +771,33 @@ const handleUpdateMenuItem = async (req, res) => {
     console.log('📁 Uploaded file:', req.file ? { name: req.file.originalname, size: req.file.size, mimetype: req.file.mimetype } : 'No file');
     console.log('📋 Content-Type:', req.headers['content-type']);
     
-    // If image was uploaded, convert it to URL
+    // If image was uploaded, set the imageUrl
     if (req.file) {
       console.log('🖼️ Image file uploaded with menu item update:', req.file.originalname, req.file.size, 'bytes');
-      const imageUrl = await convertImageToUrl(req.file);
-      if (imageUrl) {
-        updates.imageUrl = imageUrl;
-        console.log(`✅ Image converted to URL and saved to updates.imageUrl (${imageUrl.substring(0, 50)}...)`);
+      
+      // Try Cloudinary first (if configured)
+      if (process.env.CLOUDINARY_CLOUD_NAME && 
+          process.env.CLOUDINARY_API_KEY && 
+          process.env.CLOUDINARY_API_SECRET) {
+        try {
+          const imageUrl = await convertImageToUrl(req.file);
+          if (imageUrl) {
+            updates.imageUrl = imageUrl;
+            console.log(`✅ Image uploaded to Cloudinary: ${imageUrl.substring(0, 50)}...`);
+          } else {
+            // Fallback to file storage
+            updates.imageUrl = `/uploads/${req.file.filename}`;
+            console.log(`✅ Image saved to file system: ${updates.imageUrl}`);
+          }
+        } catch (cloudinaryError) {
+          console.error('❌ Cloudinary upload failed, using file storage:', cloudinaryError.message);
+          updates.imageUrl = `/uploads/${req.file.filename}`;
+          console.log(`✅ Image saved to file system: ${updates.imageUrl}`);
+        }
       } else {
-        console.error('❌ Failed to convert image to URL');
+        // Simple file storage - use the uploaded filename
+        updates.imageUrl = `/uploads/${req.file.filename}`;
+        console.log(`✅ Image saved to file system: ${updates.imageUrl}`);
       }
     }
     
