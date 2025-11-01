@@ -612,25 +612,48 @@ const handleCreateMenuItem = async (req, res) => {
     console.log('📝 Creating new menu item...');
     console.log('📋 Content-Type:', req.headers['content-type']);
     console.log('📦 BODY (type):', typeof req.body, 'isArray:', Array.isArray(req.body));
-    console.log('📦 BODY (raw):', req.body);
+    console.log('📦 BODY (raw):', JSON.stringify(req.body, null, 2));
     console.log('📦 BODY keys:', Object.keys(req.body || {}));
+    console.log('📦 BODY entries:', Object.entries(req.body || {}));
     console.log('📁 FILE:', req.file ? {
       fieldname: req.file.fieldname,
       originalname: req.file.originalname,
       filename: req.file.filename,
       size: req.file.size,
-      mimetype: req.file.mimetype
+      mimetype: req.file.mimetype,
+      path: req.file.path
     } : 'No file');
     
     // Check if body is empty or not properly parsed
     if (!req.body || Object.keys(req.body).length === 0) {
       console.error('❌ CRITICAL: req.body is empty! Multer may not have parsed the FormData correctly.');
       console.error('❌ Content-Type header:', req.headers['content-type']);
-      console.error('❌ Request headers:', JSON.stringify(req.headers, null, 2));
+      console.error('❌ File received:', !!req.file);
+      
+      // Return a detailed error to help debug
+      return res.status(400).json({ 
+        success: false, 
+        error: 'FormData parsing failed',
+        message: 'The server received the request but could not parse the form data. Please check that all fields are being sent correctly.',
+        debug: {
+          hasFile: !!req.file,
+          bodyKeys: Object.keys(req.body || {}),
+          contentType: req.headers['content-type']
+        }
+      });
     }
     
     // Extract data directly from req.body (Multer populates this for FormData)
     const { name, description, price } = req.body;
+    
+    console.log('📋 Extracted from req.body:', {
+      name: name,
+      description: description,
+      price: price,
+      nameType: typeof name,
+      descriptionType: typeof description,
+      priceType: typeof price
+    });
     
     // Handle image upload - try Cloudinary first, fallback to file storage or Base64
     let imageUrl = '';
