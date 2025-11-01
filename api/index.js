@@ -209,6 +209,80 @@ app.use(helmet());
 app.use(morgan('dev'));
 
 // =============================================================================
+// IMAGE TO URL CONVERSION HELPER
+// =============================================================================
+
+/**
+ * Convert uploaded image file to URL
+ * Tries Cloudinary first, falls back to Base64 data URL
+ * @param {Object} file - Multer file object (req.file)
+ * @returns {Promise<string>} - Image URL
+ */
+async function convertImageToUrl(file) {
+  if (!file || !file.path) {
+    console.error('❌ No file provided for image conversion');
+    return '';
+  }
+
+  try {
+    console.log(`🔄 Converting image to URL: ${file.originalname} (${file.size} bytes)`);
+    
+    // Try Cloudinary first (if configured)
+    if (process.env.CLOUDINARY_CLOUD_NAME && 
+        process.env.CLOUDINARY_API_KEY && 
+        process.env.CLOUDINARY_API_SECRET) {
+      try {
+        console.log('☁️ Uploading to Cloudinary...');
+        const result = await cloudinary.uploader.upload(file.path, {
+          folder: 'chouieur-express/menu-items',
+          resource_type: 'auto',
+          transformation: [
+            { width: 800, height: 600, crop: 'limit' },
+            { quality: 'auto' }
+          ]
+        });
+        
+        console.log(`✅ Image uploaded to Cloudinary: ${result.secure_url}`);
+        
+        // Clean up temp file
+        try {
+          fs.unlinkSync(file.path);
+        } catch (cleanupError) {
+          console.warn('⚠️ Could not clean up temp file:', cleanupError.message);
+        }
+        
+        return result.secure_url;
+      } catch (cloudinaryError) {
+        console.error('❌ Cloudinary upload failed:', cloudinaryError.message);
+        console.log('📦 Falling back to Base64 data URL...');
+        // Fall through to Base64 fallback
+      }
+    }
+    
+    // Fallback: Create Base64 data URL
+    console.log('📦 Creating Base64 data URL...');
+    const fileBuffer = fs.readFileSync(file.path);
+    const base64Image = fileBuffer.toString('base64');
+    const mimeType = file.mimetype || 'image/jpeg';
+    const dataUrl = `data:${mimeType};base64,${base64Image}`;
+    
+    console.log(`✅ Created Base64 data URL (${dataUrl.length} characters)`);
+    
+    // Clean up temp file
+    try {
+      fs.unlinkSync(file.path);
+    } catch (cleanupError) {
+      console.warn('⚠️ Could not clean up temp file:', cleanupError.message);
+    }
+    
+    return dataUrl;
+  } catch (error) {
+    console.error('❌ Error converting image to URL:', error.message);
+    return '';
+  }
+}
+
+// =============================================================================
 // FILE UPLOAD CONFIGURATION
 // =============================================================================
 
@@ -578,42 +652,15 @@ const handleCreateMenuItem = async (req, res) => {
       });
     }
     
-    // If image was uploaded, handle it
+    // If image was uploaded, convert it to URL
     if (req.file) {
       console.log('🖼️ Image file uploaded with menu item:', req.file.originalname, req.file.size, 'bytes');
-      
-      // Check if Cloudinary is configured
-      if (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET) {
-        // Upload to Cloudinary
-        const result = await cloudinary.uploader.upload(req.file.path, {
-          folder: 'chouieur-express/menu-items',
-          resource_type: 'auto',
-          transformation: [
-            { width: 800, height: 600, crop: 'limit' },
-            { quality: 'auto' }
-          ]
-        });
-        data.imageUrl = result.secure_url;
-        
-        // Clean up temp file
-        try {
-          fs.unlinkSync(req.file.path);
-        } catch (cleanupError) {
-          console.warn('⚠️ Could not clean up temp file:', cleanupError.message);
-        }
+      const imageUrl = await convertImageToUrl(req.file);
+      if (imageUrl) {
+        data.imageUrl = imageUrl;
+        console.log(`✅ Image converted to URL and saved to data.imageUrl (${imageUrl.substring(0, 50)}...)`);
       } else {
-        // Fallback: create data URL
-        const fileBuffer = fs.readFileSync(req.file.path);
-        const base64Image = fileBuffer.toString('base64');
-        const mimeType = req.file.mimetype;
-        data.imageUrl = `data:${mimeType};base64,${base64Image}`;
-        
-        // Clean up temp file
-        try {
-          fs.unlinkSync(req.file.path);
-        } catch (cleanupError) {
-          console.warn('⚠️ Could not clean up temp file:', cleanupError.message);
-        }
+        console.error('❌ Failed to convert image to URL');
       }
     }
     
@@ -650,6 +697,11 @@ const handleCreateMenuItem = async (req, res) => {
     }
     data.isActive = data.isActive !== false;
     
+    // Ensure imageUrl is set (even if empty)
+    if (!data.imageUrl) {
+      data.imageUrl = '';
+    }
+    
     console.log('✅ Processed data before save:', {
       id: data.id,
       name: data.name,
@@ -658,6 +710,8 @@ const handleCreateMenuItem = async (req, res) => {
       priceType: typeof data.price,
       description: data.description ? data.description.substring(0, 50) + '...' : 'MISSING',
       hasImageUrl: !!data.imageUrl,
+      imageUrlPreview: data.imageUrl ? (data.imageUrl.length > 100 ? data.imageUrl.substring(0, 100) + '...' : data.imageUrl) : 'EMPTY',
+      imageUrlLength: data.imageUrl ? data.imageUrl.length : 0,
       isActive: data.isActive,
       hasSheetsClient: !!sheetsClient
     });
@@ -695,42 +749,15 @@ const handleUpdateMenuItem = async (req, res) => {
     console.log('📁 Uploaded file:', req.file ? { name: req.file.originalname, size: req.file.size, mimetype: req.file.mimetype } : 'No file');
     console.log('📋 Content-Type:', req.headers['content-type']);
     
-    // If image was uploaded, handle it
+    // If image was uploaded, convert it to URL
     if (req.file) {
       console.log('🖼️ Image file uploaded with menu item update:', req.file.originalname, req.file.size, 'bytes');
-      
-      // Check if Cloudinary is configured
-      if (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET) {
-        // Upload to Cloudinary
-        const result = await cloudinary.uploader.upload(req.file.path, {
-          folder: 'chouieur-express/menu-items',
-          resource_type: 'auto',
-          transformation: [
-            { width: 800, height: 600, crop: 'limit' },
-            { quality: 'auto' }
-          ]
-        });
-        updates.imageUrl = result.secure_url;
-        
-        // Clean up temp file
-        try {
-          fs.unlinkSync(req.file.path);
-        } catch (cleanupError) {
-          console.warn('⚠️ Could not clean up temp file:', cleanupError.message);
-        }
+      const imageUrl = await convertImageToUrl(req.file);
+      if (imageUrl) {
+        updates.imageUrl = imageUrl;
+        console.log(`✅ Image converted to URL and saved to updates.imageUrl (${imageUrl.substring(0, 50)}...)`);
       } else {
-        // Fallback: create data URL
-        const fileBuffer = fs.readFileSync(req.file.path);
-        const base64Image = fileBuffer.toString('base64');
-        const mimeType = req.file.mimetype;
-        updates.imageUrl = `data:${mimeType};base64,${base64Image}`;
-        
-        // Clean up temp file
-        try {
-          fs.unlinkSync(req.file.path);
-        } catch (cleanupError) {
-          console.warn('⚠️ Could not clean up temp file:', cleanupError.message);
-        }
+        console.error('❌ Failed to convert image to URL');
       }
     }
     
