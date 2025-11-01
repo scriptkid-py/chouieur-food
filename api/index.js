@@ -718,7 +718,19 @@ const logMenuRequest = (req, res, next) => {
   console.log('  URL:', req.url);
   console.log('  Content-Type:', req.headers['content-type']);
   console.log('  Content-Length:', req.headers['content-length']);
-  console.log('  Has body stream:', !!req.body);
+  console.log('  Authorization header present:', !!req.headers['authorization']);
+  console.log('  req.body before multer:', req.body);
+  console.log('  req.body type:', typeof req.body);
+  console.log('  req.body keys:', Object.keys(req.body || {}));
+  
+  // Verify Content-Type is multipart/form-data
+  const contentType = (req.headers['content-type'] || '').toLowerCase();
+  if (!contentType.includes('multipart/form-data')) {
+    console.warn('⚠️  WARNING: Content-Type is not multipart/form-data!');
+    console.warn('⚠️  Content-Type:', req.headers['content-type']);
+    console.warn('⚠️  This might cause multer parsing issues.');
+  }
+  
   next();
 };
 
