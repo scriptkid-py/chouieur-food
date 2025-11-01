@@ -319,8 +319,13 @@ const upload = multer({
   }
 });
 
-// Middleware to handle multer errors
+// Middleware to handle multer errors (must be placed AFTER multer in chain)
 const handleMulterError = (err, req, res, next) => {
+  // Only handle errors, not normal flow
+  if (!err) {
+    return next();
+  }
+  
   if (err instanceof multer.MulterError) {
     console.error('❌ Multer error:', err);
     if (err.code === 'LIMIT_FILE_SIZE') {
@@ -328,11 +333,14 @@ const handleMulterError = (err, req, res, next) => {
     }
     return res.status(400).json({ success: false, error: 'File upload error', message: err.message });
   }
+  
+  // Handle other upload-related errors
   if (err) {
     console.error('❌ Upload error:', err);
     return res.status(400).json({ success: false, error: 'Upload failed', message: err.message });
   }
-  next();
+  
+  next(err);
 };
 
 // Middleware to log multer-parsed data
@@ -734,8 +742,17 @@ const logMenuRequest = (req, res, next) => {
   next();
 };
 
-app.post('/api/menu', logMenuRequest, authenticateAdmin, upload.single('image'), handleMulterError, logMulterData, handleCreateMenuItem);
-app.post('/api/menu-items', logMenuRequest, authenticateAdmin, upload.single('image'), handleMulterError, logMulterData, handleCreateMenuItem);
+// Menu item routes with proper error handling
+// Order: Log -> Auth -> Multer -> Error Handler -> Log Data -> Handler
+app.post('/api/menu', logMenuRequest, authenticateAdmin, upload.single('image'), (err, req, res, next) => {
+  if (err) return handleMulterError(err, req, res, next);
+  next();
+}, logMulterData, handleCreateMenuItem);
+
+app.post('/api/menu-items', logMenuRequest, authenticateAdmin, upload.single('image'), (err, req, res, next) => {
+  if (err) return handleMulterError(err, req, res, next);
+  next();
+}, logMulterData, handleCreateMenuItem);
 
 // Update menu item (admin only - supports both /api/menu/:id and /api/menu-items/:id)
 // Also supports multipart form data with image upload
