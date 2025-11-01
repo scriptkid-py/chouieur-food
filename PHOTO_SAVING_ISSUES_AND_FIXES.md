@@ -113,11 +113,19 @@ If you just want to test locally:
 
 The code already supports Cloudinary! Just add the environment variables to Render:
 
-```bash
-CLOUDINARY_CLOUD_NAME=your_cloud_name
-CLOUDINARY_API_KEY=your_api_key
-CLOUDINARY_API_SECRET=your_api_secret
-```
+### Steps to Add Cloudinary on Render:
+
+1. Go to your Render Dashboard: https://dashboard.render.com
+2. Select your backend service: `chouieur-express-backend`
+3. Click on **Environment** tab
+4. Add these 3 environment variables (click **Add Environment Variable** for each):
+   - **Key:** `CLOUDINARY_CLOUD_NAME` → **Value:** `your_cloud_name`
+   - **Key:** `CLOUDINARY_API_KEY` → **Value:** `your_api_key`
+   - **Key:** `CLOUDINARY_API_SECRET` → **Value:** `your_api_secret`
+5. Click **Save Changes**
+6. Your service will automatically redeploy
+
+**Note:** Keep your credentials secure! Never commit them to git.
 
 Then images will be uploaded to Cloudinary and URLs will be permanent!
 
