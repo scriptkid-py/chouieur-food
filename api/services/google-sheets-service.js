@@ -23,6 +23,11 @@ const HEADERS = [
  */
 async function initGoogleSheets() {
   try {
+    console.log('🔍 Google Sheets initialization check:');
+    console.log('  GOOGLE_SHEETS_ID:', GOOGLE_SHEETS_ID ? `${GOOGLE_SHEETS_ID.substring(0, 20)}...` : 'MISSING');
+    console.log('  GOOGLE_SERVICE_ACCOUNT_EMAIL:', GOOGLE_SERVICE_ACCOUNT_EMAIL ? GOOGLE_SERVICE_ACCOUNT_EMAIL : 'MISSING');
+    console.log('  GOOGLE_PRIVATE_KEY:', GOOGLE_PRIVATE_KEY ? `${GOOGLE_PRIVATE_KEY.substring(0, 50)}...` : 'MISSING');
+    
     if (!GOOGLE_SHEETS_ID || !GOOGLE_SERVICE_ACCOUNT_EMAIL || !GOOGLE_PRIVATE_KEY) {
       console.warn('⚠️  Google Sheets credentials not configured, will use MongoDB only');
       return null;
@@ -43,7 +48,7 @@ async function initGoogleSheets() {
     });
 
     sheetsClient = google.sheets({ version: 'v4', auth });
-    console.log('✅ Google Sheets client initialized');
+    console.log('✅ Google Sheets client initialized successfully');
     return sheetsClient;
   } catch (error) {
     console.error('❌ Failed to initialize Google Sheets:', error.message);
