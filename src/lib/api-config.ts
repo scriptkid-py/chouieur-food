@@ -143,34 +143,36 @@ export async function apiRequest<T = any>(
 
   // CRITICAL: For FormData, DO NOT set Content-Type header - let browser set it with boundary
   // For non-FormData, set JSON Content-Type
-  const defaultOptions: RequestInit = {
-    ...options,
-  };
+  let defaultOptions: RequestInit;
   
   // Handle headers separately to avoid conflicts
   if (isFormData) {
-    // For FormData: DO NOT set Content-Type - browser will set it with boundary
+    // For FormData: DO NOT set Content-Type - browser will set it with boundary automatically
     // The browser automatically sets: Content-Type: multipart/form-data; boundary=xxxxx
     // Only preserve Authorization header if it was provided
-    if (options.headers && typeof options.headers === 'object' && 'Authorization' in options.headers) {
-      const authHeader = (options.headers as Record<string, string>).Authorization;
-      if (authHeader) {
-        defaultOptions.headers = {
-          Authorization: authHeader
-        };
-      } else {
-        // No headers at all for FormData - let browser set everything
-        delete defaultOptions.headers;
+    const headers: Record<string, string> = {};
+    if (options.headers && typeof options.headers === 'object') {
+      if ('Authorization' in options.headers) {
+        const authHeader = (options.headers as Record<string, string>).Authorization;
+        if (authHeader) {
+          headers.Authorization = authHeader;
+        }
       }
-    } else {
-      // No headers at all for FormData - let browser set everything
-      delete defaultOptions.headers;
     }
+    
+    // Create options without Content-Type header for FormData
+    defaultOptions = {
+      ...options,
+      headers: Object.keys(headers).length > 0 ? headers : undefined
+    };
   } else {
     // For non-FormData: set Content-Type and merge with existing headers
-    defaultOptions.headers = {
-      'Content-Type': 'application/json',
-      ...(options.headers || {})
+    defaultOptions = {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(options.headers || {})
+      }
     };
   }
 
