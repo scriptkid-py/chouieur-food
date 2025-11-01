@@ -1133,23 +1133,27 @@ app.post('/api/orders', jsonParser, urlencodedParser, async (req, res) => {
     
     // Transform the order data to match our schema
     const orderItems = orderData.items.map(item => {
-      // Handle menuItemId - can be string or ObjectId
+      // Handle menuItemId - can be ObjectId (MongoDB) or String (UUID from Google Sheets)
       let menuItemId = null;
       if (item.menuItemId) {
-        // Convert string to ObjectId if it's a valid ObjectId string
-        if (mongoose.Types.ObjectId.isValid(item.menuItemId)) {
+        // Check if it's a valid MongoDB ObjectId (24 char hex string)
+        if (mongoose.Types.ObjectId.isValid(item.menuItemId) && item.menuItemId.toString().length === 24) {
           menuItemId = new mongoose.Types.ObjectId(item.menuItemId);
         } else {
-          menuItemId = item.menuItemId; // Keep as is if not valid ObjectId format
+          // Keep as string (UUID from Google Sheets or other string ID)
+          menuItemId = String(item.menuItemId);
         }
       } else if (item.menuItem?.id) {
         // Fallback for old format
-        if (mongoose.Types.ObjectId.isValid(item.menuItem.id)) {
-          menuItemId = new mongoose.Types.ObjectId(item.menuItem.id);
+        const idValue = item.menuItem.id;
+        if (mongoose.Types.ObjectId.isValid(idValue) && idValue.toString().length === 24) {
+          menuItemId = new mongoose.Types.ObjectId(idValue);
         } else {
-          menuItemId = item.menuItem.id;
+          menuItemId = String(idValue);
         }
       }
+      
+      console.log(`📦 Order item - menuItemId: ${menuItemId} (type: ${typeof menuItemId}, isObjectId: ${menuItemId instanceof mongoose.Types.ObjectId})`);
       
       return {
         menuItemId: menuItemId,

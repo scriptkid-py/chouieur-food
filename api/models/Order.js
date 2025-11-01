@@ -15,7 +15,7 @@ const mongoose = require('mongoose');
 
 const orderItemSchema = new mongoose.Schema({
   menuItemId: {
-    type: mongoose.Schema.Types.ObjectId,
+    type: mongoose.Schema.Types.Mixed, // Can be ObjectId (MongoDB) or String (UUID from Google Sheets)
     ref: 'MenuItem',
     required: false // Optional since items might come from Google Sheets
   },
@@ -179,7 +179,8 @@ orderSchema.index({ customerEmail: 1 });
 orderSchema.index({ status: 1 });
 orderSchema.index({ orderType: 1 });
 orderSchema.index({ createdAt: -1 });
-orderSchema.index({ 'items.menuItemId': 1 });
+// Note: Can't index Mixed type, but items are typically queried by other fields
+// orderSchema.index({ 'items.menuItemId': 1 }); // Removed - Mixed type can't be indexed
 
 // =============================================================================
 // VIRTUAL FIELDS
