@@ -617,30 +617,38 @@ const handleCreateMenuItem = async (req, res) => {
     let imageUrl = '';
     if (req.file) {
       console.log('🖼️ Image file uploaded with menu item:', req.file.originalname, req.file.size, 'bytes');
+      console.log('🖼️ File path:', req.file.path);
+      console.log('🖼️ File exists:', fs.existsSync(req.file.path));
       
       // Try Cloudinary first (if configured)
       if (process.env.CLOUDINARY_CLOUD_NAME && 
           process.env.CLOUDINARY_API_KEY && 
           process.env.CLOUDINARY_API_SECRET) {
         try {
+          console.log('☁️ Attempting Cloudinary upload...');
           imageUrl = await convertImageToUrl(req.file);
           if (imageUrl) {
             console.log(`✅ Image uploaded to Cloudinary: ${imageUrl.substring(0, 50)}...`);
           } else {
+            console.warn('⚠️ Cloudinary returned empty URL, using file storage');
             // Fallback to file storage
             imageUrl = `/uploads/${req.file.filename}`;
             console.log(`✅ Image saved to file system: ${imageUrl}`);
           }
         } catch (cloudinaryError) {
           console.error('❌ Cloudinary upload failed, using file storage:', cloudinaryError.message);
+          console.error('❌ Cloudinary error stack:', cloudinaryError.stack);
           imageUrl = `/uploads/${req.file.filename}`;
           console.log(`✅ Image saved to file system: ${imageUrl}`);
         }
       } else {
         // Simple file storage - use the uploaded filename
+        console.log('📁 Cloudinary not configured, using file storage');
         imageUrl = `/uploads/${req.file.filename}`;
         console.log(`✅ Image saved to file system: ${imageUrl}`);
       }
+    } else {
+      console.log('📁 No file uploaded');
     }
     
     console.log('🔄 Extracted values:', {
@@ -715,7 +723,29 @@ const handleCreateMenuItem = async (req, res) => {
     return res.status(201).json({ success: true, message: 'Menu item created successfully', data: savedMenuItem, source: 'mongodb' });
   } catch (error) {
     console.error('❌ Error creating menu item:', error);
-    res.status(500).json({ success: false, error: 'Failed to create menu item', message: error.message });
+    console.error('❌ Error stack:', error.stack);
+    console.error('❌ Error name:', error.name);
+    console.error('❌ Error message:', error.message);
+    
+    // Check if it's a Mongoose validation error
+    if (error.name === 'ValidationError') {
+      const validationErrors = Object.values(error.errors || {}).map((e: any) => e.message);
+      console.error('❌ Mongoose validation errors:', validationErrors);
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Validation failed', 
+        message: validationErrors.join(', '),
+        validationErrors: validationErrors
+      });
+    }
+    
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to create menu item', 
+      message: error.message,
+      errorName: error.name,
+      ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
+    });
   }
 };
 
