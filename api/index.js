@@ -261,23 +261,42 @@ async function convertImageToUrl(file) {
     
     // Fallback: Create Base64 data URL
     console.log('📦 Creating Base64 data URL...');
-    const fileBuffer = fs.readFileSync(file.path);
-    const base64Image = fileBuffer.toString('base64');
-    const mimeType = file.mimetype || 'image/jpeg';
-    const dataUrl = `data:${mimeType};base64,${base64Image}`;
     
-    console.log(`✅ Created Base64 data URL (${dataUrl.length} characters)`);
-    
-    // Clean up temp file
-    try {
-      fs.unlinkSync(file.path);
-    } catch (cleanupError) {
-      console.warn('⚠️ Could not clean up temp file:', cleanupError.message);
+    // Check if file exists before reading
+    if (!fs.existsSync(file.path)) {
+      console.error('❌ File does not exist at path:', file.path);
+      return '';
     }
     
-    return dataUrl;
+    try {
+      const fileBuffer = fs.readFileSync(file.path);
+      if (!fileBuffer || fileBuffer.length === 0) {
+        console.error('❌ File buffer is empty');
+        return '';
+      }
+      
+      const base64Image = fileBuffer.toString('base64');
+      const mimeType = file.mimetype || 'image/jpeg';
+      const dataUrl = `data:${mimeType};base64,${base64Image}`;
+      
+      console.log(`✅ Created Base64 data URL (${dataUrl.length} characters)`);
+      
+      // Clean up temp file
+      try {
+        fs.unlinkSync(file.path);
+      } catch (cleanupError) {
+        console.warn('⚠️ Could not clean up temp file:', cleanupError.message);
+      }
+      
+      return dataUrl;
+    } catch (readError) {
+      console.error('❌ Error reading file:', readError.message);
+      console.error('❌ Error stack:', readError.stack);
+      return '';
+    }
   } catch (error) {
     console.error('❌ Error converting image to URL:', error.message);
+    console.error('❌ Error stack:', error.stack);
     return '';
   }
 }
@@ -698,12 +717,29 @@ const handleCreateMenuItem = async (req, res) => {
       description: typeof description === 'string' ? description.trim() : description,
       price: typeof price === 'string' ? parseFloat(price) : Number(price),
       category: req.body.category || 'Sandwiches',
-      imageUrl: imageUrl,
-      isActive: req.body.isActive !== undefined ? (req.body.isActive === 'true' || req.body.isActive === true) : true,
-      megaPrice: req.body.megaPrice ? (typeof req.body.megaPrice === 'string' ? parseFloat(req.body.megaPrice) : Number(req.body.megaPrice)) : undefined
+      imageUrl: imageUrl || '',
+      isActive: req.body.isActive !== undefined ? (req.body.isActive === 'true' || req.body.isActive === true) : true
     };
     
+    // Only add megaPrice if it exists and is valid
+    if (req.body.megaPrice) {
+      const megaPriceValue = typeof req.body.megaPrice === 'string' ? parseFloat(req.body.megaPrice) : Number(req.body.megaPrice);
+      if (!isNaN(megaPriceValue) && megaPriceValue > 0) {
+        menuItemData.megaPrice = megaPriceValue;
+      }
+    }
+    
     console.log('✅ Processed menu item data:', menuItemData);
+    console.log('✅ menuItemData keys:', Object.keys(menuItemData));
+    console.log('✅ menuItemData values:', {
+      name: menuItemData.name,
+      description: menuItemData.description,
+      price: menuItemData.price,
+      category: menuItemData.category,
+      imageUrl: menuItemData.imageUrl ? menuItemData.imageUrl.substring(0, 50) + '...' : 'empty',
+      isActive: menuItemData.isActive,
+      megaPrice: menuItemData.megaPrice
+    });
 
     if (sheetsClient) {
       console.log('📊 Saving to Google Sheets...');
