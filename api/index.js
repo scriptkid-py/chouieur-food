@@ -828,16 +828,12 @@ const logMenuRequest = (req, res, next) => {
 };
 
 // Menu item routes with proper error handling
-// Order: Log -> Auth -> Multer -> Error Handler -> Log Data -> Handler
-app.post('/api/menu', logMenuRequest, authenticateAdmin, upload.single('image'), (err, req, res, next) => {
-  if (err) return handleMulterError(err, req, res, next);
-  next();
-}, logMulterData, handleCreateMenuItem);
+// CRITICAL: Multer must process FormData BEFORE any other middleware touches req.body
+// Order: Log -> Auth -> Multer -> Log Data -> Handler
+// Multer errors are handled by Express error middleware at the end
+app.post('/api/menu', logMenuRequest, authenticateAdmin, upload.single('image'), logMulterData, handleCreateMenuItem);
 
-app.post('/api/menu-items', logMenuRequest, authenticateAdmin, upload.single('image'), (err, req, res, next) => {
-  if (err) return handleMulterError(err, req, res, next);
-  next();
-}, logMulterData, handleCreateMenuItem);
+app.post('/api/menu-items', logMenuRequest, authenticateAdmin, upload.single('image'), logMulterData, handleCreateMenuItem);
 
 // Update menu item (admin only - supports both /api/menu/:id and /api/menu-items/:id)
 // Also supports multipart form data with image upload
@@ -1465,9 +1461,14 @@ app.use('*', (req, res) => {
   });
 });
 
-// Global error handler
+// Global error handler (must be last, with 4 parameters for Express to recognize it)
 app.use((error, req, res, next) => {
   console.error('❌ Global error handler:', error);
+  
+  // Handle multer errors specifically
+  if (error instanceof multer.MulterError || error.code === 'LIMIT_FILE_SIZE') {
+    return handleMulterError(error, req, res, next);
+  }
   
   res.status(error.status || 500).json({
     success: false,
