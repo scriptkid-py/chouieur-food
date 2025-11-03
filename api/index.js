@@ -1206,7 +1206,7 @@ app.post('/api/orders', jsonParser, urlencodedParser, async (req, res) => {
 });
 
 // Update order status
-app.put('/api/orders/:id', async (req, res) => {
+app.put('/api/orders/:id', jsonParser, urlencodedParser, async (req, res) => {
   try {
     const { id } = req.params;
     const { status, reason } = req.body;
@@ -1297,7 +1297,7 @@ app.get('/api/users', async (req, res) => {
 });
 
 // Create new user
-app.post('/api/users', async (req, res) => {
+app.post('/api/users', jsonParser, urlencodedParser, async (req, res) => {
   try {
     console.log('📝 Creating new user in MongoDB...');
     
