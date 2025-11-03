@@ -1,3 +1,18 @@
+/**
+ * DELIVERY DRIVER DASHBOARD
+ * ==========================
+ * This page is exclusively for delivery drivers to manage deliveries.
+ * It is NOT accessible from the main navigation menu.
+ * 
+ * Access URL: /delivery
+ * 
+ * Features:
+ * - View all delivery orders
+ * - Update order status (Ready → Out for Delivery → Delivered)
+ * - Search orders by ID, customer name, phone, or address
+ * - Auto-refresh every 10 seconds
+ */
+
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -248,14 +263,16 @@ export default function DeliveryPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       {/* Header */}
-      <header className="bg-white border-b shadow-sm sticky top-0 z-10">
+      <header className="bg-gradient-to-r from-purple-600 to-blue-600 border-b shadow-lg sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Truck className="h-6 w-6 text-primary" />
+              <div className="bg-white/20 p-2 rounded-lg backdrop-blur-sm">
+                <Truck className="h-6 w-6 text-white" />
+              </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Delivery Dashboard</h1>
-                <p className="text-xs text-gray-500">For delivery drivers</p>
+                <h1 className="text-2xl font-bold text-white">Delivery Driver Dashboard</h1>
+                <p className="text-xs text-white/90 font-medium">🚚 Driver Access Only • Not in Public Menu</p>
               </div>
             </div>
             <div className="flex items-center gap-4">
@@ -264,7 +281,7 @@ export default function DeliveryPage() {
                 size="sm"
                 onClick={fetchOrders}
                 disabled={isLoading}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 bg-white/10 border-white/30 text-white hover:bg-white/20 backdrop-blur-sm"
               >
                 <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
                 Refresh
@@ -273,7 +290,7 @@ export default function DeliveryPage() {
                 variant="outline"
                 size="sm"
                 onClick={handleLogout}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 bg-white/10 border-white/30 text-white hover:bg-white/20 backdrop-blur-sm"
               >
                 <LogOut className="h-4 w-4" />
                 Logout

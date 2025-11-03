@@ -15,7 +15,6 @@ const navLinks = [
   { href: '/menu', label: 'Menu' },
   { href: '/about', label: 'About' },
   { href: '/contact', label: 'Contact' },
-  { href: '/delivery', label: 'Delivery' },
 ];
 
 export function Header() {
