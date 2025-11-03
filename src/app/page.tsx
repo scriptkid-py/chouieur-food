@@ -24,7 +24,7 @@ export default function Home() {
         <div className="mb-4">
           <Logo large />
         </div>
-        <p className="max-w-2xl text-lg text-primary-foreground/90 md:text-xl">
+        <p className="max-w-2xl text-lg md:text-xl" style={{ color: '#d89a32' }}>
           Fresh, Fast, and Flavorful. Your next favorite meal is just a click away.
         </p>
         <Button asChild size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground font-headline text-lg tracking-wider transition-transform duration-300 hover:scale-105">
