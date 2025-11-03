@@ -7,10 +7,11 @@
  * Access URL: /delivery
  * 
  * Features:
- * - View all delivery orders
+ * - View all delivery orders (REAL-TIME via Socket.IO)
  * - Update order status (Ready → Out for Delivery → Delivered)
  * - Search orders by ID, customer name, phone, or address
- * - Auto-refresh every 10 seconds
+ * - Live updates with WebSocket connection
+ * - Push notifications for new orders
  */
 
 'use client';
@@ -23,7 +24,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { apiRequest, getApiBaseUrl } from '@/lib/api-config';
+import { useSocketOrders } from '@/hooks/use-socket-orders';
 import { 
   Search, 
   LogOut, 
@@ -36,7 +37,9 @@ import {
   XCircle,
   RefreshCw,
   Truck,
-  Loader2
+  Loader2,
+  Wifi,
+  WifiOff
 } from 'lucide-react';
 
 interface OrderItem {
@@ -50,19 +53,24 @@ interface OrderItem {
 }
 
 interface Order {
+  id?: string;
   _id?: string;
-  orderId: string;
-  customerName: string;
-  customerPhone: string;
-  customerAddress: string;
+  orderId?: string;
+  orderid?: string;
+  userid?: string;
+  customerName?: string;
+  customerPhone?: string;
+  customerAddress?: string;
   customerEmail?: string;
-  items: OrderItem[];
-  subtotal: number;
-  total: number;
-  status: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'out-for-delivery' | 'delivered' | 'cancelled';
-  orderType: 'delivery' | 'pickup';
-  paymentMethod: string;
+  email?: string;
+  items?: OrderItem[];
+  subtotal?: number;
+  total?: number;
+  status?: string;
+  orderType?: string;
+  paymentMethod?: string;
   notes?: string;
+  deliveryTime?: string;
   deliveryInstructions?: string;
   createdAt?: string;
   updatedAt?: string;
@@ -79,9 +87,17 @@ const STATUS_OPTIONS = [
 ];
 
 export default function DeliveryPage() {
-  const [orders, setOrders] = useState<Order[]>([]);
+  // Use Socket.IO hook for real-time orders (LIVE UPDATES!)
+  const { 
+    orders: allOrders, 
+    isLoading, 
+    error: socketError,
+    isConnected, 
+    updateOrderStatus: socketUpdateStatus,
+    refetch 
+  } = useSocketOrders({ enableSound: true });
+
   const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -92,114 +108,40 @@ export default function DeliveryPage() {
   const [newOrdersCount, setNewOrdersCount] = useState(0);
   const { toast } = useToast();
 
-  // Fetch orders from API
-  const fetchOrders = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      
-      // Use a try-catch around the API call to handle any errors
-      let response;
-      try {
-        response = await apiRequest<{ success: boolean; data: Order[]; orders?: Order[] }>('/api/orders');
-      } catch (apiError) {
-        console.error('❌ API request failed:', apiError);
-        // Set empty orders instead of crashing
-        setOrders([]);
-        setFilteredOrders([]);
-        if (toast) {
-          toast({
-            title: 'Connection Error',
-            description: 'Could not connect to backend. Please check if the server is running.',
-            variant: 'destructive',
-          });
-        }
-        return;
-      }
-      
-      console.log('📦 Raw API Response:', response);
-      
-      // Safely extract orders data
-      const ordersData = (response && (response.data || response.orders)) || [];
-      console.log(`📋 Total orders from API: ${ordersData.length}`);
-      
-      // Filter to show ONLY delivery orders that need driver action
-      // Show orders that are: Ready for pickup, Out for Delivery, or Delivered (recent)
-      const activeOrders = Array.isArray(ordersData) ? ordersData.filter(order => {
-        if (!order || typeof order !== 'object') return false;
-        
-        // Must be a delivery order (not pickup)
-        const isDeliveryOrder = order.orderType === 'delivery';
-        
-        // Show only orders that need delivery driver attention
-        const needsDelivery = ['ready', 'out-for-delivery', 'delivered'].includes(order.status);
-        
-        return isDeliveryOrder && needsDelivery;
-      }) : [];
-      
-      console.log(`🚚 Delivery orders after filter: ${activeOrders.length}`);
-      
-      setOrders(activeOrders);
-      setFilteredOrders(activeOrders);
-      
-      if (activeOrders.length === 0 && ordersData.length > 0 && toast) {
-        toast({
-          title: 'No Delivery Orders',
-          description: `Found ${ordersData.length} total orders, but none are delivery orders. Check orderType field.`,
-          variant: 'default',
-        });
-      }
-    } catch (error) {
-      console.error('❌ Error fetching orders:', error);
-      // Set empty arrays on error to prevent crash
-      setOrders([]);
-      setFilteredOrders([]);
-      if (toast) {
-        toast({
-          title: 'Error',
-          description: error instanceof Error ? error.message : 'Failed to fetch orders. Please check your connection and try again.',
-          variant: 'destructive',
-        });
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  }, [toast]);
-
-  // Fetch orders on mount and set up auto-refresh
-  useEffect(() => {
-    fetchOrders();
+  // Filter delivery orders from all orders
+  const deliveryOrders = allOrders.filter(order => {
+    // Only show delivery orders (not pickup)
+    const isDeliveryOrder = order.orderType === 'delivery';
     
-    // Auto-refresh every 10 seconds
-    const interval = setInterval(() => {
-      fetchOrders();
-    }, 10000);
-
-    return () => clearInterval(interval);
-  }, [fetchOrders]);
+    // Only show orders that need delivery (Ready, Out for Delivery, or recently Delivered)
+    const needsDelivery = ['ready', 'out-for-delivery', 'delivered'].includes(order.status?.toLowerCase() || '');
+    
+    return isDeliveryOrder && needsDelivery;
+  });
 
   // Filter orders based on search query
   useEffect(() => {
     if (!searchQuery.trim()) {
-      setFilteredOrders(orders);
+      setFilteredOrders(deliveryOrders);
       return;
     }
 
     const query = searchQuery.toLowerCase();
-    const filtered = orders.filter(order => 
-      order.orderId.toLowerCase().includes(query) ||
-      order.customerName.toLowerCase().includes(query) ||
-      order.customerPhone.includes(query) ||
-      order.customerAddress.toLowerCase().includes(query)
+    const filtered = deliveryOrders.filter(order => 
+      order.orderid?.toLowerCase().includes(query) ||
+      order.customerName?.toLowerCase().includes(query) ||
+      order.customerPhone?.includes(query) ||
+      order.customerAddress?.toLowerCase().includes(query)
     );
     
     setFilteredOrders(filtered);
-  }, [searchQuery, orders]);
+  }, [searchQuery, deliveryOrders]);
 
   // Detect new orders and trigger notifications
   useEffect(() => {
     if (!isAuthenticated) return;
 
-    const currentCount = orders.length;
+    const currentCount = deliveryOrders.length;
     
     // Check if there are new orders
     if (previousOrderCount > 0 && currentCount > previousOrderCount) {
@@ -232,7 +174,7 @@ export default function DeliveryPage() {
     
     // Update previous count
     setPreviousOrderCount(currentCount);
-  }, [orders, isAuthenticated, previousOrderCount, toast]);
+  }, [deliveryOrders, isAuthenticated, previousOrderCount, toast]);
 
   // Request notification permission on mount (when authenticated)
   useEffect(() => {
@@ -241,34 +183,26 @@ export default function DeliveryPage() {
     }
   }, [isAuthenticated]);
 
-  // Update order status
+  // Update order status (using Socket.IO for real-time updates)
   const handleStatusUpdate = async (orderId: string, newStatus: string) => {
     setUpdatingStatus(orderId);
     
     try {
-      // Try by orderId first (ORD-xxx format)
-      let order = orders.find(o => o.orderId === orderId);
-      const idToUse = order?._id || orderId;
-
-      const response = await apiRequest<{ success: boolean; data?: Order; message?: string }>(
-        `/api/orders/${idToUse}`,
-        {
-          method: 'PUT',
-          body: JSON.stringify({ status: newStatus }),
-        }
-      );
-
-      if (response && response.success !== false) {
-        toast({
-          title: 'Success',
-          description: `Order status updated to ${newStatus.replace('-', ' ')}`,
-        });
-        
-        // Refresh orders
-        await fetchOrders();
-      } else {
-        throw new Error(response?.message || 'Failed to update order status');
+      // Find the order
+      const order = deliveryOrders.find(o => o.orderid === orderId || o.id === orderId);
+      if (!order) {
+        throw new Error('Order not found');
       }
+
+      // Use Socket.IO hook to update status (will broadcast to all connected clients)
+      await socketUpdateStatus(order.id || order.orderid, newStatus);
+
+      toast({
+        title: 'Success',
+        description: `Order status updated to ${newStatus.replace('-', ' ')}`,
+      });
+      
+      // No need to refresh - Socket.IO will update automatically!
     } catch (error) {
       console.error('Error updating order status:', error);
       toast({
@@ -424,7 +358,10 @@ export default function DeliveryPage() {
   };
 
   // Calculate delivery-ready orders count
-  const readyOrdersCount = orders.filter(o => o.status === 'ready' || o.status === 'out-for-delivery').length;
+  const readyOrdersCount = deliveryOrders.filter(o => {
+    const status = (o.status || '').toLowerCase();
+    return status === 'ready' || status === 'out-for-delivery';
+  }).length;
 
   // Show login screen if not authenticated
   if (!isAuthenticated) {
@@ -515,10 +452,25 @@ export default function DeliveryPage() {
               </div>
             </div>
             <div className="flex items-center gap-4">
+              {/* Real-time Connection Status */}
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/10 backdrop-blur-sm">
+                {isConnected ? (
+                  <>
+                    <Wifi className="h-4 w-4 text-green-400" />
+                    <span className="text-xs text-white font-medium">LIVE</span>
+                  </>
+                ) : (
+                  <>
+                    <WifiOff className="h-4 w-4 text-red-400" />
+                    <span className="text-xs text-white font-medium">OFFLINE</span>
+                  </>
+                )}
+              </div>
+
               <Button
                 variant="outline"
                 size="sm"
-                onClick={fetchOrders}
+                onClick={refetch}
                 disabled={isLoading}
                 className="flex items-center gap-2 bg-white/10 border-white/30 text-white hover:bg-white/20 backdrop-blur-sm"
               >
@@ -565,7 +517,7 @@ export default function DeliveryPage() {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-purple-600">
-                {orders.filter(o => o.status === 'out-for-delivery').length}
+                {deliveryOrders.filter(o => (o.status || '').toLowerCase() === 'out-for-delivery').length}
               </div>
             </CardContent>
           </Card>
@@ -591,7 +543,7 @@ export default function DeliveryPage() {
           <CardHeader>
             <CardTitle>Delivery Orders</CardTitle>
             <CardDescription>
-              View and manage delivery orders. Update status when you pick up or deliver an order. Auto-refreshes every 10 seconds.
+              View and manage delivery orders. Update status when you pick up or deliver an order. Real-time updates via Socket.IO ⚡
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -625,11 +577,11 @@ export default function DeliveryPage() {
                   </TableHeader>
                   <TableBody>
                     {filteredOrders.map((order) => (
-                      <TableRow key={order.orderId || order._id}>
+                      <TableRow key={order.orderid || order.id}>
                         <TableCell className="font-medium">
                           <div className="flex items-center gap-2">
                             <Package className="h-4 w-4 text-gray-400" />
-                            {order.orderId}
+                            {order.orderid}
                           </div>
                         </TableCell>
                         <TableCell>
@@ -657,24 +609,24 @@ export default function DeliveryPage() {
                         </TableCell>
                         <TableCell>
                           <div className="space-y-1">
-                            {order.items.slice(0, 2).map((item, idx) => (
+                            {(order.items || []).slice(0, 2).map((item, idx) => (
                               <div key={idx} className="text-sm">
                                 {item.quantity}x {item.name}
                                 {item.size && ` (${item.size})`}
                               </div>
                             ))}
-                            {order.items.length > 2 && (
+                            {(order.items || []).length > 2 && (
                               <div className="text-xs text-gray-500">
-                                +{order.items.length - 2} more items
+                                +{(order.items || []).length - 2} more items
                               </div>
                             )}
                           </div>
                         </TableCell>
                         <TableCell className="font-medium">
-                          ${order.total.toFixed(2)}
+                          ${(order.total || 0).toFixed(2)}
                         </TableCell>
                         <TableCell>
-                          {getStatusBadge(order.status)}
+                          {getStatusBadge(order.status || 'pending')}
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2 text-sm text-gray-500">
@@ -684,12 +636,12 @@ export default function DeliveryPage() {
                         </TableCell>
                         <TableCell className="text-right">
                           <Select
-                            value={order.status}
-                            onValueChange={(value) => handleStatusUpdate(order.orderId, value)}
-                            disabled={updatingStatus === order.orderId}
+                            value={order.status || 'pending'}
+                            onValueChange={(value) => handleStatusUpdate(order.orderid || order.id || '', value)}
+                            disabled={updatingStatus === order.orderid}
                           >
                             <SelectTrigger className="w-[160px]">
-                              {updatingStatus === order.orderId ? (
+                              {updatingStatus === order.orderid ? (
                                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
                               ) : (
                                 <SelectValue />
