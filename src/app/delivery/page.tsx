@@ -84,6 +84,9 @@ export default function DeliveryPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [driverCode, setDriverCode] = useState('');
+  const [loginAttempting, setLoginAttempting] = useState(false);
   const { toast } = useToast();
 
   // Fetch orders from API
@@ -116,13 +119,18 @@ export default function DeliveryPage() {
       const ordersData = (response && (response.data || response.orders)) || [];
       console.log(`📋 Total orders from API: ${ordersData.length}`);
       
-      // Filter out cancelled orders by default, show only delivery-relevant statuses
-      // Also handle cases where orderType might be missing (show all non-cancelled orders if no orderType filter)
+      // Filter to show ONLY delivery orders that need driver action
+      // Show orders that are: Ready for pickup, Out for Delivery, or Delivered (recent)
       const activeOrders = Array.isArray(ordersData) ? ordersData.filter(order => {
         if (!order || typeof order !== 'object') return false;
-        const notCancelled = order.status !== 'cancelled';
-        const isDelivery = order.orderType === 'delivery' || !order.orderType; // Show orders without orderType too
-        return notCancelled && isDelivery;
+        
+        // Must be a delivery order (not pickup)
+        const isDeliveryOrder = order.orderType === 'delivery';
+        
+        // Show only orders that need delivery driver attention
+        const needsDelivery = ['ready', 'out-for-delivery', 'delivered'].includes(order.status);
+        
+        return isDeliveryOrder && needsDelivery;
       }) : [];
       
       console.log(`🚚 Delivery orders after filter: ${activeOrders.length}`);
@@ -224,12 +232,52 @@ export default function DeliveryPage() {
     }
   };
 
+  // Handle driver login
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginAttempting(true);
+    
+    // Simple driver code authentication (can be enhanced with API call)
+    // Default codes: DRIVER2024, DELIVERY123
+    const validCodes = ['DRIVER2024', 'DELIVERY123', 'DRIVER', '1234'];
+    
+    setTimeout(() => {
+      if (validCodes.includes(driverCode.toUpperCase())) {
+        setIsAuthenticated(true);
+        localStorage.setItem('driverAuthenticated', 'true');
+        toast({
+          title: 'Login Successful',
+          description: 'Welcome to the Delivery Dashboard!',
+        });
+      } else {
+        toast({
+          title: 'Invalid Code',
+          description: 'Please enter a valid driver code',
+          variant: 'destructive',
+        });
+      }
+      setLoginAttempting(false);
+    }, 500);
+  };
+
   // Handle logout
   const handleLogout = () => {
     if (confirm('Are you sure you want to logout?')) {
-      window.location.href = '/';
+      setIsAuthenticated(false);
+      localStorage.removeItem('driverAuthenticated');
+      setDriverCode('');
+      toast({
+        title: 'Logged Out',
+        description: 'You have been logged out successfully',
+      });
     }
   };
+
+  // Check authentication on mount
+  useEffect(() => {
+    const isAuth = localStorage.getItem('driverAuthenticated') === 'true';
+    setIsAuthenticated(isAuth);
+  }, []);
 
   // Get status badge color
   const getStatusBadge = (status: string) => {
@@ -259,6 +307,67 @@ export default function DeliveryPage() {
 
   // Calculate delivery-ready orders count
   const readyOrdersCount = orders.filter(o => o.status === 'ready' || o.status === 'out-for-delivery').length;
+
+  // Show login screen if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <div className="flex justify-center mb-4">
+              <div className="bg-purple-100 p-4 rounded-full">
+                <Truck className="h-12 w-12 text-purple-600" />
+              </div>
+            </div>
+            <CardTitle className="text-2xl">Delivery Driver Login</CardTitle>
+            <CardDescription>
+              Enter your driver code to access the delivery dashboard
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Driver Code</label>
+                <Input
+                  type="password"
+                  placeholder="Enter your driver code"
+                  value={driverCode}
+                  onChange={(e) => setDriverCode(e.target.value)}
+                  disabled={loginAttempting}
+                  className="text-center text-lg tracking-wider"
+                  autoFocus
+                />
+                <p className="text-xs text-muted-foreground text-center">
+                  Contact your manager if you don't have a code
+                </p>
+              </div>
+              <Button
+                type="submit"
+                className="w-full bg-purple-600 hover:bg-purple-700"
+                disabled={loginAttempting || !driverCode}
+              >
+                {loginAttempting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Logging in...
+                  </>
+                ) : (
+                  <>
+                    <Truck className="mr-2 h-4 w-4" />
+                    Access Dashboard
+                  </>
+                )}
+              </Button>
+            </form>
+            <div className="mt-6 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-xs text-blue-800 font-medium mb-1">Demo Codes (for testing):</p>
+              <p className="text-xs text-blue-600">DRIVER2024, DELIVERY123, DRIVER, 1234</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
