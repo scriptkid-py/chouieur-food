@@ -87,6 +87,9 @@ export default function DeliveryPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [driverCode, setDriverCode] = useState('');
   const [loginAttempting, setLoginAttempting] = useState(false);
+  const [previousOrderCount, setPreviousOrderCount] = useState(0);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [newOrdersCount, setNewOrdersCount] = useState(0);
   const { toast } = useToast();
 
   // Fetch orders from API
@@ -192,6 +195,52 @@ export default function DeliveryPage() {
     setFilteredOrders(filtered);
   }, [searchQuery, orders]);
 
+  // Detect new orders and trigger notifications
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const currentCount = orders.length;
+    
+    // Check if there are new orders
+    if (previousOrderCount > 0 && currentCount > previousOrderCount) {
+      const newOrdersCount = currentCount - previousOrderCount;
+      setNewOrdersCount(newOrdersCount);
+      
+      // Play sound notification
+      playNotificationSound();
+      
+      // Vibrate device (mobile)
+      vibrateDevice();
+      
+      // Show browser notification
+      const orderText = newOrdersCount === 1 ? 'order' : 'orders';
+      showBrowserNotification(
+        `🚚 ${newOrdersCount} New Delivery ${orderText.charAt(0).toUpperCase() + orderText.slice(1)}!`,
+        `You have ${newOrdersCount} new delivery ${orderText} ready for pickup`
+      );
+      
+      // Show toast notification
+      toast({
+        title: `🚚 ${newOrdersCount} New Order${newOrdersCount > 1 ? 's' : ''}!`,
+        description: `${newOrdersCount} new delivery order${newOrdersCount > 1 ? 's are' : ' is'} ready for pickup`,
+        duration: 5000,
+      });
+
+      // Reset new orders count after 5 seconds
+      setTimeout(() => setNewOrdersCount(0), 5000);
+    }
+    
+    // Update previous count
+    setPreviousOrderCount(currentCount);
+  }, [orders, isAuthenticated, previousOrderCount, toast]);
+
+  // Request notification permission on mount (when authenticated)
+  useEffect(() => {
+    if (isAuthenticated) {
+      requestNotificationPermission();
+    }
+  }, [isAuthenticated]);
+
   // Update order status
   const handleStatusUpdate = async (orderId: string, newStatus: string) => {
     setUpdatingStatus(orderId);
@@ -278,6 +327,75 @@ export default function DeliveryPage() {
     const isAuth = localStorage.getItem('driverAuthenticated') === 'true';
     setIsAuthenticated(isAuth);
   }, []);
+
+  // Request notification permission
+  const requestNotificationPermission = async () => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      const permission = await Notification.requestPermission();
+      setNotificationsEnabled(permission === 'granted');
+      if (permission === 'granted') {
+        toast({
+          title: 'Notifications Enabled',
+          description: 'You will receive alerts for new orders',
+        });
+      }
+    } else if ('Notification' in window && Notification.permission === 'granted') {
+      setNotificationsEnabled(true);
+    }
+  };
+
+  // Play notification sound
+  const playNotificationSound = () => {
+    try {
+      // Create audio context and oscillator for beep sound
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      oscillator.frequency.value = 800; // Frequency in Hz
+      oscillator.type = 'sine';
+      
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+      
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.5);
+    } catch (error) {
+      console.error('Error playing notification sound:', error);
+    }
+  };
+
+  // Vibrate device (mobile)
+  const vibrateDevice = () => {
+    if ('vibrate' in navigator) {
+      navigator.vibrate([200, 100, 200]); // Vibrate pattern: 200ms, pause 100ms, 200ms
+    }
+  };
+
+  // Show browser notification
+  const showBrowserNotification = (title: string, body: string) => {
+    if (notificationsEnabled && 'Notification' in window && Notification.permission === 'granted') {
+      const notification = new Notification(title, {
+        body,
+        icon: '/favicon.ico',
+        badge: '/favicon.ico',
+        tag: 'new-order',
+        requireInteraction: false,
+      });
+
+      // Auto-close after 5 seconds
+      setTimeout(() => notification.close(), 5000);
+
+      // Click handler to focus window
+      notification.onclick = () => {
+        window.focus();
+        notification.close();
+      };
+    }
+  };
 
   // Get status badge color
   const getStatusBadge = (status: string) => {
@@ -376,11 +494,23 @@ export default function DeliveryPage() {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="bg-white/20 p-2 rounded-lg backdrop-blur-sm">
+              <div className="bg-white/20 p-2 rounded-lg backdrop-blur-sm relative">
                 <Truck className="h-6 w-6 text-white" />
+                {newOrdersCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center animate-pulse">
+                    {newOrdersCount}
+                  </span>
+                )}
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-white">Delivery Driver Dashboard</h1>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-2xl font-bold text-white">Delivery Driver Dashboard</h1>
+                  {notificationsEnabled && (
+                    <Badge className="bg-green-500 text-white text-xs">
+                      🔔 Notifications ON
+                    </Badge>
+                  )}
+                </div>
                 <p className="text-xs text-white/90 font-medium">🚚 Driver Access Only • Not in Public Menu</p>
               </div>
             </div>
