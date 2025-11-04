@@ -1256,6 +1256,125 @@ app.put('/api/orders/:id', jsonParser, urlencodedParser, async (req, res) => {
   }
 });
 
+// Assign driver to order
+app.patch('/api/orders/:id/assign-driver', jsonParser, urlencodedParser, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { driverName, driverId } = req.body;
+    
+    if (!driverName) {
+      return res.status(400).json({
+        success: false,
+        error: 'Driver name is required',
+        message: 'Please provide a driver name'
+      });
+    }
+    
+    // Try to find order by orderId first (if it looks like ORD-...)
+    // Otherwise try by MongoDB _id
+    let order = null;
+    if (id.startsWith('ORD-')) {
+      order = await Order.findOne({ orderId: id });
+    } else {
+      // Try MongoDB ObjectId
+      if (mongoose.Types.ObjectId.isValid(id)) {
+        order = await Order.findById(id);
+      }
+      // If not found, also try orderId field
+      if (!order) {
+        order = await Order.findOne({ orderId: id });
+      }
+    }
+    
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        error: 'Order not found',
+        message: `Order with ID ${id} does not exist`
+      });
+    }
+    
+    // Assign driver
+    order.assignedDriver = driverName;
+    order.assignedDriverId = driverId || null;
+    order.assignedAt = new Date();
+    
+    await order.save();
+    
+    // Broadcast order update to all connected clients
+    broadcastOrderUpdate('updateOrderStatus', order);
+    
+    res.status(200).json({
+      success: true,
+      message: `Driver ${driverName} assigned to order successfully`,
+      data: order,
+      source: 'mongodb'
+    });
+  } catch (error) {
+    console.error('❌ Error assigning driver:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to assign driver',
+      message: error.message
+    });
+  }
+});
+
+// Unassign driver from order
+app.patch('/api/orders/:id/unassign-driver', jsonParser, urlencodedParser, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Try to find order by orderId first (if it looks like ORD-...)
+    // Otherwise try by MongoDB _id
+    let order = null;
+    if (id.startsWith('ORD-')) {
+      order = await Order.findOne({ orderId: id });
+    } else {
+      // Try MongoDB ObjectId
+      if (mongoose.Types.ObjectId.isValid(id)) {
+        order = await Order.findById(id);
+      }
+      // If not found, also try orderId field
+      if (!order) {
+        order = await Order.findOne({ orderId: id });
+      }
+    }
+    
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        error: 'Order not found',
+        message: `Order with ID ${id} does not exist`
+      });
+    }
+    
+    // Unassign driver
+    order.assignedDriver = null;
+    order.assignedDriverId = null;
+    order.assignedAt = null;
+    
+    await order.save();
+    
+    // Broadcast order update to all connected clients
+    broadcastOrderUpdate('updateOrderStatus', order);
+    
+    res.status(200).json({
+      success: true,
+      message: 'Driver unassigned from order successfully',
+      data: order,
+      source: 'mongodb'
+    });
+  } catch (error) {
+    console.error('❌ Error unassigning driver:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to unassign driver',
+      message: error.message
+    });
+  }
+});
+
 // =============================================================================
 // USERS ENDPOINTS
 // =============================================================================

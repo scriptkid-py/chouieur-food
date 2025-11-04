@@ -5,13 +5,27 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useSocketOrders } from "@/hooks/use-socket-orders";
-import { Loader2, RefreshCw, Eye, CheckCircle, XCircle, Clock, Wifi, WifiOff } from "lucide-react";
+import { Loader2, RefreshCw, Eye, CheckCircle, XCircle, Clock, Wifi, WifiOff, Truck, UserX } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getApiBaseUrl } from "@/lib/api-config";
+import { useToast } from "@/hooks/use-toast";
+
+// Available delivery drivers
+const DRIVERS = [
+  { id: 'driver1', name: 'Driver 1' },
+  { id: 'driver2', name: 'Driver 2' },
+  { id: 'driver3', name: 'Driver 3' },
+  { id: 'driver4', name: 'Driver 4' },
+  { id: 'driver5', name: 'Driver 5' },
+];
 
 export default function AdminOrdersPage() {
   const { orders, isLoading, error, refetch, updateOrderStatus, isConnected } = useSocketOrders({ enableSound: true });
   const [updatingOrders, setUpdatingOrders] = useState<Set<string>>(new Set());
+  const [assigningDriver, setAssigningDriver] = useState<Set<string>>(new Set());
+  const { toast } = useToast();
 
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
@@ -65,6 +79,104 @@ export default function AdminOrdersPage() {
       // You could add a toast notification here for better UX
     } finally {
       setUpdatingOrders(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(orderId);
+        return newSet;
+      });
+    }
+  };
+
+  const handleAssignDriver = async (orderId: string, driverName: string, driverId: string) => {
+    try {
+      setAssigningDriver(prev => new Set(prev).add(orderId));
+      
+      const apiUrl = getApiBaseUrl();
+      const order = orders.find(o => (o.orderid || o.id) === orderId);
+      const idToUse = order?.id || orderId;
+      
+      const response = await fetch(`${apiUrl}/api/orders/${idToUse}/assign-driver`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          driverName,
+          driverId
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to assign driver: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      
+      if (data.success) {
+        toast({
+          title: 'Driver Assigned',
+          description: `${driverName} has been assigned to this order`,
+        });
+        // Orders will be automatically refreshed by Socket.IO
+      } else {
+        throw new Error(data.message || 'Failed to assign driver');
+      }
+    } catch (error) {
+      console.error('Failed to assign driver:', error);
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to assign driver',
+        variant: 'destructive',
+      });
+    } finally {
+      setAssigningDriver(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(orderId);
+        return newSet;
+      });
+    }
+  };
+
+  const handleUnassignDriver = async (orderId: string) => {
+    try {
+      setAssigningDriver(prev => new Set(prev).add(orderId));
+      
+      const apiUrl = getApiBaseUrl();
+      const order = orders.find(o => (o.orderid || o.id) === orderId);
+      const idToUse = order?.id || orderId;
+      
+      const response = await fetch(`${apiUrl}/api/orders/${idToUse}/unassign-driver`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to unassign driver: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      
+      if (data.success) {
+        toast({
+          title: 'Driver Unassigned',
+          description: 'Driver has been removed from this order',
+        });
+        // Orders will be automatically refreshed by Socket.IO
+      } else {
+        throw new Error(data.message || 'Failed to unassign driver');
+      }
+    } catch (error) {
+      console.error('Failed to unassign driver:', error);
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to unassign driver',
+        variant: 'destructive',
+      });
+    } finally {
+      setAssigningDriver(prev => {
         const newSet = new Set(prev);
         newSet.delete(orderId);
         return newSet;
@@ -173,6 +285,7 @@ export default function AdminOrdersPage() {
                   <TableHead>Customer</TableHead>
                   <TableHead>Items</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Driver</TableHead>
                   <TableHead className="text-right">Total</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
@@ -180,7 +293,7 @@ export default function AdminOrdersPage() {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8">
+                    <TableCell colSpan={8} className="text-center py-8">
                       <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
                       <p>Loading orders...</p>
                     </TableCell>
@@ -234,6 +347,61 @@ export default function AdminOrdersPage() {
                           <Badge className={getStatusColor(order.status)}>
                             {order.status}
                           </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {order.orderType === 'delivery' ? (
+                            <div className="space-y-2">
+                              {order.assignedDriver ? (
+                                <div className="flex items-center gap-2">
+                                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                                    <Truck className="h-3 w-3 mr-1" />
+                                    {order.assignedDriver}
+                                  </Badge>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleUnassignDriver(order.orderid || order.id)}
+                                    disabled={assigningDriver.has(order.orderid || order.id)}
+                                    className="h-6 w-6 p-0"
+                                  >
+                                    {assigningDriver.has(order.orderid || order.id) ? (
+                                      <Loader2 className="h-3 w-3 animate-spin" />
+                                    ) : (
+                                      <UserX className="h-3 w-3 text-red-500" />
+                                    )}
+                                  </Button>
+                                </div>
+                              ) : (
+                                <Select
+                                  onValueChange={(value) => {
+                                    const driver = DRIVERS.find(d => d.id === value);
+                                    if (driver) {
+                                      handleAssignDriver(order.orderid || order.id, driver.name, driver.id);
+                                    }
+                                  }}
+                                  disabled={assigningDriver.has(order.orderid || order.id)}
+                                >
+                                  <SelectTrigger className="w-[140px] h-8">
+                                    {assigningDriver.has(order.orderid || order.id) ? (
+                                      <Loader2 className="h-3 w-3 animate-spin mr-2" />
+                                    ) : (
+                                      <Truck className="h-3 w-3 mr-2 text-gray-400" />
+                                    )}
+                                    <SelectValue placeholder="Assign Driver" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {DRIVERS.map((driver) => (
+                                      <SelectItem key={driver.id} value={driver.id}>
+                                        {driver.name}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-sm text-muted-foreground">Pickup</span>
+                          )}
                         </TableCell>
                         <TableCell className="text-right font-medium">
                           {parseFloat(String(order.total || 0)).toLocaleString()} FCFA
@@ -331,7 +499,7 @@ export default function AdminOrdersPage() {
                   })
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                       No orders found. Orders will appear here once customers start placing orders.
                     </TableCell>
                   </TableRow>

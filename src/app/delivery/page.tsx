@@ -116,7 +116,18 @@ export default function DeliveryPage() {
     // Only show orders that need delivery (Ready, Out for Delivery, or recently Delivered)
     const needsDelivery = ['ready', 'out-for-delivery', 'delivered'].includes(order.status?.toLowerCase() || '');
     
-    return isDeliveryOrder && needsDelivery;
+    if (!isDeliveryOrder || !needsDelivery) return false;
+    
+    // If driver is authenticated, only show orders assigned to them
+    if (isAuthenticated) {
+      const driverId = localStorage.getItem('driverId');
+      if (driverId) {
+        // Show orders assigned to this driver OR unassigned orders
+        return !order.assignedDriverId || order.assignedDriverId === driverId;
+      }
+    }
+    
+    return true;
   });
 
   // Filter orders based on search query
@@ -215,22 +226,33 @@ export default function DeliveryPage() {
     }
   };
 
+  // Driver code to driver ID mapping
+  const DRIVER_CODE_MAP: { [key: string]: { id: string; name: string } } = {
+    'DRIVER2024': { id: 'driver1', name: 'Driver 1' },
+    'DELIVERY123': { id: 'driver2', name: 'Driver 2' },
+    'DRIVER': { id: 'driver3', name: 'Driver 3' },
+    '1234': { id: 'driver4', name: 'Driver 4' },
+  };
+
   // Handle driver login
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     setLoginAttempting(true);
     
     // Simple driver code authentication (can be enhanced with API call)
-    // Default codes: DRIVER2024, DELIVERY123
-    const validCodes = ['DRIVER2024', 'DELIVERY123', 'DRIVER', '1234'];
+    const validCodes = Object.keys(DRIVER_CODE_MAP);
+    const codeUpper = driverCode.toUpperCase();
     
     setTimeout(() => {
-      if (validCodes.includes(driverCode.toUpperCase())) {
+      if (validCodes.includes(codeUpper)) {
+        const driverInfo = DRIVER_CODE_MAP[codeUpper];
         setIsAuthenticated(true);
         localStorage.setItem('driverAuthenticated', 'true');
+        localStorage.setItem('driverId', driverInfo.id);
+        localStorage.setItem('driverName', driverInfo.name);
         toast({
           title: 'Login Successful',
-          description: 'Welcome to the Delivery Dashboard!',
+          description: `Welcome ${driverInfo.name}!`,
         });
       } else {
         toast({
@@ -248,6 +270,8 @@ export default function DeliveryPage() {
     if (confirm('Are you sure you want to logout?')) {
       setIsAuthenticated(false);
       localStorage.removeItem('driverAuthenticated');
+      localStorage.removeItem('driverId');
+      localStorage.removeItem('driverName');
       setDriverCode('');
       toast({
         title: 'Logged Out',
@@ -260,6 +284,16 @@ export default function DeliveryPage() {
   useEffect(() => {
     const isAuth = localStorage.getItem('driverAuthenticated') === 'true';
     setIsAuthenticated(isAuth);
+    // Restore driver info if authenticated
+    if (isAuth) {
+      const driverId = localStorage.getItem('driverId');
+      const driverName = localStorage.getItem('driverName');
+      if (!driverId || !driverName) {
+        // If driver info is missing, logout
+        setIsAuthenticated(false);
+        localStorage.removeItem('driverAuthenticated');
+      }
+    }
   }, []);
 
   // Request notification permission
@@ -448,7 +482,12 @@ export default function DeliveryPage() {
                     </Badge>
                   )}
                 </div>
-                <p className="text-xs text-white/90 font-medium">🚚 Driver Access Only • Not in Public Menu</p>
+                <p className="text-xs text-white/90 font-medium">
+                  🚚 Driver Access Only • Not in Public Menu
+                  {isAuthenticated && localStorage.getItem('driverName') && (
+                    <span className="ml-2">• {localStorage.getItem('driverName')}</span>
+                  )}
+                </p>
               </div>
             </div>
             <div className="flex items-center gap-4">

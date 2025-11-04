@@ -143,6 +143,22 @@ const orderSchema = new mongoose.Schema({
     trim: true,
     maxlength: [200, 'Delivery instructions cannot exceed 200 characters']
   },
+  // Driver assignment
+  assignedDriver: {
+    type: String,
+    trim: true,
+    default: null,
+    maxlength: [100, 'Driver name cannot exceed 100 characters']
+  },
+  assignedDriverId: {
+    type: String,
+    trim: true,
+    default: null
+  },
+  assignedAt: {
+    type: Date,
+    default: null
+  },
   // Tracking fields
   confirmedAt: {
     type: Date

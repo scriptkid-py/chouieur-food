@@ -18,6 +18,9 @@ export interface HybridOrder {
   deliveryTime?: string;
   paymentMethod?: string;
   orderType?: string;
+  assignedDriver?: string;
+  assignedDriverId?: string;
+  assignedAt?: any;
 }
 
 export function useHybridOrders() {

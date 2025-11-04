@@ -62,6 +62,9 @@ const transformOrder = (mongoOrder: any): HybridOrder => {
     deliveryTime: mongoOrder.estimatedDeliveryTime || mongoOrder.deliveryTime || '',
     paymentMethod: mongoOrder.paymentMethod || 'cash',
     orderType: mongoOrder.orderType || 'delivery',
+    assignedDriver: mongoOrder.assignedDriver,
+    assignedDriverId: mongoOrder.assignedDriverId,
+    assignedAt: mongoOrder.assignedAt,
   };
 };
 
