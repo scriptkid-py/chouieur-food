@@ -122,10 +122,19 @@ export function CheckoutForm() {
         throw new Error(data.error || 'Could not determine address from location');
       }
     } catch (error: any) {
-      console.error('Geolocation error:', error);
+      // Only log detailed errors in development
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('Geolocation unavailable:', {
+          code: error.code,
+          message: error.message || 'Position unavailable',
+          type: error.code === 1 ? 'PERMISSION_DENIED' : 
+                error.code === 2 ? 'POSITION_UNAVAILABLE' : 
+                error.code === 3 ? 'TIMEOUT' : 'UNKNOWN'
+        });
+      }
       
       let errorMessage = 'Failed to get your location.';
-      let errorTitle = 'Location Error';
+      let errorTitle = 'Location Unavailable';
       
       if (error.code === 1) {
         // PERMISSION_DENIED
@@ -134,7 +143,7 @@ export function CheckoutForm() {
       } else if (error.code === 2) {
         // POSITION_UNAVAILABLE - GPS/WiFi unavailable or location service disabled
         errorTitle = 'Location Unavailable';
-        errorMessage = 'Unable to determine your location. Please check that:\n• GPS is enabled on your device\n• WiFi or mobile data is connected\n• Location services are enabled\n\nYou can enter your address manually below.';
+        errorMessage = 'Unable to determine your location. This is normal if GPS is disabled or location services are unavailable. You can enter your address manually - it\'s quick and easy!';
       } else if (error.code === 3) {
         // TIMEOUT
         errorTitle = 'Location Timeout';
@@ -143,11 +152,12 @@ export function CheckoutForm() {
         errorMessage = error.message;
       }
       
+      // Show user-friendly error message
       toast({
         title: errorTitle,
         description: errorMessage,
         variant: 'destructive',
-        duration: 6000,
+        duration: 5000,
       });
     } finally {
       setIsGettingLocation(false);
