@@ -343,38 +343,63 @@ export function CheckoutForm() {
         {/* Address field - different behavior for delivery vs pickup */}
         {orderType === 'delivery' ? (
           <div className="space-y-2">
-            <Label htmlFor="address">Delivery Address</Label>
-            <div className="flex gap-2">
-              <Input 
-                id="address" 
-                placeholder="Enter your delivery address or use location"
-                {...register('address', { required: 'Address is required for delivery' })} 
-                className="flex-1"
-              />
+            <div className="flex items-center justify-between">
+              <Label htmlFor="address">Delivery Address *</Label>
               <Button
                 type="button"
-                variant="outline"
+                variant="ghost"
+                size="sm"
                 onClick={handleGetLocation}
                 disabled={isGettingLocation}
-                className="shrink-0"
+                className="text-xs h-7"
               >
                 {isGettingLocation ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <>
+                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                    Getting location...
+                  </>
                 ) : (
                   <>
-                    <Navigation className="h-4 w-4 mr-2" />
+                    <Navigation className="h-3 w-3 mr-1" />
                     Use My Location
                   </>
                 )}
               </Button>
             </div>
+            <Input 
+              id="address" 
+              placeholder="Enter your delivery address (or click 'Use My Location' above)"
+              {...register('address', { required: 'Address is required for delivery' })} 
+              className="w-full"
+            />
             {errors.address && <p className="text-sm text-destructive">{errors.address.message}</p>}
-            {savedAddress && (
-              <p className="text-xs text-muted-foreground">
-                <MapPin className="h-3 w-3 inline mr-1" />
-                Saved address: {savedAddress}
-              </p>
+            {savedAddress && addressValue !== savedAddress && (
+              <div className="p-2 bg-muted rounded-md">
+                <p className="text-xs text-muted-foreground mb-1">
+                  <MapPin className="h-3 w-3 inline mr-1" />
+                  Saved address:
+                </p>
+                <p className="text-sm font-medium">{savedAddress}</p>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setValue('address', savedAddress);
+                    toast({
+                      title: 'Address Loaded',
+                      description: 'Your saved address has been loaded',
+                    });
+                  }}
+                  className="mt-1 h-6 text-xs"
+                >
+                  Use This Address
+                </Button>
+              </div>
             )}
+            <p className="text-xs text-muted-foreground">
+              💡 Tip: If location doesn't work, you can always enter your address manually above
+            </p>
           </div>
         ) : (
           <div className="space-y-2">
