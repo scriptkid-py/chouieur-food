@@ -101,7 +101,8 @@ export default function DeliveryPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [driverCode, setDriverCode] = useState('');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [loginAttempting, setLoginAttempting] = useState(false);
   const [previousOrderCount, setPreviousOrderCount] = useState(0);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
@@ -226,38 +227,49 @@ export default function DeliveryPage() {
     }
   };
 
-  // Driver code to driver ID mapping
-  const DRIVER_CODE_MAP: { [key: string]: { id: string; name: string } } = {
-    'DRIVER2024': { id: 'driver1', name: 'Driver 1' },
-    'DELIVERY123': { id: 'driver2', name: 'Driver 2' },
-    'DRIVER': { id: 'driver3', name: 'Driver 3' },
-    '1234': { id: 'driver4', name: 'Driver 4' },
-  };
+  // Driver accounts with username and password
+  const DRIVER_ACCOUNTS = [
+    {
+      username: 'driver1',
+      password: 'driver123',
+      id: 'driver1',
+      name: 'Driver 1'
+    },
+    {
+      username: 'driver2',
+      password: 'driver456',
+      id: 'driver2',
+      name: 'Driver 2'
+    }
+  ];
 
   // Handle driver login
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     setLoginAttempting(true);
     
-    // Simple driver code authentication (can be enhanced with API call)
-    const validCodes = Object.keys(DRIVER_CODE_MAP);
-    const codeUpper = driverCode.toUpperCase();
+    // Find matching driver account
+    const driver = DRIVER_ACCOUNTS.find(
+      account => account.username.toLowerCase() === username.toLowerCase() && account.password === password
+    );
     
     setTimeout(() => {
-      if (validCodes.includes(codeUpper)) {
-        const driverInfo = DRIVER_CODE_MAP[codeUpper];
+      if (driver) {
         setIsAuthenticated(true);
         localStorage.setItem('driverAuthenticated', 'true');
-        localStorage.setItem('driverId', driverInfo.id);
-        localStorage.setItem('driverName', driverInfo.name);
+        localStorage.setItem('driverId', driver.id);
+        localStorage.setItem('driverName', driver.name);
+        localStorage.setItem('driverUsername', driver.username);
+        setUsername('');
+        setPassword('');
         toast({
           title: 'Login Successful',
-          description: `Welcome ${driverInfo.name}!`,
+          description: `Welcome ${driver.name}!`,
         });
       } else {
         toast({
-          title: 'Invalid Code',
-          description: 'Please enter a valid driver code',
+          title: 'Invalid Credentials',
+          description: 'Please check your username and password',
           variant: 'destructive',
         });
       }
@@ -272,7 +284,9 @@ export default function DeliveryPage() {
       localStorage.removeItem('driverAuthenticated');
       localStorage.removeItem('driverId');
       localStorage.removeItem('driverName');
-      setDriverCode('');
+      localStorage.removeItem('driverUsername');
+      setUsername('');
+      setPassword('');
       toast({
         title: 'Logged Out',
         description: 'You have been logged out successfully',
@@ -410,30 +424,41 @@ export default function DeliveryPage() {
             </div>
             <CardTitle className="text-2xl">Delivery Driver Login</CardTitle>
             <CardDescription>
-              Enter your driver code to access the delivery dashboard
+              Enter your username and password to access the delivery dashboard
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium">Driver Code</label>
+                <label className="text-sm font-medium">Username</label>
                 <Input
-                  type="password"
-                  placeholder="Enter your driver code"
-                  value={driverCode}
-                  onChange={(e) => setDriverCode(e.target.value)}
+                  type="text"
+                  placeholder="Enter your username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
                   disabled={loginAttempting}
-                  className="text-center text-lg tracking-wider"
+                  className="text-center"
                   autoFocus
                 />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Password</label>
+                <Input
+                  type="password"
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={loginAttempting}
+                  className="text-center"
+                />
                 <p className="text-xs text-muted-foreground text-center">
-                  Contact your manager if you don't have a code
+                  Contact your manager if you don't have credentials
                 </p>
               </div>
               <Button
                 type="submit"
                 className="w-full bg-purple-600 hover:bg-purple-700"
-                disabled={loginAttempting || !driverCode}
+                disabled={loginAttempting || !username || !password}
               >
                 {loginAttempting ? (
                   <>
@@ -449,8 +474,11 @@ export default function DeliveryPage() {
               </Button>
             </form>
             <div className="mt-6 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-xs text-blue-800 font-medium mb-1">Demo Codes (for testing):</p>
-              <p className="text-xs text-blue-600">DRIVER2024, DELIVERY123, DRIVER, 1234</p>
+              <p className="text-xs text-blue-800 font-medium mb-2">Driver Accounts:</p>
+              <div className="space-y-1 text-xs text-blue-600">
+                <p><strong>Driver 1:</strong> driver1 / driver123</p>
+                <p><strong>Driver 2:</strong> driver2 / driver456</p>
+              </div>
             </div>
           </CardContent>
         </Card>
