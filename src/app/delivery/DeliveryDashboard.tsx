@@ -155,16 +155,23 @@ export function DeliveryDashboard() {
     
     if (!isDeliveryOrder || !needsDelivery) return false;
     
-    // If driver is authenticated, only show orders assigned to them
+    // Driver filtering logic:
+    // - Show unassigned orders to ALL drivers (until admin assigns)
+    // - Show assigned orders ONLY to the assigned driver
     if (isAuthenticated && typeof window !== 'undefined') {
       const driverId = localStorage.getItem('driverId');
       if (driverId) {
-        // Show orders assigned to this driver OR unassigned orders
-        return !order.assignedDriverId || order.assignedDriverId === driverId;
+        // If order has no assigned driver, show it to all drivers
+        if (!order.assignedDriverId) {
+          return true; // Unassigned - visible to all drivers
+        }
+        // If order is assigned, only show to the assigned driver
+        return order.assignedDriverId === driverId;
       }
     }
     
-    return true;
+    // If not authenticated, show nothing
+    return false;
   });
 
   // Filter orders based on search query
@@ -595,6 +602,7 @@ export function DeliveryDashboard() {
                       <TableHead>Items</TableHead>
                       <TableHead>Total</TableHead>
                       <TableHead>Status</TableHead>
+                      <TableHead>Assigned To</TableHead>
                       <TableHead>Time</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
@@ -679,6 +687,19 @@ export function DeliveryDashboard() {
                           >
                             {order.status}
                           </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {order.assignedDriverId ? (
+                            <Badge className="bg-purple-500 text-white">
+                              {order.assignedDriver === typeof window !== 'undefined' && localStorage.getItem('driverId') === order.assignedDriverId
+                                ? 'You'
+                                : order.assignedDriver || `Driver ${order.assignedDriverId}`}
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-300">
+                              Unassigned
+                            </Badge>
+                          )}
                         </TableCell>
                         <TableCell className="text-sm text-gray-500">
                           <div className="flex items-center gap-1">

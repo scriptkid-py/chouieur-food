@@ -12,13 +12,10 @@ import { cn } from "@/lib/utils";
 import { getApiBaseUrl } from "@/lib/api-config";
 import { useToast } from "@/hooks/use-toast";
 
-// Available delivery drivers
+// Available delivery drivers (only 2 drivers)
 const DRIVERS = [
   { id: 'driver1', name: 'Driver 1' },
   { id: 'driver2', name: 'Driver 2' },
-  { id: 'driver3', name: 'Driver 3' },
-  { id: 'driver4', name: 'Driver 4' },
-  { id: 'driver5', name: 'Driver 5' },
 ];
 
 export default function AdminOrdersPage() {
