@@ -120,7 +120,7 @@ export default function DeliveryPage() {
     if (!isDeliveryOrder || !needsDelivery) return false;
     
     // If driver is authenticated, only show orders assigned to them
-    if (isAuthenticated) {
+    if (isAuthenticated && typeof window !== 'undefined') {
       const driverId = localStorage.getItem('driverId');
       if (driverId) {
         // Show orders assigned to this driver OR unassigned orders
@@ -294,8 +294,10 @@ export default function DeliveryPage() {
     }
   };
 
-  // Check authentication on mount
+  // Check authentication on mount (client-side only)
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
     const isAuth = localStorage.getItem('driverAuthenticated') === 'true';
     setIsAuthenticated(isAuth);
     // Restore driver info if authenticated
@@ -512,7 +514,7 @@ export default function DeliveryPage() {
                 </div>
                 <p className="text-xs text-white/90 font-medium">
                   🚚 Driver Access Only • Not in Public Menu
-                  {isAuthenticated && localStorage.getItem('driverName') && (
+                  {isAuthenticated && typeof window !== 'undefined' && localStorage.getItem('driverName') && (
                     <span className="ml-2">• {localStorage.getItem('driverName')}</span>
                   )}
                 </p>
@@ -643,8 +645,10 @@ export default function DeliveryPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredOrders.map((order) => (
-                      <TableRow key={order.orderid || order.id}>
+                    {filteredOrders.map((order, index) => {
+                      const orderKey = order.orderid || order.id || `order-${index}`;
+                      return (
+                      <TableRow key={orderKey}>
                         <TableCell className="font-medium">
                           <div className="flex items-center gap-2">
                             <Package className="h-4 w-4 text-gray-400" />
@@ -724,7 +728,8 @@ export default function DeliveryPage() {
                           </Select>
                         </TableCell>
                       </TableRow>
-                    ))}
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
