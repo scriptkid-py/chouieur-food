@@ -75,11 +75,11 @@ export function CheckoutForm() {
         navigator.geolocation.getCurrentPosition(
           resolve,
           reject,
-          {
-            enableHighAccuracy: true,
-            timeout: 15000,
-            maximumAge: 0
-          }
+      {
+        enableHighAccuracy: false, // Changed to false for better compatibility
+        timeout: 20000, // Increased timeout to 20 seconds
+        maximumAge: 60000 // Allow cached location up to 1 minute old
+      }
         );
       });
 
@@ -125,24 +125,29 @@ export function CheckoutForm() {
       console.error('Geolocation error:', error);
       
       let errorMessage = 'Failed to get your location.';
+      let errorTitle = 'Location Error';
       
       if (error.code === 1) {
         // PERMISSION_DENIED
-        errorMessage = 'Location permission denied. Please enable location access in your browser settings or enter address manually.';
+        errorTitle = 'Location Permission Denied';
+        errorMessage = 'Please enable location access in your browser settings. You can also enter your address manually below.';
       } else if (error.code === 2) {
-        // POSITION_UNAVAILABLE
-        errorMessage = 'Location information unavailable. Please enter address manually.';
+        // POSITION_UNAVAILABLE - GPS/WiFi unavailable or location service disabled
+        errorTitle = 'Location Unavailable';
+        errorMessage = 'Unable to determine your location. Please check that:\n• GPS is enabled on your device\n• WiFi or mobile data is connected\n• Location services are enabled\n\nYou can enter your address manually below.';
       } else if (error.code === 3) {
         // TIMEOUT
-        errorMessage = 'Location request timed out. Please try again or enter address manually.';
+        errorTitle = 'Location Timeout';
+        errorMessage = 'Location request took too long. Please try again or enter your address manually below.';
       } else if (error.message) {
         errorMessage = error.message;
       }
       
       toast({
-        title: 'Location Error',
+        title: errorTitle,
         description: errorMessage,
         variant: 'destructive',
+        duration: 6000,
       });
     } finally {
       setIsGettingLocation(false);
