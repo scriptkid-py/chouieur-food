@@ -189,7 +189,8 @@ const orderSchema = new mongoose.Schema({
 // INDEXES FOR PERFORMANCE
 // =============================================================================
 
-orderSchema.index({ orderId: 1 });
+// Note: orderId index is automatically created by unique: true constraint
+// orderSchema.index({ orderId: 1 }); // Removed - duplicate of unique index
 orderSchema.index({ customerPhone: 1 });
 orderSchema.index({ customerEmail: 1 });
 orderSchema.index({ status: 1 });
