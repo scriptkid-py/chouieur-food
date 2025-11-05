@@ -107,7 +107,13 @@ export default function DeliveryPage() {
   const [previousOrderCount, setPreviousOrderCount] = useState(0);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [newOrdersCount, setNewOrdersCount] = useState(0);
+  const [isMounted, setIsMounted] = useState(false);
   const { toast } = useToast();
+
+  // Prevent hydration mismatch by only rendering after mount
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Filter delivery orders from all orders
   const deliveryOrders = allOrders.filter(order => {
@@ -484,6 +490,15 @@ export default function DeliveryPage() {
             </div>
           </CardContent>
         </Card>
+      </div>
+    );
+  }
+
+  // Prevent rendering until mounted to avoid hydration errors
+  if (!isMounted) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
