@@ -16,6 +16,29 @@
 
 'use client';
 
+import dynamic from 'next/dynamic';
+import { Loader2 } from 'lucide-react';
+
+// Disable SSR for this page to prevent hydration errors
+const DeliveryDashboard = dynamic(
+  () => import('./DeliveryDashboard').then(mod => ({ default: mod.DeliveryDashboard })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-gray-600">Loading delivery dashboard...</p>
+        </div>
+      </div>
+    ),
+  }
+);
+
+export default function DeliveryPage() {
+  return <DeliveryDashboard />;
+}
+
 import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -217,11 +240,11 @@ export default function DeliveryPage() {
       // Use Socket.IO hook to update status (will broadcast to all connected clients)
       await socketUpdateStatus(order.id || order.orderid, newStatus);
 
-      toast({
-        title: 'Success',
-        description: `Order status updated to ${newStatus.replace('-', ' ')}`,
-      });
-      
+        toast({
+          title: 'Success',
+          description: `Order status updated to ${newStatus.replace('-', ' ')}`,
+        });
+        
       // No need to refresh - Socket.IO will update automatically!
     } catch (error) {
       console.error('Error updating order status:', error);
