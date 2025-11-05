@@ -177,7 +177,7 @@ export function DeliveryDashboard() {
   // Filter orders based on search query
   useEffect(() => {
     if (!searchQuery.trim()) {
-      setFilteredOrders(deliveryOrders);
+      setFilteredOrders(deliveryOrders as Order[]);
       return;
     }
 
@@ -189,7 +189,7 @@ export function DeliveryDashboard() {
       order.customerAddress?.toLowerCase().includes(query)
     );
     
-    setFilteredOrders(filtered);
+    setFilteredOrders(filtered as Order[]);
   }, [searchQuery, deliveryOrders]);
 
   // Detect new orders and trigger notifications
@@ -691,7 +691,7 @@ export function DeliveryDashboard() {
                         <TableCell>
                           {order.assignedDriverId ? (
                             <Badge className="bg-purple-500 text-white">
-                              {order.assignedDriver === typeof window !== 'undefined' && localStorage.getItem('driverId') === order.assignedDriverId
+                              {typeof window !== 'undefined' && localStorage.getItem('driverId') === order.assignedDriverId
                                 ? 'You'
                                 : order.assignedDriver || `Driver ${order.assignedDriverId}`}
                             </Badge>
