@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -25,7 +25,13 @@ export default function AdminOrdersPage() {
   const { orders, isLoading, error, refetch, updateOrderStatus, isConnected } = useSocketOrders({ enableSound: true });
   const [updatingOrders, setUpdatingOrders] = useState<Set<string>>(new Set());
   const [assigningDriver, setAssigningDriver] = useState<Set<string>>(new Set());
+  const [isMounted, setIsMounted] = useState(false);
   const { toast } = useToast();
+
+  // Prevent hydration mismatch by only rendering after mount
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
@@ -269,7 +275,12 @@ export default function AdminOrdersPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {error ? (
+          {!isMounted ? (
+            <div className="text-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
+              <p>Loading...</p>
+            </div>
+          ) : error ? (
             <div className="text-center py-8">
               <p className="text-red-500 mb-4">Error loading orders: {typeof error === 'string' ? error : (error as any)?.message || 'Unknown error'}</p>
               <Button onClick={refetch} variant="outline">
@@ -315,8 +326,9 @@ export default function AdminOrdersPage() {
                       }
                     }
                     
+                    const orderKey = order.orderid || order.id || `order-${orders.indexOf(order)}`;
                     return (
-                      <TableRow key={order.orderid || order.id}>
+                      <TableRow key={orderKey}>
                         <TableCell className="font-medium">
                           {order.orderid || order.id}
                         </TableCell>
