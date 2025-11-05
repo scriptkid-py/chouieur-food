@@ -16,12 +16,18 @@ import {
   Wifi,
   WifiOff
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 
 export default function KitchenViewPage() {
   const { orders: allOrders, isLoading, updateOrderStatus, refetch, error, isConnected } = useSocketOrders({ enableSound: true });
   const [isUpdating, setIsUpdating] = useState<Set<string>>(new Set());
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Prevent hydration mismatch by only rendering after mount
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Filter orders for kitchen (confirmed, preparing, ready)
   const kitchenOrders = allOrders.filter(order => 
@@ -206,7 +212,16 @@ export default function KitchenViewPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {isLoading ? (
+                {!isMounted ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-8">
+                      <div className="flex items-center justify-center">
+                        <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                        Loading...
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : isLoading ? (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center py-8">
                       <div className="flex items-center justify-center">
@@ -236,8 +251,9 @@ export default function KitchenViewPage() {
                     (order.createdAt.toDate ? order.createdAt.toDate().toLocaleString() : new Date(order.createdAt).toLocaleString()) 
                     : 'Unknown';
                   
+                  const orderKey = order.orderid || order.id || `admin-kitchen-order-${kitchenOrders.indexOf(order)}`;
                   return (
-                    <TableRow key={order.orderid || order.id}>
+                    <TableRow key={orderKey}>
                       <TableCell className="font-medium">{order.orderid || order.id}</TableCell>
                       <TableCell>{order.customerName || 'Anonymous'}</TableCell>
                       <TableCell>
