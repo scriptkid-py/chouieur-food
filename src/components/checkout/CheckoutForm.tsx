@@ -11,8 +11,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
-import { useState } from 'react';
-import { Loader2, Truck, Store } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Loader2, Truck, Store, MapPin, Navigation } from 'lucide-react';
 import { apiRequest } from '@/lib/api-config';
 import { automateDeliveryNotifications } from '@/ai/flows/automate-delivery-notifications';
 
@@ -28,7 +28,126 @@ export function CheckoutForm() {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderType, setOrderType] = useState<'delivery' | 'pickup'>('delivery');
-  const { register, handleSubmit, formState: { errors } } = useForm<FormValues>();
+  const [isGettingLocation, setIsGettingLocation] = useState(false);
+  const [savedAddress, setSavedAddress] = useState<string>('');
+  const { register, handleSubmit, formState: { errors }, setValue, watch } = useForm<FormValues>();
+  
+  const addressValue = watch('address');
+
+  // Load saved address from localStorage on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('savedAddress');
+      if (saved) {
+        setSavedAddress(saved);
+        // If address field is empty, pre-fill with saved address
+        if (!addressValue) {
+          setValue('address', saved);
+        }
+      }
+    }
+  }, [setValue, addressValue]);
+
+  // Save address to localStorage when it changes
+  useEffect(() => {
+    if (typeof window !== 'undefined' && addressValue && orderType === 'delivery') {
+      localStorage.setItem('savedAddress', addressValue);
+      setSavedAddress(addressValue);
+    }
+  }, [addressValue, orderType]);
+
+  // Get user's current location using geolocation API
+  const handleGetLocation = () => {
+    if (!navigator.geolocation) {
+      toast({
+        title: 'Geolocation not supported',
+        description: 'Your browser does not support geolocation. Please enter your address manually.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsGettingLocation(true);
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        
+        try {
+          // Use reverse geocoding to get address from coordinates
+          // Using OpenStreetMap Nominatim API (free, no API key needed)
+          const response = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&addressdetails=1`,
+            {
+              headers: {
+                'User-Agent': 'ChouieurExpressApp/1.0'
+              }
+            }
+          );
+
+          if (!response.ok) {
+            throw new Error('Failed to get address from location');
+          }
+
+          const data = await response.json();
+          
+          if (data && data.display_name) {
+            const address = data.display_name;
+            setValue('address', address);
+            // Save to localStorage
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('savedAddress', address);
+              setSavedAddress(address);
+            }
+            toast({
+              title: 'Location Found!',
+              description: 'Your address has been filled in automatically',
+            });
+          } else {
+            throw new Error('Could not determine address from location');
+          }
+        } catch (error) {
+          console.error('Geocoding error:', error);
+          // Fallback: Use coordinates as address
+          const coordAddress = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+          setValue('address', coordAddress);
+          toast({
+            title: 'Location Found',
+            description: 'Using coordinates. Please refine the address if needed.',
+          });
+        } finally {
+          setIsGettingLocation(false);
+        }
+      },
+      (error) => {
+        setIsGettingLocation(false);
+        let errorMessage = 'Failed to get your location.';
+        
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            errorMessage = 'Location permission denied. Please enable location access or enter address manually.';
+            break;
+          case error.POSITION_UNAVAILABLE:
+            errorMessage = 'Location information unavailable. Please enter address manually.';
+            break;
+          case error.TIMEOUT:
+            errorMessage = 'Location request timed out. Please try again or enter address manually.';
+            break;
+        }
+        
+        toast({
+          title: 'Location Error',
+          description: errorMessage,
+          variant: 'destructive',
+        });
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+      }
+    );
+  };
 
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
     if (cartItems.length === 0) {
@@ -216,12 +335,74 @@ export function CheckoutForm() {
            {errors.phone && <p className="text-sm text-destructive">{errors.phone.message}</p>}
         </div>
         
-        {/* Only show address field for delivery orders */}
-        {orderType === 'delivery' && (
+        {/* Address field - different behavior for delivery vs pickup */}
+        {orderType === 'delivery' ? (
           <div className="space-y-2">
             <Label htmlFor="address">Delivery Address</Label>
-            <Input id="address" {...register('address', { required: orderType === 'delivery' ? 'Address is required for delivery' : false })} />
+            <div className="flex gap-2">
+              <Input 
+                id="address" 
+                placeholder="Enter your delivery address or use location"
+                {...register('address', { required: 'Address is required for delivery' })} 
+                className="flex-1"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleGetLocation}
+                disabled={isGettingLocation}
+                className="shrink-0"
+              >
+                {isGettingLocation ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <>
+                    <Navigation className="h-4 w-4 mr-2" />
+                    Use My Location
+                  </>
+                )}
+              </Button>
+            </div>
             {errors.address && <p className="text-sm text-destructive">{errors.address.message}</p>}
+            {savedAddress && (
+              <p className="text-xs text-muted-foreground">
+                <MapPin className="h-3 w-3 inline mr-1" />
+                Saved address: {savedAddress}
+              </p>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <Label htmlFor="address">Your Address (Optional - for future orders)</Label>
+            <Input 
+              id="address" 
+              placeholder="Enter your address (optional for pickup)"
+              {...register('address', { required: false })} 
+            />
+            {savedAddress && (
+              <div className="p-3 bg-muted rounded-lg">
+                <p className="text-sm font-medium mb-1">Saved Address:</p>
+                <p className="text-sm text-muted-foreground">
+                  <MapPin className="h-3 w-3 inline mr-1" />
+                  {savedAddress}
+                </p>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setValue('address', savedAddress);
+                    toast({
+                      title: 'Address Loaded',
+                      description: 'Your saved address has been loaded',
+                    });
+                  }}
+                  className="mt-2 h-7 text-xs"
+                >
+                  Use Saved Address
+                </Button>
+              </div>
+            )}
           </div>
         )}
         <Button type="submit" size="lg" className="w-full" disabled={isSubmitting || cartItems.length === 0}>
