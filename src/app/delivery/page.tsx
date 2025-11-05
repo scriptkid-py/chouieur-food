@@ -115,8 +115,8 @@ export default function DeliveryPage() {
     setIsMounted(true);
   }, []);
 
-  // Filter delivery orders from all orders
-  const deliveryOrders = allOrders.filter(order => {
+  // Filter delivery orders from all orders (only after mount to prevent SSR issues)
+  const deliveryOrders = (!isMounted || typeof window === 'undefined') ? [] : allOrders.filter(order => {
     // Only show delivery orders (not pickup)
     const isDeliveryOrder = order.orderType === 'delivery';
     
