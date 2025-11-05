@@ -22,10 +22,17 @@ import {
   RefreshCw
 } from "lucide-react";
 import Link from "next/link";
+import { useState, useEffect } from "react";
 
 export default function AdminDashboardPage() {
   const { menuItems, isLoading: menuLoading } = useMenuItems();
   const { stats, isLoading: statsLoading, error: statsError, refetch, source, ordersCount } = useHybridAdminStats();
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Prevent hydration mismatch by only rendering after mount
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -153,25 +160,34 @@ export default function AdminDashboardPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {statsLoading ? (
+                    {!isMounted ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center">
+                          <Loader2 className="h-6 w-6 animate-spin mx-auto" />
+                        </TableCell>
+                      </TableRow>
+                    ) : statsLoading ? (
                       <TableRow>
                         <TableCell colSpan={4} className="text-center">
                           <Loader2 className="h-6 w-6 animate-spin mx-auto" />
                         </TableCell>
                       </TableRow>
                     ) : stats?.recentOrders && stats.recentOrders.length > 0 ? (
-                      stats.recentOrders.map((order) => (
-                        <TableRow key={order.id}>
-                          <TableCell className="font-medium">{order.id}</TableCell>
-                          <TableCell>{order.customer}</TableCell>
-                          <TableCell>
-                            <Badge className={getStatusColor(order.status)}>
-                              {order.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right">{order.total.toLocaleString()} FCFA</TableCell>
-                        </TableRow>
-                      ))
+                      stats.recentOrders.map((order, index) => {
+                        const orderKey = order.id || `recent-order-${index}`;
+                        return (
+                          <TableRow key={orderKey}>
+                            <TableCell className="font-medium">{order.id}</TableCell>
+                            <TableCell>{order.customer}</TableCell>
+                            <TableCell>
+                              <Badge className={getStatusColor(order.status)}>
+                                {order.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right">{order.total.toLocaleString()} FCFA</TableCell>
+                          </TableRow>
+                        );
+                      })
                     ) : (
                       <TableRow>
                         <TableCell colSpan={4} className="text-center text-muted-foreground">
