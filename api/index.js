@@ -1321,6 +1321,70 @@ app.patch('/api/orders/:id/assign-driver', jsonParser, urlencodedParser, async (
 });
 
 // Unassign driver from order
+// =============================================================================
+// REVERSE GEOCODING ENDPOINT (for "Use My Location" feature)
+// =============================================================================
+app.get('/api/geocode/reverse', async (req, res) => {
+  try {
+    const { lat, lon } = req.query;
+    
+    if (!lat || !lon) {
+      return res.status(400).json({
+        success: false,
+        error: 'Latitude and longitude are required'
+      });
+    }
+
+    const latitude = parseFloat(lat);
+    const longitude = parseFloat(lon);
+
+    if (isNaN(latitude) || isNaN(longitude)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid latitude or longitude'
+      });
+    }
+
+    // Use OpenStreetMap Nominatim API for reverse geocoding
+    const nominatimUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&addressdetails=1`;
+    
+    const response = await fetch(nominatimUrl, {
+      headers: {
+        'User-Agent': 'ChouieurExpress/1.0 (Contact: support@chouieur.com)'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Nominatim API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    
+    if (data && data.display_name) {
+      return res.json({
+        success: true,
+        address: data.display_name,
+        addressDetails: data.address || {}
+      });
+    } else {
+      // Fallback: return coordinates as address
+      return res.json({
+        success: true,
+        address: `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`,
+        addressDetails: {},
+        isFallback: true
+      });
+    }
+  } catch (error) {
+    console.error('Reverse geocoding error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to get address from location',
+      message: error.message
+    });
+  }
+});
+
 app.patch('/api/orders/:id/unassign-driver', jsonParser, urlencodedParser, async (req, res) => {
   try {
     const { id } = req.params;

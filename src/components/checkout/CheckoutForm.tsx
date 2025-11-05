@@ -57,8 +57,8 @@ export function CheckoutForm() {
   }, [addressValue, orderType]);
 
   // Get user's current location using geolocation API
-  const handleGetLocation = () => {
-    if (!navigator.geolocation) {
+  const handleGetLocation = async () => {
+    if (typeof window === 'undefined' || !navigator.geolocation) {
       toast({
         title: 'Geolocation not supported',
         description: 'Your browser does not support geolocation. Please enter your address manually.',
@@ -69,84 +69,87 @@ export function CheckoutForm() {
 
     setIsGettingLocation(true);
 
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const { latitude, longitude } = position.coords;
-        
-        try {
-          // Use reverse geocoding to get address from coordinates
-          // Using OpenStreetMap Nominatim API (free, no API key needed)
-          const response = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&addressdetails=1`,
-            {
-              headers: {
-                'User-Agent': 'ChouieurExpressApp/1.0'
-              }
-            }
-          );
-
-          if (!response.ok) {
-            throw new Error('Failed to get address from location');
+    try {
+      // Get current position
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(
+          resolve,
+          reject,
+          {
+            enableHighAccuracy: true,
+            timeout: 15000,
+            maximumAge: 0
           }
+        );
+      });
 
-          const data = await response.json();
-          
-          if (data && data.display_name) {
-            const address = data.display_name;
-            setValue('address', address);
-            // Save to localStorage
-            if (typeof window !== 'undefined') {
-              localStorage.setItem('savedAddress', address);
-              setSavedAddress(address);
-            }
-            toast({
-              title: 'Location Found!',
-              description: 'Your address has been filled in automatically',
-            });
-          } else {
-            throw new Error('Could not determine address from location');
-          }
-        } catch (error) {
-          console.error('Geocoding error:', error);
-          // Fallback: Use coordinates as address
-          const coordAddress = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
-          setValue('address', coordAddress);
-          toast({
-            title: 'Location Found',
-            description: 'Using coordinates. Please refine the address if needed.',
-          });
-        } finally {
-          setIsGettingLocation(false);
+      const { latitude, longitude } = position.coords;
+      
+      // Use our backend API for reverse geocoding (avoids CORS issues)
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 
+        (process.env.NODE_ENV === 'production' 
+          ? 'https://chouieur-express-backend-h74v.onrender.com'
+          : 'http://localhost:3001');
+
+      const response = await fetch(
+        `${apiUrl}/api/geocode/reverse?lat=${latitude}&lon=${longitude}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
         }
-      },
-      (error) => {
-        setIsGettingLocation(false);
-        let errorMessage = 'Failed to get your location.';
-        
-        switch (error.code) {
-          case error.PERMISSION_DENIED:
-            errorMessage = 'Location permission denied. Please enable location access or enter address manually.';
-            break;
-          case error.POSITION_UNAVAILABLE:
-            errorMessage = 'Location information unavailable. Please enter address manually.';
-            break;
-          case error.TIMEOUT:
-            errorMessage = 'Location request timed out. Please try again or enter address manually.';
-            break;
-        }
-        
-        toast({
-          title: 'Location Error',
-          description: errorMessage,
-          variant: 'destructive',
-        });
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 0
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to get address from location');
       }
-    );
+
+      const data = await response.json();
+      
+      if (data.success && data.address) {
+        const address = data.address;
+        setValue('address', address);
+        // Save to localStorage
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('savedAddress', address);
+          setSavedAddress(address);
+        }
+        toast({
+          title: 'Location Found!',
+          description: data.isFallback 
+            ? 'Using coordinates. Please refine the address if needed.'
+            : 'Your address has been filled in automatically',
+        });
+      } else {
+        throw new Error(data.error || 'Could not determine address from location');
+      }
+    } catch (error: any) {
+      console.error('Geolocation error:', error);
+      
+      let errorMessage = 'Failed to get your location.';
+      
+      if (error.code === 1) {
+        // PERMISSION_DENIED
+        errorMessage = 'Location permission denied. Please enable location access in your browser settings or enter address manually.';
+      } else if (error.code === 2) {
+        // POSITION_UNAVAILABLE
+        errorMessage = 'Location information unavailable. Please enter address manually.';
+      } else if (error.code === 3) {
+        // TIMEOUT
+        errorMessage = 'Location request timed out. Please try again or enter address manually.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      toast({
+        title: 'Location Error',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsGettingLocation(false);
+    }
   };
 
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
