@@ -310,7 +310,7 @@ export default function AdminOrdersPage() {
                     </TableCell>
                   </TableRow>
                 ) : orders.length > 0 ? (
-                  orders.map((order) => {
+                  orders.map((order, index) => {
                     // Handle items field - it might be a JSON string or array
                     let items = [];
                     if (order.items) {
@@ -326,7 +326,7 @@ export default function AdminOrdersPage() {
                       }
                     }
                     
-                    const orderKey = order.orderid || order.id || `order-${orders.indexOf(order)}`;
+                    const orderKey = order.orderid || order.id || `order-${index}`;
                     return (
                       <TableRow key={orderKey}>
                         <TableCell className="font-medium">

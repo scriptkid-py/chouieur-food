@@ -231,7 +231,7 @@ export default function KitchenViewPage() {
                     </TableCell>
                   </TableRow>
                 ) : kitchenOrders.length > 0 ? (
-                kitchenOrders.map((order) => {
+                kitchenOrders.map((order, index) => {
                   // Handle items field - it might be a JSON string or array
                   let items = [];
                   if (order.items) {
@@ -251,7 +251,7 @@ export default function KitchenViewPage() {
                     (order.createdAt.toDate ? order.createdAt.toDate().toLocaleString() : new Date(order.createdAt).toLocaleString()) 
                     : 'Unknown';
                   
-                  const orderKey = order.orderid || order.id || `kitchen-order-${kitchenOrders.indexOf(order)}`;
+                  const orderKey = order.orderid || order.id || `kitchen-order-${index}`;
                   return (
                     <TableRow key={orderKey}>
                       <TableCell className="font-medium">{order.orderid || order.id}</TableCell>
