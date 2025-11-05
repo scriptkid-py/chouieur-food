@@ -80,10 +80,12 @@ export interface UseSocketOrdersOptions {
 export function useSocketOrders(options: UseSocketOrdersOptions = {}) {
   const { enableSound = true } = options;
   
+  // Initialize with empty state to prevent SSR hydration issues
   const [orders, setOrders] = useState<HybridOrder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
   const socketRef = useRef<Socket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectAttemptsRef = useRef(0);
@@ -334,9 +336,14 @@ export function useSocketOrders(options: UseSocketOrdersOptions = {}) {
     }
   }, [connectSocket]);
 
-  // Connect on mount and cleanup on unmount
+  // Mark as mounted and connect on mount (client-side only)
   useEffect(() => {
-    connectSocket();
+    setIsMounted(true);
+    
+    // Only connect if we're on the client
+    if (typeof window !== 'undefined') {
+      connectSocket();
+    }
 
     return () => {
       console.log('🔌 Cleaning up Socket.io connection');
@@ -351,11 +358,12 @@ export function useSocketOrders(options: UseSocketOrdersOptions = {}) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Only run on mount
 
+  // Return empty orders during SSR to prevent hydration mismatches
   return {
-    orders: orders || [],
-    isLoading,
+    orders: (typeof window !== 'undefined' && isMounted) ? (orders || []) : [],
+    isLoading: (typeof window !== 'undefined' && isMounted) ? isLoading : true,
     error,
-    isConnected,
+    isConnected: (typeof window !== 'undefined' && isMounted) ? isConnected : false,
     refetch,
     updateOrderStatus,
     source: 'socket.io' // Indicate data source
