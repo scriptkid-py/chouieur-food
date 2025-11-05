@@ -137,8 +137,10 @@ export default function DeliveryPage() {
     return true;
   });
 
-  // Filter orders based on search query
+  // Filter orders based on search query (only after mount)
   useEffect(() => {
+    if (!isMounted || typeof window === 'undefined') return;
+    
     if (!searchQuery.trim()) {
       setFilteredOrders(deliveryOrders);
       return;
@@ -153,7 +155,7 @@ export default function DeliveryPage() {
     );
     
     setFilteredOrders(filtered);
-  }, [searchQuery, deliveryOrders]);
+  }, [searchQuery, deliveryOrders, isMounted]);
 
   // Detect new orders and trigger notifications
   useEffect(() => {
