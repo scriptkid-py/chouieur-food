@@ -13,7 +13,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useEffect } from 'react';
 import { Loader2, Truck, Store, MapPin, Navigation } from 'lucide-react';
-import { apiRequest } from '@/lib/api-config';
+import { apiRequest, getApiBaseUrl } from '@/lib/api-config';
 import { automateDeliveryNotifications } from '@/ai/flows/automate-delivery-notifications';
 
 type FormValues = {
@@ -86,11 +86,8 @@ export function CheckoutForm() {
       const { latitude, longitude } = position.coords;
       
       // Use our backend API for reverse geocoding (avoids CORS issues)
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 
-        (process.env.NODE_ENV === 'production' 
-          ? 'https://chouieur-express-backend-h74v.onrender.com'
-          : 'http://localhost:3001');
-
+      const apiUrl = getApiBaseUrl();
+      
       const response = await fetch(
         `${apiUrl}/api/geocode/reverse?lat=${latitude}&lon=${longitude}`,
         {
