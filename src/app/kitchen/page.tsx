@@ -257,12 +257,35 @@ export default function KitchenViewPage() {
                       <TableCell className="font-medium">{order.orderid || order.id}</TableCell>
                       <TableCell>{order.customerName || 'Anonymous'}</TableCell>
                       <TableCell>
-                        <div className="space-y-1">
-                          {Array.isArray(items) ? items.map((item: any, index: number) => (
-                            <div key={index} className="text-sm">
-                              {item.quantity}x {item.name || item.menuItem?.name}
-                            </div>
-                          )) : (
+                        <div className="space-y-2 max-w-md">
+                          {Array.isArray(items) ? items.map((item: any, index: number) => {
+                            // Extract supplements from specialInstructions if supplements array is not available
+                            const supplementsText = item.specialInstructions?.includes('Supplements:') 
+                              ? item.specialInstructions.replace('Supplements:', '').trim()
+                              : null;
+                            const hasSupplementsArray = item.supplements && Array.isArray(item.supplements) && item.supplements.length > 0;
+                            const supplementsDisplay = hasSupplementsArray 
+                              ? item.supplements.map((sup: any) => sup.name || sup).join(', ')
+                              : supplementsText;
+                            
+                            return (
+                              <div key={index} className="text-sm border-l-2 border-primary/20 pl-2">
+                                <div className="font-medium">
+                                  {item.quantity}x {item.name || item.menuItem?.name}
+                                </div>
+                                {supplementsDisplay && (
+                                  <div className="text-xs text-blue-600 dark:text-blue-400 mt-0.5 font-medium">
+                                    + {supplementsDisplay}
+                                  </div>
+                                )}
+                                {item.specialInstructions && !item.specialInstructions.includes('Supplements:') && (
+                                  <div className="text-xs text-muted-foreground mt-0.5 italic">
+                                    {item.specialInstructions}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          }) : (
                             <div className="text-sm text-muted-foreground">No items</div>
                           )}
                         </div>
