@@ -51,6 +51,7 @@ const MenuItem = require('./models/MenuItem');
 const Order = require('./models/Order');
 const User = require('./models/User');
 const { initGoogleSheets, listMenuItems: sheetsListMenuItems, getMenuItemById: sheetsGetMenuItemById, createMenuItem: sheetsCreateMenuItem, updateMenuItem: sheetsUpdateMenuItem, deleteMenuItem: sheetsDeleteMenuItem, sheetsClient } = require('./services/google-sheets-service');
+const { cleanupOldOrders, getRecentOrders } = require('./services/order-cleanup-service');
 
 const app = express();
 const server = http.createServer(app);
@@ -103,19 +104,16 @@ io.on('connection', (socket) => {
     timestamp: new Date().toISOString()
   });
 
-  // Send initial orders data when client connects
+  // Send initial orders data when client connects (only last 24 hours)
   // Note: Can't populate Mixed type (menuItemId can be ObjectId or UUID string)
-  Order.find({})
-    .sort({ createdAt: -1 })
-    .limit(50)
-    .lean()
-    .then(orders => {
+  getRecentOrders({}, { limit: 50, sort: { createdAt: -1 } })
+    .then(({ orders }) => {
       socket.emit('initialOrders', {
         orders: orders,
         count: orders.length,
         timestamp: new Date().toISOString()
       });
-      console.log(`📋 Sent ${orders.length} initial orders to client ${socket.id}`);
+      console.log(`📋 Sent ${orders.length} recent orders (last 24 hours) to client ${socket.id}`);
     })
     .catch(error => {
       console.error('❌ Error fetching initial orders for Socket.io client:', error);
@@ -1005,10 +1003,10 @@ app.delete('/api/menu-items/:id', authenticateAdmin, handleDeleteMenuItem);
 // ORDERS ENDPOINTS
 // =============================================================================
 
-// Get all orders
+// Get all orders (only from last 24 hours)
 app.get('/api/orders', async (req, res) => {
   try {
-    console.log('📋 Fetching orders from MongoDB...');
+    console.log('📋 Fetching recent orders from MongoDB (last 24 hours)...');
     
     const { status, limit = 50, page = 1 } = req.query;
     let query = {};
@@ -1019,22 +1017,21 @@ app.get('/api/orders', async (req, res) => {
     
     const skip = (parseInt(page) - 1) * parseInt(limit);
     
-    // Note: Can't use populate() on Mixed type (menuItemId can be ObjectId or UUID string)
-    // Populate only works with ObjectId references
-    const orders = await Order.find(query)
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(parseInt(limit));
-    
-    const totalCount = await Order.countDocuments(query);
+    // Get only orders from the last 24 hours
+    const { orders, totalCount, cutoffDate } = await getRecentOrders(query, {
+      limit: parseInt(limit),
+      skip: skip,
+      sort: { createdAt: -1 }
+    });
     
     res.status(200).json({
       success: true,
       data: orders,
       source: 'mongodb',
-      message: `Successfully fetched ${orders.length} orders`,
+      message: `Successfully fetched ${orders.length} recent orders (last 24 hours)`,
       count: orders.length,
       totalCount: totalCount,
+      cutoffDate: cutoffDate,
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
@@ -1048,6 +1045,30 @@ app.get('/api/orders', async (req, res) => {
       error: 'Failed to fetch orders',
       message: error.message,
       timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// =============================================================================
+// ORDER CLEANUP ENDPOINTS
+// =============================================================================
+
+// Manual cleanup endpoint (for testing or manual triggers)
+app.post('/api/orders/cleanup', async (req, res) => {
+  try {
+    console.log('🧹 Manual order cleanup triggered...');
+    const result = await cleanupOldOrders();
+    res.status(200).json({
+      success: true,
+      message: 'Order cleanup completed',
+      ...result
+    });
+  } catch (error) {
+    console.error('❌ Error during manual cleanup:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to cleanup orders',
+      message: error.message
     });
   }
 });
@@ -1710,6 +1731,65 @@ app.use((error, req, res, next) => {
 // SERVER STARTUP
 // =============================================================================
 
+// =============================================================================
+// SCHEDULED CLEANUP JOB (Every 24 hours)
+// =============================================================================
+
+let cleanupInterval = null;
+
+function startCleanupScheduler() {
+  // Run cleanup every 24 hours (86400000 milliseconds)
+  const CLEANUP_INTERVAL = 24 * 60 * 60 * 1000; // 24 hours
+  
+  // Run cleanup immediately on startup (optional - comment out if you don't want this)
+  // setTimeout(async () => {
+  //   try {
+  //     await cleanupOldOrders();
+  //   } catch (error) {
+  //     console.error('❌ Error in initial cleanup:', error);
+  //   }
+  // }, 60000); // Wait 1 minute after server starts
+  
+  // Schedule recurring cleanup
+  cleanupInterval = setInterval(async () => {
+    try {
+      console.log('⏰ Scheduled cleanup triggered...');
+      await cleanupOldOrders();
+    } catch (error) {
+      console.error('❌ Error in scheduled cleanup:', error);
+    }
+  }, CLEANUP_INTERVAL);
+  
+  console.log(`⏰ Order cleanup scheduler started (runs every 24 hours)`);
+}
+
+function stopCleanupScheduler() {
+  if (cleanupInterval) {
+    clearInterval(cleanupInterval);
+    cleanupInterval = null;
+    console.log('⏰ Order cleanup scheduler stopped');
+  }
+}
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('🛑 SIGTERM received, shutting down gracefully...');
+  stopCleanupScheduler();
+  server.close(() => {
+    console.log('✅ Server closed');
+    process.exit(0);
+  });
+});
+
+process.on('SIGINT', () => {
+  console.log('🛑 SIGINT received, shutting down gracefully...');
+  stopCleanupScheduler();
+  server.close(() => {
+    console.log('✅ Server closed');
+    process.exit(0);
+  });
+});
+
 async function startServer() {
   try {
     // Try to connect to MongoDB (don't exit if fails - allow for retry)
@@ -1731,6 +1811,9 @@ async function startServer() {
       console.log(`🗄️  Database: MongoDB (Sheets ${sheetsClient ? 'ENABLED' : 'DISABLED'})`);
       console.log(`🌐 CORS enabled for frontend communication`);
       console.log(`🔌 Socket.io server ready on ws://localhost:${PORT}`);
+      
+      // Start the cleanup scheduler
+      startCleanupScheduler();
     });
   } catch (error) {
     console.error('❌ Server startup error:', error);
