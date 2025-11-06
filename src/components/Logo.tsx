@@ -14,7 +14,7 @@ export function Logo({ large = false, className }: LogoProps) {
         )}
         style={{ color: '#d89a32' }}
       >
-        <span>Chouieur</span> Food & Helado
+        Chouieur Food
       </h1>
     </div>
   );
