@@ -1,12 +1,15 @@
 import OrderConfirmationClient from './OrderConfirmationClient';
 
 type ConfirmationPageProps = {
-  params: {
+  params: Promise<{
+    id: string;
+  }> | {
     id: string;
   };
 };
 
-export default function OrderConfirmationPage({ params }: ConfirmationPageProps) {
-  return <OrderConfirmationClient orderId={params.id} />;
+export default async function OrderConfirmationPage({ params }: ConfirmationPageProps) {
+  const resolvedParams = 'then' in params ? await params : params;
+  return <OrderConfirmationClient orderId={resolvedParams.id} />;
 }
 
