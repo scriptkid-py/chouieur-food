@@ -18,7 +18,7 @@ import Link from 'next/link';
 export default function AdminLandingPage() {
   return (
     <div className="min-h-screen bg-muted/30">
-      <div className="max-w-6xl mx-auto space-y-8">
+      <div className="max-w-6xl mx-auto space-y-8 p-4 sm:p-6 lg:p-8">
         {/* Header */}
         <div className="text-center space-y-4">
           <div className="flex items-center justify-center gap-2">
