@@ -34,7 +34,9 @@ export default function OrderConfirmationPage({ params }: ConfirmationPageProps)
       }
     };
 
-    fetchOrder();
+    if (params.id) {
+      fetchOrder();
+    }
   }, [params.id]);
 
   const isPickup = order?.orderType === 'pickup' || order?.orderType === 'local';
