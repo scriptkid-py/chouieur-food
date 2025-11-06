@@ -37,37 +37,71 @@ async function cleanupOldOrders() {
 
     console.log(`📦 Found ${oldOrders.length} orders to archive`);
 
-    // Archive to Google Sheets (MUST succeed before deletion)
+    // STEP 1: Archive to Google Sheets FIRST (MUST succeed before deletion)
     let archivedCount = 0;
+    let archiveSuccess = false;
+    
     try {
+      console.log(`📤 Archiving ${oldOrders.length} orders to Google Sheets...`);
       const archiveResult = await archiveOrdersToSheets(oldOrders);
-      archivedCount = archiveResult.count;
-      console.log(`✅ Successfully archived ${archivedCount} orders to Google Sheets`);
+      archivedCount = archiveResult.count || archiveResult.success ? oldOrders.length : 0;
+      archiveSuccess = archiveResult.success !== false && archivedCount > 0;
+      
+      if (!archiveSuccess) {
+        throw new Error('Archive result indicates failure or no orders archived');
+      }
+      
+      console.log(`✅ Successfully archived ${archivedCount} orders to Google Sheets (Historical Orders sheet)`);
+      console.log(`📋 Backup complete - orders are safely stored in Google Sheets before deletion`);
     } catch (archiveError) {
-      console.error('❌ Failed to archive orders to Google Sheets:', archiveError.message);
+      console.error('❌ CRITICAL: Failed to archive orders to Google Sheets:', archiveError.message);
+      console.error('🛡️  SAFETY: Orders will NOT be deleted because backup failed!');
       // Don't delete orders if archiving fails - safety first!
       return { 
         success: false, 
         error: 'Archive failed', 
         archived: 0, 
         deleted: 0,
-        message: 'Orders were not deleted because archiving failed. Please check Google Sheets configuration.'
+        message: 'Orders were NOT deleted because archiving to Google Sheets failed. Please check Google Sheets configuration and try again.'
       };
     }
 
-    // Only delete orders if archiving succeeded
+    // STEP 2: Only delete orders if archiving succeeded (safety check)
+    if (!archiveSuccess) {
+      console.error('🛡️  SAFETY CHECK FAILED: Archive success flag is false - aborting deletion');
+      return {
+        success: false,
+        error: 'Archive verification failed',
+        archived: archivedCount,
+        deleted: 0,
+        message: 'Orders were NOT deleted because archive verification failed'
+      };
+    }
+
+    // STEP 3: Delete from MongoDB only after successful backup
+    console.log(`🗑️  Deleting ${oldOrders.length} orders from MongoDB (backup confirmed in Google Sheets)...`);
     const deleteResult = await Order.deleteMany({
       createdAt: { $lt: cutoffDate }
     });
 
     const deletedCount = deleteResult.deletedCount;
-    console.log(`🗑️  Deleted ${deletedCount} orders from MongoDB`);
+    
+    if (deletedCount !== oldOrders.length) {
+      console.warn(`⚠️  Warning: Expected to delete ${oldOrders.length} orders, but deleted ${deletedCount}`);
+    } else {
+      console.log(`✅ Successfully deleted ${deletedCount} orders from MongoDB`);
+    }
+    
+    console.log(`📊 Summary: ${archivedCount} archived → ${deletedCount} deleted`);
 
     return {
       success: true,
       archived: archivedCount,
+      archivedCount: archivedCount, // Alias for API response
       deleted: deletedCount,
-      timestamp: new Date().toISOString()
+      deletedCount: deletedCount, // Alias for API response
+      timestamp: new Date().toISOString(),
+      message: `Successfully archived ${archivedCount} orders to Google Sheets and deleted ${deletedCount} orders from MongoDB`
     };
   } catch (error) {
     console.error('❌ Error during order cleanup:', error);

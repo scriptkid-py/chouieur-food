@@ -56,9 +56,11 @@ export default function AdminDashboardPage() {
       const data = await response.json();
 
       if (response.ok && data.success) {
+        const archived = data.archivedCount || data.archived || 0;
+        const deleted = data.deletedCount || data.deleted || 0;
         toast({
           title: "✅ Cleanup Successful",
-          description: `Archived ${data.archivedCount || 0} orders to Google Sheets and removed ${data.deletedCount || 0} old orders from the database.`,
+          description: `✅ Backed up ${archived} orders to Google Sheets (Historical Orders) and removed ${deleted} old orders from the database.`,
           variant: "default",
         });
         // Refresh stats after cleanup
