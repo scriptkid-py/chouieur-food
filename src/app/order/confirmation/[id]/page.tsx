@@ -39,7 +39,7 @@ export default function OrderConfirmationPage({ params }: ConfirmationPageProps)
 
   const isPickup = order?.orderType === 'pickup' || order?.orderType === 'local';
   const isDelivered = order?.status === 'delivered';
-  const orderId = order?.orderId || order?.orderid || params.id;
+  const displayOrderId = order?.orderId || order?.orderid || params.id;
 
   return (
     <div className="container mx-auto flex items-center justify-center px-4 py-12 md:px-6">
@@ -66,7 +66,7 @@ export default function OrderConfirmationPage({ params }: ConfirmationPageProps)
         <CardContent className="space-y-6">
           <div className="rounded-lg bg-secondary p-4">
             <p className="text-sm text-muted-foreground">Your Order ID</p>
-            <p className="break-all text-lg font-mono font-semibold">{orderId}</p>
+            <p className="break-all text-lg font-mono font-semibold">{displayOrderId}</p>
           </div>
           {isPickup && !isDelivered && (
             <div className="rounded-lg bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 p-4">
