@@ -23,8 +23,12 @@ export default function OrderConfirmationClient({ orderId }: OrderConfirmationCl
         if (response.ok) {
           const data = await response.json();
           if (data.success && data.data) {
+            console.log('Order data:', data.data);
+            console.log('Order type:', data.data.orderType);
             setOrder(data.data);
           }
+        } else {
+          console.error('Failed to fetch order:', response.status, response.statusText);
         }
       } catch (error) {
         console.error('Error fetching order:', error);
@@ -38,9 +42,15 @@ export default function OrderConfirmationClient({ orderId }: OrderConfirmationCl
     }
   }, [orderId]);
 
-  const isPickup = order?.orderType === 'pickup' || order?.orderType === 'local';
+  // Check order type - handle both 'pickup' and 'local', and also check customerAddress
+  const isPickup = order?.orderType === 'pickup' || 
+                   order?.orderType === 'local' || 
+                   order?.customerAddress === 'Pickup at restaurant' ||
+                   (order?.customerAddress && order.customerAddress.toLowerCase().includes('pickup'));
   const isDelivered = order?.status === 'delivered';
   const displayOrderId = order?.orderId || order?.orderid || orderId;
+  
+  console.log('isPickup:', isPickup, 'orderType:', order?.orderType, 'address:', order?.customerAddress);
 
   return (
     <div className="container mx-auto flex items-center justify-center px-4 py-12 md:px-6">
