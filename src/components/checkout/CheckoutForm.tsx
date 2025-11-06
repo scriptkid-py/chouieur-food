@@ -250,7 +250,8 @@ export function CheckoutForm() {
           description: 'Your order has been successfully placed.',
         });
         clearCart();
-        router.push(`/order/confirmation/${response.orderId}`);
+        // Pass orderType as query parameter for immediate display
+        router.push(`/order/confirmation/${response.orderId}?type=${orderType}`);
       } else {
         const errorMessage = response?.error || response?.message || 'Failed to create order';
         throw new Error(errorMessage);
