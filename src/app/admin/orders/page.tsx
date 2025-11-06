@@ -291,7 +291,7 @@ export default function AdminOrdersPage() {
                   <TableHead>Order ID</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Customer</TableHead>
-                  <TableHead>Items</TableHead>
+                  <TableHead className="min-w-[300px]">Items</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Driver</TableHead>
                   <TableHead className="text-right">Total</TableHead>
@@ -338,8 +338,8 @@ export default function AdminOrdersPage() {
                             <div className="text-sm text-muted-foreground">{order.customerPhone}</div>
                           </div>
                         </TableCell>
-                        <TableCell>
-                          <div className="space-y-2 max-w-md">
+                        <TableCell className="min-w-[300px]">
+                          <div className="space-y-2 max-w-lg">
                             {items.slice(0, 3).map((item: any, index: number) => {
                               // Extract supplements from specialInstructions if supplements array is not available
                               const supplementsText = item.specialInstructions?.includes('Supplements:') 
@@ -351,17 +351,17 @@ export default function AdminOrdersPage() {
                                 : supplementsText;
                               
                               return (
-                                <div key={index} className="text-sm border-l-2 border-primary/20 pl-2">
+                                <div key={index} className="text-base border-l-2 border-primary/20 pl-2">
                                   <div className="font-medium">
                                     {item.quantity}x {item.name || item.menuItem?.name}
                                   </div>
                                   {supplementsDisplay && (
-                                    <div className="text-xs text-blue-600 dark:text-blue-400 mt-0.5 font-medium">
+                                    <div className="text-sm text-blue-600 dark:text-blue-400 mt-0.5 font-medium">
                                       + {supplementsDisplay}
                                     </div>
                                   )}
                                   {item.specialInstructions && !item.specialInstructions.includes('Supplements:') && (
-                                    <div className="text-xs text-muted-foreground mt-0.5 italic">
+                                    <div className="text-sm text-muted-foreground mt-0.5 italic">
                                       {item.specialInstructions}
                                     </div>
                                   )}
