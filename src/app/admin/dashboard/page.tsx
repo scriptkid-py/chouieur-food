@@ -19,20 +19,64 @@ import {
   Plus,
   Eye,
   Loader2,
-  RefreshCw
+  RefreshCw,
+  Trash2
 } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
+import { getApiBaseUrl } from "@/lib/api-config";
 
 export default function AdminDashboardPage() {
   const { menuItems, isLoading: menuLoading } = useMenuItems();
   const { stats, isLoading: statsLoading, error: statsError, refetch, source, ordersCount } = useHybridAdminStats();
   const [isMounted, setIsMounted] = useState(false);
+  const [isCleaning, setIsCleaning] = useState(false);
+  const { toast } = useToast();
 
   // Prevent hydration mismatch by only rendering after mount
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  const handleCleanupOrders = async () => {
+    if (!confirm('Are you sure you want to clean up old orders? Orders older than 24 hours will be archived to Google Sheets and removed from the database.')) {
+      return;
+    }
+
+    setIsCleaning(true);
+    try {
+      const response = await fetch(`${getApiBaseUrl()}/api/orders/cleanup`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        toast({
+          title: "✅ Cleanup Successful",
+          description: `Archived ${data.archivedCount || 0} orders to Google Sheets and removed ${data.deletedCount || 0} old orders from the database.`,
+          variant: "default",
+        });
+        // Refresh stats after cleanup
+        refetch();
+      } else {
+        throw new Error(data.message || 'Cleanup failed');
+      }
+    } catch (error: any) {
+      console.error('Cleanup error:', error);
+      toast({
+        title: "❌ Cleanup Failed",
+        description: error.message || 'Failed to clean up orders. Please try again or check if the backend is deployed.',
+        variant: "destructive",
+      });
+    } finally {
+      setIsCleaning(false);
+    }
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -240,6 +284,25 @@ export default function AdminDashboardPage() {
                     <Users className="mr-2 h-4 w-4" />
                     Kitchen View
                   </Link>
+                </Button>
+
+                <Button 
+                  variant="outline" 
+                  className="w-full border-orange-200 text-orange-700 hover:bg-orange-50"
+                  onClick={handleCleanupOrders}
+                  disabled={isCleaning}
+                >
+                  {isCleaning ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Cleaning...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Clean Old Orders
+                    </>
+                  )}
                 </Button>
               </CardContent>
             </Card>
