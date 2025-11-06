@@ -45,43 +45,43 @@ export function MenuItemCard({ item }: MenuItemCardProps) {
   const currentPrice = size === 'Mega' && item.megaPrice ? item.megaPrice : item.price;
 
   return (
-    <Card className="flex flex-col overflow-hidden rounded-lg shadow-lg transition-transform duration-300 hover:scale-105 hover:shadow-xl">
+    <Card className="flex flex-col overflow-hidden rounded-lg shadow-lg transition-transform duration-300 hover:scale-105 hover:shadow-xl active:scale-100">
       <CardHeader className="p-0">
-        <div className="relative h-48 w-full">
+        <div className="relative h-40 sm:h-48 w-full">
           {imageUrl ? (
              <Image
                 src={imageUrl}
                 alt={item.name}
                 fill
                 className="object-cover"
-                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                 onError={(e) => {
                   // Fallback to a simple placeholder if image fails to load
                   const target = e.target as HTMLImageElement;
                   target.style.display = 'none';
                   const parent = target.parentElement;
                   if (parent) {
-                    parent.innerHTML = '<div class="flex h-full w-full items-center justify-center bg-secondary"><span class="text-muted-foreground">No Image</span></div>';
+                    parent.innerHTML = '<div class="flex h-full w-full items-center justify-center bg-secondary"><span class="text-muted-foreground text-sm">No Image</span></div>';
                   }
                 }}
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center bg-secondary">
-                <span className="text-muted-foreground">No Image</span>
+                <span className="text-muted-foreground text-sm">No Image</span>
             </div>
           )}
         </div>
       </CardHeader>
-      <CardContent className="flex-grow p-4">
-        <CardTitle className="mb-1 text-xl font-headline">{item.name}</CardTitle>
-        <CardDescription className="text-sm">{item.description}</CardDescription>
+      <CardContent className="flex-grow p-3 sm:p-4">
+        <CardTitle className="mb-1 text-lg sm:text-xl font-headline line-clamp-2">{item.name}</CardTitle>
+        <CardDescription className="text-xs sm:text-sm line-clamp-2">{item.description}</CardDescription>
       </CardContent>
-      <CardFooter className="flex items-center justify-between p-4 pt-0">
-        <div className="flex flex-col">
-            <span className="text-lg font-bold text-primary">{formatPrice(currentPrice)}</span>
+      <CardFooter className="flex items-center justify-between p-3 sm:p-4 pt-0 gap-2">
+        <div className="flex flex-col min-w-0 flex-1">
+            <span className="text-base sm:text-lg font-bold text-primary">{formatPrice(currentPrice)}</span>
             {hasSizeOption && (
                  <Select value={size} onValueChange={(value: 'Normal' | 'Mega') => setSize(value)}>
-                    <SelectTrigger className="mt-2 h-8 w-[100px] text-xs">
+                    <SelectTrigger className="mt-2 h-8 sm:h-9 w-full max-w-[120px] text-xs touch-manipulation">
                         <SelectValue placeholder="Size" />
                     </SelectTrigger>
                     <SelectContent>
@@ -91,9 +91,9 @@ export function MenuItemCard({ item }: MenuItemCardProps) {
                 </Select>
             )}
         </div>
-        <Button onClick={handleAddToCart} size="sm" className="gap-2">
-            <PlusCircle className="h-4 w-4" />
-            Add
+        <Button onClick={handleAddToCart} size="sm" className="gap-1.5 sm:gap-2 px-3 sm:px-4 h-9 sm:h-10 touch-manipulation flex-shrink-0">
+            <PlusCircle className="h-4 w-4 sm:h-5 sm:w-5" />
+            <span className="text-xs sm:text-sm">Add</span>
         </Button>
       </CardFooter>
     </Card>

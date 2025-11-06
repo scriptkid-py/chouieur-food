@@ -285,53 +285,53 @@ export function CheckoutForm() {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8">
       <Card>
-        <CardHeader>
-          <CardTitle className="font-headline text-xl">Order Summary</CardTitle>
+        <CardHeader className="p-4 sm:p-6">
+          <CardTitle className="font-headline text-lg sm:text-xl">Order Summary</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-4 sm:p-6 pt-0">
           <div className="space-y-2">
             {cartItems.map(item => (
-              <div key={item.cartId} className="flex justify-between text-sm">
-                <span>{item.quantity} x {item.menuItem?.name || 'Unknown'} ({item.size || 'Normal'})</span>
-                <span>{formatPrice(item.totalPrice)}</span>
+              <div key={item.cartId} className="flex justify-between text-xs sm:text-sm">
+                <span className="flex-1 pr-2">{item.quantity} x {item.menuItem?.name || 'Unknown'} ({item.size || 'Normal'})</span>
+                <span className="font-medium flex-shrink-0">{formatPrice(item.totalPrice)}</span>
               </div>
             ))}
           </div>
           <Separator className="my-4" />
-          <div className="flex justify-between text-lg font-bold">
+          <div className="flex justify-between text-base sm:text-lg font-bold">
             <span>Total</span>
             <span className="text-primary">{formatPrice(cartTotal)}</span>
           </div>
         </CardContent>
       </Card>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 sm:space-y-6">
         {/* Order Type Selection */}
         <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Order Type</CardTitle>
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="text-base sm:text-lg">Order Type</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 sm:p-6 pt-0 space-y-3">
             <RadioGroup value={orderType} onValueChange={(value) => setOrderType(value as 'delivery' | 'pickup')}>
-              <div className="flex items-center space-x-2 p-4 border rounded-lg hover:bg-accent cursor-pointer">
-                <RadioGroupItem value="delivery" id="delivery" />
-                <Label htmlFor="delivery" className="flex items-center gap-2 cursor-pointer flex-1">
-                  <Truck className="h-5 w-5 text-primary" />
-                  <div>
-                    <div className="font-semibold">Delivery</div>
-                    <div className="text-sm text-muted-foreground">Get it delivered to your address</div>
+              <div className="flex items-center space-x-3 p-3 sm:p-4 border rounded-lg hover:bg-accent cursor-pointer touch-manipulation">
+                <RadioGroupItem value="delivery" id="delivery" className="mt-0.5" />
+                <Label htmlFor="delivery" className="flex items-center gap-2 sm:gap-3 cursor-pointer flex-1">
+                  <Truck className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />
+                  <div className="min-w-0">
+                    <div className="font-semibold text-sm sm:text-base">Delivery</div>
+                    <div className="text-xs sm:text-sm text-muted-foreground">Get it delivered to your address</div>
                   </div>
                 </Label>
               </div>
-              <div className="flex items-center space-x-2 p-4 border rounded-lg hover:bg-accent cursor-pointer">
-                <RadioGroupItem value="pickup" id="pickup" />
-                <Label htmlFor="pickup" className="flex items-center gap-2 cursor-pointer flex-1">
-                  <Store className="h-5 w-5 text-primary" />
-                  <div>
-                    <div className="font-semibold">Pickup (Local)</div>
-                    <div className="text-sm text-muted-foreground">Pick up from our restaurant</div>
+              <div className="flex items-center space-x-3 p-3 sm:p-4 border rounded-lg hover:bg-accent cursor-pointer touch-manipulation">
+                <RadioGroupItem value="pickup" id="pickup" className="mt-0.5" />
+                <Label htmlFor="pickup" className="flex items-center gap-2 sm:gap-3 cursor-pointer flex-1">
+                  <Store className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />
+                  <div className="min-w-0">
+                    <div className="font-semibold text-sm sm:text-base">Pickup (Local)</div>
+                    <div className="text-xs sm:text-sm text-muted-foreground">Pick up from our restaurant</div>
                   </div>
                 </Label>
               </div>
@@ -340,56 +340,58 @@ export function CheckoutForm() {
         </Card>
 
         <div className="space-y-2">
-          <Label htmlFor="name">Full Name</Label>
-          <Input id="name" {...register('name', { required: 'Name is required' })} />
-          {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
+          <Label htmlFor="name" className="text-sm sm:text-base">Full Name</Label>
+          <Input id="name" className="h-11 sm:h-12 text-base touch-manipulation" {...register('name', { required: 'Name is required' })} />
+          {errors.name && <p className="text-xs sm:text-sm text-destructive">{errors.name.message}</p>}
         </div>
         <div className="space-y-2">
-          <Label htmlFor="phone">Phone Number</Label>
-          <Input id="phone" type="tel" {...register('phone', { required: 'Phone number is required' })} />
-           {errors.phone && <p className="text-sm text-destructive">{errors.phone.message}</p>}
+          <Label htmlFor="phone" className="text-sm sm:text-base">Phone Number</Label>
+          <Input id="phone" type="tel" className="h-11 sm:h-12 text-base touch-manipulation" {...register('phone', { required: 'Phone number is required' })} />
+           {errors.phone && <p className="text-xs sm:text-sm text-destructive">{errors.phone.message}</p>}
         </div>
         
         {/* Address field - different behavior for delivery vs pickup */}
         {orderType === 'delivery' ? (
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="address">Delivery Address *</Label>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <Label htmlFor="address" className="text-sm sm:text-base">Delivery Address *</Label>
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
                 onClick={handleGetLocation}
                 disabled={isGettingLocation}
-                className="text-xs h-7"
+                className="text-xs h-9 sm:h-10 touch-manipulation self-start sm:self-auto"
               >
                 {isGettingLocation ? (
                   <>
-                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                    Getting location...
+                    <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1 animate-spin" />
+                    <span className="hidden sm:inline">Getting location...</span>
+                    <span className="sm:hidden">Getting...</span>
                   </>
                 ) : (
                   <>
-                    <Navigation className="h-3 w-3 mr-1" />
-                    Use My Location
+                    <Navigation className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                    <span className="hidden sm:inline">Use My Location</span>
+                    <span className="sm:hidden">Location</span>
                   </>
                 )}
               </Button>
             </div>
             <Input 
               id="address" 
-              placeholder="Enter your delivery address (or click 'Use My Location' above)"
+              placeholder="Enter your delivery address"
               {...register('address', { required: 'Address is required for delivery' })} 
-              className="w-full"
+              className="w-full h-11 sm:h-12 text-base touch-manipulation"
             />
-            {errors.address && <p className="text-sm text-destructive">{errors.address.message}</p>}
+            {errors.address && <p className="text-xs sm:text-sm text-destructive">{errors.address.message}</p>}
             {savedAddress && addressValue !== savedAddress && (
-              <div className="p-2 bg-muted rounded-md">
-                <p className="text-xs text-muted-foreground mb-1">
-                  <MapPin className="h-3 w-3 inline mr-1" />
+              <div className="p-3 sm:p-4 bg-muted rounded-md">
+                <p className="text-xs sm:text-sm text-muted-foreground mb-1">
+                  <MapPin className="h-3 w-3 sm:h-4 sm:w-4 inline mr-1" />
                   Saved address:
                 </p>
-                <p className="text-sm font-medium">{savedAddress}</p>
+                <p className="text-sm sm:text-base font-medium break-words">{savedAddress}</p>
                 <Button
                   type="button"
                   variant="ghost"
@@ -401,29 +403,30 @@ export function CheckoutForm() {
                       description: 'Your saved address has been loaded',
                     });
                   }}
-                  className="mt-1 h-6 text-xs"
+                  className="mt-2 h-8 sm:h-9 text-xs sm:text-sm touch-manipulation"
                 >
                   Use This Address
                 </Button>
               </div>
             )}
-            <p className="text-xs text-muted-foreground">
-              💡 Tip: If location doesn't work, you can always enter your address manually above
+            <p className="text-xs sm:text-sm text-muted-foreground">
+              💡 Tip: If location doesn't work, you can always enter your address manually
             </p>
           </div>
         ) : (
           <div className="space-y-2">
-            <Label htmlFor="address">Your Address (Optional - for future orders)</Label>
+            <Label htmlFor="address" className="text-sm sm:text-base">Your Address (Optional - for future orders)</Label>
             <Input 
               id="address" 
               placeholder="Enter your address (optional for pickup)"
               {...register('address', { required: false })} 
+              className="h-11 sm:h-12 text-base touch-manipulation"
             />
             {savedAddress && (
-              <div className="p-3 bg-muted rounded-lg">
-                <p className="text-sm font-medium mb-1">Saved Address:</p>
-                <p className="text-sm text-muted-foreground">
-                  <MapPin className="h-3 w-3 inline mr-1" />
+              <div className="p-3 sm:p-4 bg-muted rounded-lg">
+                <p className="text-sm sm:text-base font-medium mb-1">Saved Address:</p>
+                <p className="text-sm sm:text-base text-muted-foreground break-words">
+                  <MapPin className="h-3 w-3 sm:h-4 sm:w-4 inline mr-1" />
                   {savedAddress}
                 </p>
                 <Button
@@ -437,7 +440,7 @@ export function CheckoutForm() {
                       description: 'Your saved address has been loaded',
                     });
                   }}
-                  className="mt-2 h-7 text-xs"
+                  className="mt-2 h-8 sm:h-9 text-xs sm:text-sm touch-manipulation"
                 >
                   Use Saved Address
                 </Button>
@@ -445,10 +448,10 @@ export function CheckoutForm() {
             )}
           </div>
         )}
-        <Button type="submit" size="lg" className="w-full" disabled={isSubmitting || cartItems.length === 0}>
+        <Button type="submit" size="lg" className="w-full h-12 sm:h-14 text-base sm:text-lg touch-manipulation" disabled={isSubmitting || cartItems.length === 0}>
           {isSubmitting ? (
             <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <Loader2 className="mr-2 h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
               Placing Order...
             </>
           ) : (

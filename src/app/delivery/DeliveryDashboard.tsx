@@ -425,27 +425,27 @@ export function DeliveryDashboard() {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       {/* Header */}
       <header className="bg-gradient-to-r from-purple-600 to-blue-600 border-b shadow-lg sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="bg-white/20 p-2 rounded-lg backdrop-blur-sm relative">
-                <Truck className="h-6 w-6 text-white" />
+        <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="bg-white/20 p-1.5 sm:p-2 rounded-lg backdrop-blur-sm relative flex-shrink-0">
+                <Truck className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                 {newOrdersCount > 0 && (
                   <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center animate-pulse">
                     {newOrdersCount}
                   </span>
                 )}
               </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h1 className="text-2xl font-bold text-white">Delivery Driver Dashboard</h1>
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                  <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-white truncate">Delivery Driver Dashboard</h1>
                   {notificationsEnabled && (
-                    <Badge className="bg-green-500 text-white text-xs">
-                      🔔 Notifications ON
+                    <Badge className="bg-green-500 text-white text-xs flex-shrink-0">
+                      🔔 ON
                     </Badge>
                   )}
                 </div>
-                <p className="text-xs text-white/90 font-medium">
+                <p className="text-xs text-white/90 font-medium hidden sm:block">
                   🚚 Driver Access Only • Not in Public Menu
                   {typeof window !== 'undefined' && localStorage.getItem('driverName') && (
                     <span className="ml-2">• {localStorage.getItem('driverName')}</span>
@@ -453,16 +453,16 @@ export function DeliveryDashboard() {
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
               <div className="flex items-center gap-2">
                 {isConnected ? (
-                  <Badge className="bg-green-500 text-white">
-                    <div className="w-2 h-2 bg-white rounded-full mr-2 animate-pulse" />
+                  <Badge className="bg-green-500 text-white text-xs sm:text-sm">
+                    <div className="w-2 h-2 bg-white rounded-full mr-1.5 sm:mr-2 animate-pulse" />
                     LIVE
                   </Badge>
                 ) : (
-                  <Badge variant="destructive">
-                    <div className="w-2 h-2 bg-white rounded-full mr-2" />
+                  <Badge variant="destructive" className="text-xs sm:text-sm">
+                    <div className="w-2 h-2 bg-white rounded-full mr-1.5 sm:mr-2" />
                     OFFLINE
                   </Badge>
                 )}
@@ -472,30 +472,30 @@ export function DeliveryDashboard() {
                   variant="outline"
                   size="sm"
                   onClick={requestNotificationPermission}
-                  className="bg-white/20 text-white border-white/30 hover:bg-white/30"
+                  className="bg-white/20 text-white border-white/30 hover:bg-white/30 text-xs sm:text-sm h-8 sm:h-9 px-2 sm:px-3 touch-manipulation"
                 >
-                  <BellOff className="h-4 w-4 mr-2" />
-                  Enable Notifications
+                  <BellOff className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Enable Notifications</span>
                 </Button>
               ) : (
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setNotificationsEnabled(false)}
-                  className="bg-white/20 text-white border-white/30 hover:bg-white/30"
+                  className="bg-white/20 text-white border-white/30 hover:bg-white/30 text-xs sm:text-sm h-8 sm:h-9 px-2 sm:px-3 touch-manipulation"
                 >
-                  <Bell className="h-4 w-4 mr-2" />
-                  Disable Notifications
+                  <Bell className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Disable Notifications</span>
                 </Button>
               )}
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleLogout}
-                className="bg-white/20 text-white border-white/30 hover:bg-white/30"
+                className="bg-white/20 text-white border-white/30 hover:bg-white/30 text-xs sm:text-sm h-8 sm:h-9 px-2 sm:px-3 touch-manipulation"
               >
-                <LogOut className="h-4 w-4 mr-2" />
-                Logout
+                <LogOut className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Logout</span>
               </Button>
             </div>
           </div>
@@ -503,9 +503,9 @@ export function DeliveryDashboard() {
       </header>
 
       {/* Main Content */}
-      <div className="container mx-auto px-4 py-6 space-y-6">
+      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6">
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-gray-600">Total Orders</CardTitle>
@@ -546,23 +546,23 @@ export function DeliveryDashboard() {
 
         {/* Orders Table */}
         <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Delivery Orders</CardTitle>
-                <CardDescription>
+          <CardHeader className="p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="min-w-0">
+                <CardTitle className="text-lg sm:text-xl">Delivery Orders</CardTitle>
+                <CardDescription className="text-xs sm:text-sm mt-1">
                   View and manage delivery orders. Update status when you pick up or deliver an order. Real-time updates via Socket.IO ⚡
                 </CardDescription>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="relative">
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <div className="relative flex-1 sm:flex-initial">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <Input
                     type="text"
                     placeholder="Search orders..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10 w-64"
+                    className="pl-10 w-full sm:w-48 md:w-64 h-9 sm:h-10 text-sm"
                   />
                 </div>
                 <Button
@@ -570,158 +570,301 @@ export function DeliveryDashboard() {
                   size="sm"
                   onClick={() => refetch()}
                   disabled={isLoading}
+                  className="h-9 sm:h-10 px-3 sm:px-4 touch-manipulation"
                 >
-                  <Loader2 className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-                  Refresh
+                  <Loader2 className={`h-4 w-4 sm:mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                  <span className="hidden sm:inline">Refresh</span>
                 </Button>
               </div>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 sm:p-6">
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <span className="ml-2 text-gray-600">Loading orders...</span>
+                <span className="ml-2 text-gray-600 text-sm sm:text-base">Loading orders...</span>
               </div>
             ) : filteredOrders.length === 0 ? (
               <div className="text-center py-12 text-gray-500">
                 <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No orders found</p>
+                <p className="text-sm sm:text-base">No orders found</p>
                 {searchQuery && (
-                  <p className="text-sm mt-2">Try adjusting your search query</p>
+                  <p className="text-xs sm:text-sm mt-2">Try adjusting your search query</p>
                 )}
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Order ID</TableHead>
-                      <TableHead>Customer</TableHead>
-                      <TableHead>Address</TableHead>
-                      <TableHead>Items</TableHead>
-                      <TableHead>Total</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Assigned To</TableHead>
-                      <TableHead>Time</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredOrders.map((order, index) => {
-                      const orderKey = order.orderid || order.id || `order-${index}`;
-                      return (
-                      <TableRow key={orderKey}>
-                        <TableCell className="font-medium">
-                          <div className="flex items-center gap-2">
-                            <Package className="h-4 w-4 text-gray-400" />
-                            {order.orderid}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="space-y-1">
+              <>
+                {/* Desktop Table View */}
+                <div className="hidden lg:block overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Order ID</TableHead>
+                        <TableHead>Customer</TableHead>
+                        <TableHead>Address</TableHead>
+                        <TableHead>Items</TableHead>
+                        <TableHead>Total</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Assigned To</TableHead>
+                        <TableHead>Time</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredOrders.map((order, index) => {
+                        const orderKey = order.orderid || order.id || `order-${index}`;
+                        return (
+                        <TableRow key={orderKey}>
+                          <TableCell className="font-medium">
                             <div className="flex items-center gap-2">
-                              <User className="h-4 w-4 text-gray-400" />
-                              <span className="font-medium">{order.customerName}</span>
+                              <Package className="h-4 w-4 text-gray-400" />
+                              {order.orderid}
                             </div>
-                            <div className="flex items-center gap-2 text-sm text-gray-500">
-                              <Phone className="h-3 w-3" />
-                              {order.customerPhone}
+                          </TableCell>
+                          <TableCell>
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2">
+                                <User className="h-4 w-4 text-gray-400" />
+                                <span className="font-medium">{order.customerName}</span>
+                              </div>
+                              <div className="flex items-center gap-2 text-sm text-gray-500">
+                                <Phone className="h-3 w-3" />
+                                {order.customerPhone}
+                              </div>
                             </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-start gap-2 max-w-xs">
-                            <MapPin className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
-                            <span className="text-sm">{order.customerAddress}</span>
-                          </div>
-                          {order.deliveryInstructions && (
-                            <div className="text-xs text-gray-500 mt-1 italic">
-                              Note: {order.deliveryInstructions}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-start gap-2 max-w-xs">
+                              <MapPin className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                              <span className="text-sm">{order.customerAddress}</span>
                             </div>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <div className="max-w-xs">
-                            {(() => {
-                              let items = [];
-                              if (order.items) {
-                                if (typeof order.items === 'string') {
-                                  try {
-                                    items = JSON.parse(order.items);
-                                  } catch {
-                                    items = [];
+                            {order.deliveryInstructions && (
+                              <div className="text-xs text-gray-500 mt-1 italic">
+                                Note: {order.deliveryInstructions}
+                              </div>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <div className="max-w-xs">
+                              {(() => {
+                                let items = [];
+                                if (order.items) {
+                                  if (typeof order.items === 'string') {
+                                    try {
+                                      items = JSON.parse(order.items);
+                                    } catch {
+                                      items = [];
+                                    }
+                                  } else if (Array.isArray(order.items)) {
+                                    items = order.items;
                                   }
-                                } else if (Array.isArray(order.items)) {
-                                  items = order.items;
                                 }
+                                return (
+                                  <div className="space-y-1">
+                                    {items.slice(0, 2).map((item: any, idx: number) => (
+                                      <div key={idx} className="text-sm">
+                                        {item.quantity}x {item.name}
+                                      </div>
+                                    ))}
+                                    {items.length > 2 && (
+                                      <div className="text-xs text-gray-500">
+                                        +{items.length - 2} more
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })()}
+                            </div>
+                          </TableCell>
+                          <TableCell className="font-semibold">
+                            {order.total?.toLocaleString()} FCFA
+                          </TableCell>
+                          <TableCell>
+                            <Badge 
+                              className={
+                                order.status === 'ready' ? 'bg-green-500' :
+                                order.status === 'out-for-delivery' ? 'bg-blue-500' :
+                                order.status === 'delivered' ? 'bg-gray-500' :
+                                'bg-yellow-500'
                               }
-                              return (
-                                <div className="space-y-1">
-                                  {items.slice(0, 2).map((item: any, idx: number) => (
-                                    <div key={idx} className="text-sm">
-                                      {item.quantity}x {item.name}
-                                    </div>
-                                  ))}
-                                  {items.length > 2 && (
-                                    <div className="text-xs text-gray-500">
-                                      +{items.length - 2} more
-                                    </div>
+                            >
+                              {order.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {order.assignedDriverId ? (
+                              <Badge className="bg-purple-500 text-white">
+                                {typeof window !== 'undefined' && localStorage.getItem('driverId') === order.assignedDriverId
+                                  ? 'You'
+                                  : order.assignedDriver || `Driver ${order.assignedDriverId}`}
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-300">
+                                Unassigned
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-sm text-gray-500">
+                            <div className="flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              {formatDateTime(order.createdAt)}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              {order.status === 'ready' && (
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleStatusUpdate(order.orderid, 'out-for-delivery')}
+                                  disabled={updatingStatus === order.orderid}
+                                  className="bg-blue-500 hover:bg-blue-600"
+                                >
+                                  {updatingStatus === order.orderid ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <>
+                                      <Truck className="h-4 w-4 mr-1" />
+                                      Pick Up
+                                    </>
+                                  )}
+                                </Button>
+                              )}
+                              {order.status === 'out-for-delivery' && (
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleStatusUpdate(order.orderid, 'delivered')}
+                                  disabled={updatingStatus === order.orderid}
+                                  className="bg-green-500 hover:bg-green-600"
+                                >
+                                  {updatingStatus === order.orderid ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <>
+                                      <CheckCircle2 className="h-4 w-4 mr-1" />
+                                      Mark Delivered
+                                    </>
+                                  )}
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {/* Mobile/Tablet Card View */}
+                <div className="lg:hidden space-y-4">
+                  {filteredOrders.map((order, index) => {
+                    const orderKey = order.orderid || order.id || `order-${index}`;
+                    let items = [];
+                    if (order.items) {
+                      if (typeof order.items === 'string') {
+                        try {
+                          items = JSON.parse(order.items);
+                        } catch {
+                          items = [];
+                        }
+                      } else if (Array.isArray(order.items)) {
+                        items = order.items;
+                      }
+                    }
+                    return (
+                      <Card key={orderKey} className="border-2">
+                        <CardHeader className="p-4 pb-3">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                              <Package className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                              <div className="min-w-0">
+                                <CardTitle className="text-base font-bold truncate">Order #{order.orderid}</CardTitle>
+                                <div className="flex items-center gap-1.5 mt-1">
+                                  <Badge 
+                                    className={
+                                      order.status === 'ready' ? 'bg-green-500 text-xs' :
+                                      order.status === 'out-for-delivery' ? 'bg-blue-500 text-xs' :
+                                      order.status === 'delivered' ? 'bg-gray-500 text-xs' :
+                                      'bg-yellow-500 text-xs'
+                                    }
+                                  >
+                                    {order.status}
+                                  </Badge>
+                                  {order.assignedDriverId && (
+                                    <Badge className="bg-purple-500 text-white text-xs">
+                                      {typeof window !== 'undefined' && localStorage.getItem('driverId') === order.assignedDriverId
+                                        ? 'You'
+                                        : order.assignedDriver || `Driver ${order.assignedDriverId}`}
+                                    </Badge>
+                                  )}
+                                  {!order.assignedDriverId && (
+                                    <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-300 text-xs">
+                                      Unassigned
+                                    </Badge>
                                   )}
                                 </div>
-                              );
-                            })()}
+                              </div>
+                            </div>
+                            <div className="text-right flex-shrink-0">
+                              <div className="text-lg font-bold text-primary">{order.total?.toLocaleString()} FCFA</div>
+                              <div className="flex items-center gap-1 text-xs text-gray-500 mt-1">
+                                <Clock className="h-3 w-3" />
+                                {formatDateTime(order.createdAt)}
+                              </div>
+                            </div>
                           </div>
-                        </TableCell>
-                        <TableCell className="font-semibold">
-                          {order.total?.toLocaleString()} FCFA
-                        </TableCell>
-                        <TableCell>
-                          <Badge 
-                            className={
-                              order.status === 'ready' ? 'bg-green-500' :
-                              order.status === 'out-for-delivery' ? 'bg-blue-500' :
-                              order.status === 'delivered' ? 'bg-gray-500' :
-                              'bg-yellow-500'
-                            }
-                          >
-                            {order.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {order.assignedDriverId ? (
-                            <Badge className="bg-purple-500 text-white">
-                              {typeof window !== 'undefined' && localStorage.getItem('driverId') === order.assignedDriverId
-                                ? 'You'
-                                : order.assignedDriver || `Driver ${order.assignedDriverId}`}
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-300">
-                              Unassigned
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-sm text-gray-500">
-                          <div className="flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            {formatDateTime(order.createdAt)}
+                        </CardHeader>
+                        <CardContent className="p-4 pt-0 space-y-3">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <User className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                              <span className="font-medium text-sm">{order.customerName}</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-sm text-gray-600">
+                              <Phone className="h-3.5 w-3.5 flex-shrink-0" />
+                              <a href={`tel:${order.customerPhone}`} className="text-blue-600 hover:underline">{order.customerPhone}</a>
+                            </div>
                           </div>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-2">
+                          <div className="flex items-start gap-2">
+                            <MapPin className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                            <div className="min-w-0 flex-1">
+                              <span className="text-sm break-words">{order.customerAddress}</span>
+                              {order.deliveryInstructions && (
+                                <div className="text-xs text-gray-500 mt-1 italic">
+                                  Note: {order.deliveryInstructions}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <div className="space-y-1">
+                            <div className="text-xs font-medium text-gray-500">Items:</div>
+                            <div className="space-y-1">
+                              {items.slice(0, 3).map((item: any, idx: number) => (
+                                <div key={idx} className="text-sm">
+                                  {item.quantity}x {item.name}
+                                </div>
+                              ))}
+                              {items.length > 3 && (
+                                <div className="text-xs text-gray-500">
+                                  +{items.length - 3} more
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <div className="pt-2 border-t">
                             {order.status === 'ready' && (
                               <Button
                                 size="sm"
                                 onClick={() => handleStatusUpdate(order.orderid, 'out-for-delivery')}
                                 disabled={updatingStatus === order.orderid}
-                                className="bg-blue-500 hover:bg-blue-600"
+                                className="w-full bg-blue-500 hover:bg-blue-600 h-10 touch-manipulation"
                               >
                                 {updatingStatus === order.orderid ? (
                                   <Loader2 className="h-4 w-4 animate-spin" />
                                 ) : (
                                   <>
-                                    <Truck className="h-4 w-4 mr-1" />
-                                    Pick Up
+                                    <Truck className="h-4 w-4 mr-2" />
+                                    Pick Up Order
                                   </>
                                 )}
                               </Button>
@@ -731,26 +874,25 @@ export function DeliveryDashboard() {
                                 size="sm"
                                 onClick={() => handleStatusUpdate(order.orderid, 'delivered')}
                                 disabled={updatingStatus === order.orderid}
-                                className="bg-green-500 hover:bg-green-600"
+                                className="w-full bg-green-500 hover:bg-green-600 h-10 touch-manipulation"
                               >
                                 {updatingStatus === order.orderid ? (
                                   <Loader2 className="h-4 w-4 animate-spin" />
                                 ) : (
                                   <>
-                                    <CheckCircle2 className="h-4 w-4 mr-1" />
-                                    Mark Delivered
+                                    <CheckCircle2 className="h-4 w-4 mr-2" />
+                                    Mark as Delivered
                                   </>
                                 )}
                               </Button>
                             )}
                           </div>
-                        </TableCell>
-                      </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </>
             )}
           </CardContent>
         </Card>
