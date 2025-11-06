@@ -51,7 +51,7 @@ const MenuItem = require('./models/MenuItem');
 const Order = require('./models/Order');
 const User = require('./models/User');
 const { initGoogleSheets, listMenuItems: sheetsListMenuItems, getMenuItemById: sheetsGetMenuItemById, createMenuItem: sheetsCreateMenuItem, updateMenuItem: sheetsUpdateMenuItem, deleteMenuItem: sheetsDeleteMenuItem, sheetsClient } = require('./services/google-sheets-service');
-const { cleanupOldOrders, getRecentOrders } = require('./services/order-cleanup-service');
+const { cleanupOldOrders, cleanupAllHistoricalOrders, getRecentOrders } = require('./services/order-cleanup-service');
 
 const app = express();
 const server = http.createServer(app);
@@ -1054,13 +1054,14 @@ app.get('/api/orders', async (req, res) => {
 // =============================================================================
 
 // Manual cleanup endpoint (for testing or manual triggers)
+// This cleans ALL historical orders (not time-based)
 app.post('/api/orders/cleanup', async (req, res) => {
   try {
-    console.log('🧹 Manual order cleanup triggered...');
-    const result = await cleanupOldOrders();
+    console.log('🧹 Manual order cleanup triggered (cleaning ALL historical orders)...');
+    const result = await cleanupAllHistoricalOrders();
     res.status(200).json({
-      success: true,
-      message: 'Order cleanup completed',
+      success: result.success,
+      message: result.message || 'Order cleanup completed',
       ...result
     });
   } catch (error) {

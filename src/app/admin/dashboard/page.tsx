@@ -40,7 +40,7 @@ export default function AdminDashboardPage() {
   }, []);
 
   const handleCleanupOrders = async () => {
-    if (!confirm('Are you sure you want to clean up old orders? Orders older than 24 hours will be archived to Google Sheets and removed from the database.')) {
+    if (!confirm('⚠️ WARNING: This will clean ALL historical orders from the dashboard!\n\n✅ All orders will be backed up to Google Sheets first\n🗑️ Then all orders will be removed from the database\n\nAre you sure you want to proceed?')) {
       return;
     }
 
