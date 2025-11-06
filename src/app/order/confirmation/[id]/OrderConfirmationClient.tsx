@@ -51,14 +51,14 @@ export default function OrderConfirmationClient({ orderId }: OrderConfirmationCl
           ) : (
             <Package className="h-20 w-20 text-blue-500" />
           )}
-          <CardTitle className="mt-4 font-headline text-3xl">
-            {isDelivered ? 'Your Code Confirmed!' : 'Order Confirmed!'}
+          <CardTitle className="font-semibold tracking-tight mt-4 font-headline text-3xl">
+            {isPickup ? 'Go confirm your code' : 'Your order confirmed'}
           </CardTitle>
           <CardDescription className="text-base">
             {isDelivered
               ? 'Thank you! Your order has been delivered successfully.'
               : isPickup
-              ? 'Go confirm your code at the restaurant when picking up your order.'
+              ? 'Please bring this order ID when you come to pick up your order.'
               : 'Thank you for your order. We are preparing it now.'}
           </CardDescription>
         </CardHeader>
