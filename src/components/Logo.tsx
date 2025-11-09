@@ -9,8 +9,8 @@ type LogoProps = {
 };
 
 export function Logo({ large = false, className }: LogoProps) {
-  // Try local file first, fallback to ImgBB URL, then SVG
-  const [imgSrc, setImgSrc] = useState('/logo.jpg');
+  // Use PostImg URL as primary, with local PNG and SVG fallbacks
+  const [imgSrc, setImgSrc] = useState('https://i.postimg.cc/Njt0HjJG/IMG-8377.png');
   const [hasError, setHasError] = useState(false);
   const [fallbackUsed, setFallbackUsed] = useState(false);
 
@@ -21,12 +21,12 @@ export function Logo({ large = false, className }: LogoProps) {
       setHasError(false);
     };
     img.onerror = () => {
-      console.warn('Local logo.jpg not found, trying ImgBB URL');
-      // Try ImgBB URL as fallback
-      setImgSrc('https://i.ibb.co/ccSNgY1G/IMG-8377.jpg');
+      console.warn('PostImg URL not found, trying local PNG');
+      // Try local PNG as fallback
+      setImgSrc('/logo.png');
       setFallbackUsed(true);
     };
-    img.src = '/logo.jpg';
+    img.src = 'https://i.postimg.cc/Njt0HjJG/IMG-8377.png';
   }, []);
 
   return (
@@ -47,14 +47,14 @@ export function Logo({ large = false, className }: LogoProps) {
         }}
         onError={(e) => {
           const target = e.target as HTMLImageElement;
-          if (!fallbackUsed && target.src.includes('/logo.jpg')) {
-            // First error: try ImgBB URL
-            console.warn('Local logo failed, trying ImgBB URL');
-            setImgSrc('https://i.ibb.co/ccSNgY1G/IMG-8377.jpg');
+          if (!fallbackUsed && target.src.includes('postimg.cc')) {
+            // First error: try local PNG
+            console.warn('PostImg URL failed, trying local PNG');
+            setImgSrc('/logo.png');
             setFallbackUsed(true);
           } else if (fallbackUsed && !target.src.includes('logo.svg')) {
             // Second error: try SVG fallback
-            console.warn('ImgBB URL failed, using SVG fallback');
+            console.warn('Local PNG failed, using SVG fallback');
             setImgSrc('/logo.svg');
             setHasError(true);
           }
