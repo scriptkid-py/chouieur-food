@@ -36,10 +36,15 @@ export function Header() {
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
 
   return (
-    <header className="sticky top-0 z-50 bg-background/80 shadow-md backdrop-blur-sm">
-      <div className="container mx-auto flex h-16 sm:h-20 items-center justify-between px-3 sm:px-4 md:px-6">
-        <Link href="/" className="flex-shrink-0 z-50 flex items-center" onClick={() => isMenuOpen && setIsMenuOpen(false)}>
-            <Logo className="h-10 sm:h-12 md:h-14 w-auto" />
+    <header className="sticky top-0 z-50 bg-black shadow-md">
+      <div className="container mx-auto flex h-20 sm:h-24 items-center justify-between px-3 sm:px-4 md:px-6">
+        <Link 
+          href="/" 
+          className="flex-shrink-0 z-50 flex items-center gap-3 flex-col sm:flex-row justify-center sm:justify-start" 
+          onClick={() => isMenuOpen && setIsMenuOpen(false)}
+        >
+          <Logo className="h-[80px] w-auto" />
+          <h1 className="text-white text-xl sm:text-2xl font-bold font-sans">Chonieur Food & Helado</h1>
         </Link>
 
         <nav className="hidden items-center gap-4 lg:gap-6 md:flex">
@@ -47,7 +52,7 @@ export function Header() {
             <Link 
               key={link.href} 
               href={link.href} 
-              className="text-sm lg:text-base font-medium text-foreground/80 transition-colors hover:text-primary px-2 py-1 rounded-md hover:bg-accent"
+              className="text-sm lg:text-base font-medium text-white transition-colors hover:text-gray-300 px-2 py-1 rounded-md hover:bg-gray-800"
             >
               {link.label}
             </Link>
@@ -55,7 +60,7 @@ export function Header() {
         </nav>
 
         <div className="flex items-center gap-1 sm:gap-2">
-           <Button asChild variant="ghost" size="icon" className="relative h-10 w-10 sm:h-11 sm:w-11 touch-manipulation">
+           <Button asChild variant="ghost" size="icon" className="relative h-10 w-10 sm:h-11 sm:w-11 touch-manipulation text-white hover:bg-gray-800">
               <Link href="/cart">
                 <ShoppingCart className="h-5 w-5 sm:h-6 sm:w-6" />
                 {isHydrated && itemCount > 0 && (
@@ -66,7 +71,7 @@ export function Header() {
                 <span className="sr-only">View Cart</span>
               </Link>
             </Button>
-          <Button variant="ghost" size="icon" className="md:hidden h-10 w-10 touch-manipulation" onClick={toggleMenu}>
+          <Button variant="ghost" size="icon" className="md:hidden h-10 w-10 touch-manipulation text-white hover:bg-gray-800" onClick={toggleMenu}>
             {isMenuOpen ? <X className="h-6 w-6" /> : <MenuIcon className="h-6 w-6" />}
             <span className="sr-only">Toggle Menu</span>
           </Button>
@@ -74,14 +79,14 @@ export function Header() {
       </div>
 
       {isMobile && isMenuOpen && (
-        <div className="absolute top-16 sm:top-20 left-0 w-full bg-background shadow-lg md:hidden border-t">
+        <div className="absolute top-20 sm:top-24 left-0 w-full bg-black shadow-lg md:hidden border-t border-gray-800">
             <nav className="flex flex-col gap-1 p-4">
                 {navLinks.map((link) => (
                     <Link 
                       key={link.href} 
                       href={link.href} 
                       onClick={toggleMenu} 
-                      className="text-base font-medium text-foreground/80 transition-colors hover:text-primary px-4 py-3 rounded-md hover:bg-accent touch-manipulation"
+                      className="text-base font-medium text-white transition-colors hover:text-gray-300 px-4 py-3 rounded-md hover:bg-gray-800 touch-manipulation"
                     >
                     {link.label}
                     </Link>
