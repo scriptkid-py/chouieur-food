@@ -10,13 +10,13 @@ export function Logo({ large = false, className }: LogoProps) {
   return (
     <div className={cn("flex items-center justify-center", className)}>
       <Image
-        src="/logo.svg"
+        src="/logo.jpg"
         alt="Chonieur Food & Helado"
-        width={large ? 300 : 160}
-        height={large ? 360 : 192}
+        width={large ? 400 : 200}
+        height={large ? 400 : 200}
         className={cn(
           "object-contain",
-          large ? "w-[300px] md:w-[400px] h-auto" : "h-full w-auto max-h-full"
+          large ? "w-[400px] md:w-[500px] h-auto" : "h-full w-auto max-h-full"
         )}
         priority
         unoptimized

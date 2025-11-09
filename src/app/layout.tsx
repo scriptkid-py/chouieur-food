@@ -10,11 +10,11 @@ export const metadata: Metadata = {
   description: 'Order delicious fast food from Chonieur Food & Helado',
   icons: {
     icon: [
-      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/logo.jpg', type: 'image/jpeg' },
       { url: '/favicon.ico', type: 'image/x-icon' },
     ],
     shortcut: '/favicon.ico',
-    apple: '/logo-icon.svg',
+    apple: '/logo.jpg',
   },
 };
 
