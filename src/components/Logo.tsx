@@ -1,6 +1,7 @@
 'use client';
 
 import { cn } from "@/lib/utils";
+import { useEffect, useState } from "react";
 
 type LogoProps = {
   large?: boolean;
@@ -8,10 +9,27 @@ type LogoProps = {
 };
 
 export function Logo({ large = false, className }: LogoProps) {
+  const [imgSrc, setImgSrc] = useState('/logo.jpg');
+  const [hasError, setHasError] = useState(false);
+
+  useEffect(() => {
+    // Verify image exists on mount
+    const img = new Image();
+    img.onload = () => {
+      setHasError(false);
+    };
+    img.onerror = () => {
+      console.warn('Logo.jpg not found, using SVG fallback');
+      setImgSrc('/logo.svg');
+      setHasError(true);
+    };
+    img.src = '/logo.jpg';
+  }, []);
+
   return (
     <div className={cn("flex items-center justify-center", className)}>
       <img
-        src="/logo.jpg"
+        src={imgSrc}
         alt="Chonieur Food & Helado"
         className={cn(
           "object-contain",
@@ -25,11 +43,13 @@ export function Logo({ large = false, className }: LogoProps) {
           display: 'block',
         }}
         onError={(e) => {
-          console.error('Logo failed to load, trying fallback');
-          const target = e.target as HTMLImageElement;
-          // Try SVG fallback
-          if (target.src !== '/logo.svg') {
-            target.src = '/logo.svg';
+          if (!hasError) {
+            console.error('Logo image failed to load, trying SVG fallback');
+            const target = e.target as HTMLImageElement;
+            if (target.src !== '/logo.svg') {
+              setImgSrc('/logo.svg');
+              setHasError(true);
+            }
           }
         }}
       />
