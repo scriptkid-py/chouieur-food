@@ -38,7 +38,7 @@ export function Header() {
   return (
     <header className="sticky top-0 z-50 bg-background/80 shadow-md backdrop-blur-sm">
       <div className="container mx-auto flex h-16 sm:h-20 items-center justify-between px-3 sm:px-4 md:px-6">
-        <Link href="/" className="flex-shrink-0" onClick={() => isMenuOpen && setIsMenuOpen(false)}>
+        <Link href="/" className="flex-shrink-0 z-50" onClick={() => isMenuOpen && setIsMenuOpen(false)}>
             <Logo className="h-8 sm:h-10 w-auto" />
         </Link>
 

@@ -21,8 +21,8 @@ export default function Home() {
         />
       )}
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-      <div className="relative z-10 flex flex-col items-center gap-4 sm:gap-6 px-4 sm:px-6 max-w-4xl mx-auto">
-        <div className="mb-2 sm:mb-4">
+      <div className="relative z-10 flex flex-col items-center justify-center gap-4 sm:gap-6 px-4 sm:px-6 max-w-4xl mx-auto py-8">
+        <div className="mb-2 sm:mb-4 relative z-20 flex items-center justify-center">
           <Logo large />
         </div>
         <p className="max-w-2xl text-base sm:text-lg md:text-xl px-2" style={{ color: '#d89a32' }}>
