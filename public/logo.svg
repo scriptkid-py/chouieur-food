@@ -1,0 +1,55 @@
+<svg width="200" height="240" viewBox="0 0 200 240" xmlns="http://www.w3.org/2000/svg">
+  <!-- Black background -->
+  <rect width="200" height="240" fill="#000000"/>
+  
+  <!-- Stylized stork/crane graphic -->
+  <!-- Body and neck (S-shaped curve) -->
+  <path d="M 100 35 Q 85 55, 88 85 Q 92 115, 108 135 Q 104 155, 100 175" 
+        stroke="#FFFFFF" 
+        stroke-width="3.5" 
+        fill="none" 
+        stroke-linecap="round" 
+        stroke-linejoin="round"/>
+  
+  <!-- Head (small curve at top) -->
+  <circle cx="100" cy="32" r="4" fill="#FFFFFF"/>
+  <circle cx="100" cy="32" r="2.5" fill="#000000"/>
+  
+  <!-- Eye (red dot on head) -->
+  <circle cx="98" cy="30" r="1.5" fill="#FF0000"/>
+  
+  <!-- Beak (sharp vertical red shape extending down) -->
+  <path d="M 102 32 L 108 26 L 102 38 L 102 32 Z" 
+        fill="#FF0000"/>
+  
+  <!-- Legs/wings (two angular red lines extending down and out) -->
+  <line x1="100" y1="175" x2="75" y2="195" 
+        stroke="#FF0000" 
+        stroke-width="4.5" 
+        stroke-linecap="round" 
+        stroke-linejoin="round"/>
+  <line x1="100" y1="175" x2="125" y2="195" 
+        stroke="#FF0000" 
+        stroke-width="4.5" 
+        stroke-linecap="round" 
+        stroke-linejoin="round"/>
+  
+  <!-- Chonieur text (bold cursive/script) -->
+  <text x="100" y="210" 
+        font-family="Brush Script MT, Lucida Handwriting, cursive, serif" 
+        font-size="32" 
+        font-weight="bold" 
+        fill="#FFFFFF" 
+        text-anchor="middle" 
+        dominant-baseline="middle">Chonieur</text>
+  
+  <!-- Food &amp; Helado text (thinner sans-serif) -->
+  <text x="100" y="230" 
+        font-family="Arial, Helvetica Neue, sans-serif" 
+        font-size="15" 
+        font-weight="300" 
+        fill="#FFFFFF" 
+        text-anchor="middle" 
+        dominant-baseline="middle">Food &amp; Helado</text>
+</svg>
+

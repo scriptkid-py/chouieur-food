@@ -6,12 +6,15 @@ import { Toaster } from '@/components/ui/toaster';
 import { CartProvider } from '@/context/CartContext';
 
 export const metadata: Metadata = {
-  title: 'Chouieur Express',
-  description: 'Order delicious fast food from Chouieur Food & Helado',
+  title: 'Chonieur Food & Helado',
+  description: 'Order delicious fast food from Chonieur Food & Helado',
   icons: {
-    icon: '/favicon.ico',
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/favicon.ico', type: 'image/x-icon' },
+    ],
     shortcut: '/favicon.ico',
-    apple: '/favicon.ico',
+    apple: '/logo-icon.svg',
   },
 };
 

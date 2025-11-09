@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import Image from "next/image";
 
 type LogoProps = {
   large?: boolean;
@@ -7,15 +8,19 @@ type LogoProps = {
 
 export function Logo({ large = false, className }: LogoProps) {
   return (
-    <div className={cn("font-headline", className)}>
-      <h1 
+    <div className={cn("flex items-center justify-center", className)}>
+      <Image
+        src="/logo.svg"
+        alt="Chonieur Food & Helado"
+        width={large ? 300 : 160}
+        height={large ? 360 : 192}
         className={cn(
-          large ? "text-5xl md:text-7xl" : ""
+          "object-contain",
+          large ? "w-[300px] md:w-[400px] h-auto" : "h-full w-auto max-h-full"
         )}
-        style={{ color: '#d89a32' }}
-      >
-        Chouieur Food
-      </h1>
+        priority
+        unoptimized
+      />
     </div>
   );
 }
