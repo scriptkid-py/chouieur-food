@@ -9,8 +9,10 @@ type LogoProps = {
 };
 
 export function Logo({ large = false, className }: LogoProps) {
+  // Try local file first, fallback to ImgBB URL, then SVG
   const [imgSrc, setImgSrc] = useState('/logo.jpg');
   const [hasError, setHasError] = useState(false);
+  const [fallbackUsed, setFallbackUsed] = useState(false);
 
   useEffect(() => {
     // Verify image exists on mount
@@ -19,9 +21,10 @@ export function Logo({ large = false, className }: LogoProps) {
       setHasError(false);
     };
     img.onerror = () => {
-      console.warn('Logo.jpg not found, using SVG fallback');
-      setImgSrc('/logo.svg');
-      setHasError(true);
+      console.warn('Local logo.jpg not found, trying ImgBB URL');
+      // Try ImgBB URL as fallback
+      setImgSrc('https://i.ibb.co/ccSNgY1G/IMG-8377.jpg');
+      setFallbackUsed(true);
     };
     img.src = '/logo.jpg';
   }, []);
@@ -43,13 +46,17 @@ export function Logo({ large = false, className }: LogoProps) {
           display: 'block',
         }}
         onError={(e) => {
-          if (!hasError) {
-            console.error('Logo image failed to load, trying SVG fallback');
-            const target = e.target as HTMLImageElement;
-            if (target.src !== '/logo.svg') {
-              setImgSrc('/logo.svg');
-              setHasError(true);
-            }
+          const target = e.target as HTMLImageElement;
+          if (!fallbackUsed && target.src.includes('/logo.jpg')) {
+            // First error: try ImgBB URL
+            console.warn('Local logo failed, trying ImgBB URL');
+            setImgSrc('https://i.ibb.co/ccSNgY1G/IMG-8377.jpg');
+            setFallbackUsed(true);
+          } else if (fallbackUsed && !target.src.includes('logo.svg')) {
+            // Second error: try SVG fallback
+            console.warn('ImgBB URL failed, using SVG fallback');
+            setImgSrc('/logo.svg');
+            setHasError(true);
           }
         }}
       />
